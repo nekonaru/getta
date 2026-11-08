@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# JavaScript build output
+.svelte-kit/
+build/
+dist/
+vite.config.ts.timestamp-*
+
+# Rust build output
+target/
+src-tauri/gen/
+
+# Test and coverage
+coverage/
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
