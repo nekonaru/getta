@@ -3,6 +3,20 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.2.0
+
+Desktop terasa seperti aplikasi native. Mobile tidak lagi direncanakan.
+
+## Fitur baru
+
+- **System tray.** Getta menambahkan ikon di system tray: klik kiri membuka/menyembunyikan window, klik kanan membuka menu dengan Tampilkan dan Keluar. Label mengikuti bahasa yang diatur.
+
+## Peningkatan
+
+- **Hanya desktop.** Rencana mobile dibatalkan; dokumentasi kini menyatakan Windows, macOS, dan Linux saja.
+- **Versi di Tentang.** Layar Tentang membaca versi dari manifest paket, bukan string tetap.
+- **Repository lebih ramping.** Set ikon Android dan iOS yang tidak terpakai dari generasi awal dihapus.
+
 ## v0.1.1
 
 Perbaikan untuk layar kosong saat pertama dibuka.

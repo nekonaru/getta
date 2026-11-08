@@ -14,7 +14,7 @@
 [English](README.md) | **Bahasa Indonesia**
 
 > [!NOTE]
-> Getta masih rilis awal. Unduhan inti sudah jalan hari ini. Extractor native, torrent, kursus, Telegram, dan aplikasi mobile ada di roadmap di bawah, belum ada di build ini.
+> Getta masih rilis awal. Unduhan inti sudah jalan hari ini. Extractor native, torrent, kursus, dan Telegram ada di roadmap di bawah, belum ada di build ini.
 
 ---
 
@@ -271,7 +271,7 @@ Getta mengunduh mesin unduhannya dari penerbit resminya dan memverifikasi SHA-25
 
 ## Roadmap
 
-Direncanakan, belum dirilis: extractor native untuk platform-platform besar (lebih cepat, paham cookies), dukungan bittorrent, pengunduh kursus, integrasi Telegram, mode command-line, dan build Android/iOS. Tidak ada yang dijamin sebelum tag rilis terbit.
+Direncanakan, belum dirilis: extractor native untuk platform-platform besar (lebih cepat, paham cookies), dukungan bittorrent, pengunduh kursus, integrasi Telegram, mode command-line. Tidak ada yang dijamin sebelum tag rilis terbit.
 
 ---
 
@@ -303,7 +303,7 @@ Getta open source dan tidak ditandatangani dengan sertifikat berbayar. Itu hal n
 
 <details><summary><b>Apakah Getta bisa dipakai di HP?</b></summary>
 
-Belum. Build Android dan iOS ada di roadmap.
+Tidak. Getta adalah aplikasi desktop (Windows, macOS, Linux). Belum ada build mobile dan belum direncanakan.
 
 </details>
 
@@ -325,3 +325,4 @@ Belum. Build Android dan iOS ada di roadmap.
 ## Lisensi
 
 Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](LICENSE) untuk informasi lebih lanjut.
+

@@ -14,7 +14,7 @@
 **English** | [Bahasa Indonesia](README.id.md)
 
 > [!NOTE]
-> Getta is an early release. Core downloads work today. Native extractors, torrents, courses, Telegram and the mobile apps are on the roadmap below, not in this build.
+> Getta is an early release. Core downloads work today. Native extractors, torrents, courses and Telegram are on the roadmap below, not in this build.
 
 ---
 
@@ -271,7 +271,7 @@ Getta downloads its engines from their official publishers and verifies yt-dlp's
 
 ## Roadmap
 
-Planned, not shipped: native extractors for the big platforms (faster, cookie-aware), bittorrent support, course downloaders, Telegram integration, a command-line mode, Android and iOS builds. Nothing here is promised until a release tag ships it.
+Planned, not shipped: native extractors for the big platforms (faster, cookie-aware), bittorrent support, course downloaders, Telegram integration, a command-line mode. Nothing here is promised until a release tag ships it.
 
 ---
 
@@ -303,7 +303,7 @@ Getta is open source and not signed with a paid certificate. That is normal for 
 
 <details><summary><b>Does Getta work on phones?</b></summary>
 
-Not yet. Android and iOS builds are on the roadmap.
+No. Getta is a desktop app (Windows, macOS, Linux). There is no mobile build and none is planned right now.
 
 </details>
 
@@ -325,3 +325,4 @@ Not yet. Android and iOS builds are on the roadmap.
 ## License
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+

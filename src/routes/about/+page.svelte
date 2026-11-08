@@ -1,7 +1,9 @@
 <script lang="ts">
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { t } from "#lib/i18n.svelte";
-	const version = "0.1.0";
+	import pkg from "../../../package.json";
+
+	const version = pkg.version;
 </script>
 
 <div class="page">

@@ -10,6 +10,7 @@ mod platform;
 mod queue;
 mod settings;
 mod storage;
+mod tray;
 mod ytdlp;
 
 use std::path::PathBuf;
@@ -53,9 +54,14 @@ pub fn run() {
                 queue: queue::QueueManager::new(data_dir),
             });
             if let Some(window) = app.get_webview_window("main") {
-                let title = format!("Getta");
-                let _ = window.set_title(&title);
+                let _ = window.set_title("Getta");
             }
+            let language = app
+                .try_state::<AppState>()
+                .and_then(|state| state.settings.lock().ok().map(|s| s.language.clone()))
+                .unwrap_or_else(|| "en".to_string());
+            let (show_label, quit_label) = tray::tray_labels(&language);
+            tray::setup(app, &show_label, &quit_label)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

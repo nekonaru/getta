@@ -3,6 +3,20 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.2.0
+
+Desktop feels like a native app. Mobile is no longer planned.
+
+## New features
+
+- **System tray.** Getta adds a tray icon: left click toggles the window, right click opens a menu with Show and Quit. Labels follow the configured language.
+
+## Improvements
+
+- **Desktop only.** The mobile plan is dropped; documentation now states Windows, macOS and Linux only.
+- **Version on About.** The About screen reads the version from the package manifest, not a hardcoded string.
+- **Leaner repository.** Unused Android and iOS icon sets from early generation are removed.
+
 ## v0.1.1
 
 Fix for a blank home screen on first launch.
