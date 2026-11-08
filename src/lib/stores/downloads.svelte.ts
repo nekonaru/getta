@@ -7,7 +7,7 @@ import {
 } from "#lib/api";
 import { settingsStore } from "#lib/stores/settings.svelte";
 import { toastStore } from "#lib/stores/toast.svelte";
-import { t } from "#lib/i18n";
+import { t } from "#lib/i18n.svelte";
 import {
 	isPermissionGranted,
 	requestPermission,

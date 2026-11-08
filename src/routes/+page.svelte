@@ -6,7 +6,7 @@
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 	import { formatBytes, formatDuration } from "#lib/format";
 	import LogoMark from "#lib/components/LogoMark.svelte";
 

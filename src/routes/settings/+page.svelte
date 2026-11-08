@@ -4,7 +4,7 @@
 	import { api, type EngineStatus } from "#lib/api";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 
 	type Category = "output" | "transfer" | "appearance" | "engine";
 	let category = $state<Category>("output");

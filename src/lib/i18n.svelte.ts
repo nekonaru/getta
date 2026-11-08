@@ -1,5 +1,5 @@
-import en from "./en.json";
-import id from "./id.json";
+import en from "./i18n/en.json";
+import id from "./i18n/id.json";
 
 export type Locale = "en" | "id";
 

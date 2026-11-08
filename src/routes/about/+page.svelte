@@ -1,6 +1,6 @@
 <script lang="ts">
 	import LogoMark from "#lib/components/LogoMark.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 	const version = "0.1.0";
 </script>
 

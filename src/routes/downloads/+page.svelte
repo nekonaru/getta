@@ -4,7 +4,7 @@
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 	import { formatBytes, formatEta, formatRelativeTime, formatSpeed } from "#lib/format";
 
 	type Filter = "all" | "active" | "queued" | "done" | "failed";

@@ -11,7 +11,7 @@
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 
 	let { children }: { children: Snippet } = $props();
 
