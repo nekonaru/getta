@@ -16,19 +16,7 @@
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		<link rel="manifest" href="/site.webmanifest" />
 		%sveltekit.head%
-		<script>
-			// Restore the saved theme before first paint to avoid a flash.
-			(function () {
-				try {
-					var t = localStorage.getItem("getta.theme");
-					if (t === "light" || t === "dark" || t === "system") {
-						document.documentElement.dataset.theme = t;
-					}
-				} catch (e) {
-					/* storage unavailable: keep default */
-				}
-			})();
-		</script>
+		<script src="/theme-init.js"></script>
 	</head>
 	<body>
 		<div id="app">%sveltekit.body%</div>
