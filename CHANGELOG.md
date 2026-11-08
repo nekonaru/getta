@@ -3,6 +3,14 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.1.1
+
+Fix for a blank home screen on first launch.
+
+## Bug fixes
+
+- **Blank window.** The app crashed on startup because the language module used Svelte 5 runes in a plain TypeScript file, which the compiler never processed. The module is now compiled as a Svelte module and the app renders normally.
+
 ## v0.1.0
 
 First public release. Paste a link, get the file.

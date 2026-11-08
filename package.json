@@ -1,6 +1,6 @@
 {
   "name": "getta",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Getta fetches media and files from across the web into your own folders. Free, open source, no account, no terminal.",
   "type": "module",
   "imports": {

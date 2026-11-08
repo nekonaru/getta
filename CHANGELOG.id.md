@@ -3,6 +3,14 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.1.1
+
+Perbaikan untuk layar kosong saat pertama dibuka.
+
+## Perbaikan bug
+
+- **Window kosong.** Aplikasi crash saat startup karena modul bahasa memakai rune Svelte 5 di file TypeScript biasa yang tidak pernah dikompilasi. Modulnya sekarang dikompilasi sebagai modul Svelte dan aplikasi tampil normal.
+
 ## v0.1.0
 
 Rilis publik pertama. Tempel tautan, ambil filenya.
