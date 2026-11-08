@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Getta symbol reversed</title>
+  <g fill="none" stroke="#F5F7F6" stroke-width="27" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="81" cy="85" r="45"/>
+    <path d="M128 40 V152 Q128 189 91 189 Q62 189 50 163"/>
+  </g>
+  <path fill="#F5F7F6" d="M88 194 Q184 190 228 92 L238 118 Q198 226 88 222 Z"/>
+</svg>
+
+

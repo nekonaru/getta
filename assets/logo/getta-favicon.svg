@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><title>Getta</title><g transform="translate(-38.73 -31.47) scale(1.217)">
+  
+  <g fill="none" stroke="#111111" stroke-width="27" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="81" cy="85" r="45"/>
+    <path d="M128 40 V152 Q128 189 91 189 Q62 189 50 163"/>
+  </g>
+  <path fill="#111111" d="M88 194 Q184 190 228 92 L238 118 Q198 226 88 222 Z"/>
+</g></svg>
