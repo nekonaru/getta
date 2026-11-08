@@ -111,6 +111,70 @@ body {
 	overscroll-behavior: none;
 }
 
+/* ---------- motion ---------- */
+
+@keyframes fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: translateY(16px) scale(0.96);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes dot-pulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.55;
+		transform: scale(0.82);
+	}
+}
+
+@keyframes shimmer {
+	from {
+		background-position: -150% 0;
+	}
+	to {
+		background-position: 150% 0;
+	}
+}
+
+.page {
+	animation: fade-up 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.engine-ready .engine-dot {
+	animation: dot-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton {
+	background: linear-gradient(
+		100deg,
+		var(--card-2) 20%,
+		var(--raised) 40%,
+		var(--card-2) 60%
+	);
+	background-size: 250% 100%;
+	animation: shimmer 1.5s ease-in-out infinite;
+}
+
 ::selection {
 	background: var(--accent);
 	color: var(--on-accent);
@@ -193,6 +257,16 @@ button {
 	cursor: pointer;
 	text-align: left;
 	width: 100%;
+	transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-item:hover {
+	background: var(--card-2);
+	transform: translateX(3px);
+}
+
+.nav-item:active {
+	transform: translateX(3px) scale(0.98);
 }
 
 .nav-index {
@@ -422,17 +496,19 @@ button {
 	letter-spacing: 0.02em;
 	cursor: pointer;
 	border-radius: var(--r-sm);
-	transition: background 0.12s ease, transform 0.1s ease;
+	transition: background 0.12s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
 	text-decoration: none;
 	font-family: var(--font-body);
 }
 
 .btn:hover {
 	background: var(--card-2);
+	transform: translateY(-1px);
+	border-color: var(--border-strong);
 }
 
 .btn:active {
-	transform: translateY(1px);
+	transform: translateY(0.5px) scale(0.985);
 }
 
 .btn:disabled {
@@ -644,6 +720,7 @@ select.input {
 	border-radius: 3px;
 	padding: 3px 7px;
 	color: var(--muted);
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .chip-accent {
@@ -745,6 +822,7 @@ select.input {
 	border: 1px solid var(--border);
 	border-radius: var(--r-md);
 	box-shadow: var(--shadow);
+	transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 /* ---------- manifest table ---------- */
@@ -833,6 +911,7 @@ select.input {
 	font-size: 13px;
 	border-radius: var(--r-sm);
 	box-shadow: var(--shadow);
+	animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .toast.error {
