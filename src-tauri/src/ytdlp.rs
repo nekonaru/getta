@@ -28,6 +28,31 @@ impl std::fmt::Display for EngineError {
     }
 }
 
+pub fn managed_ffprobe(data_dir: &Path) -> PathBuf {
+    data_dir.join("bin").join(if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" })
+}
+
+/// Locate ffprobe: alongside a custom FFmpeg, the managed copy, then PATH.
+pub fn locate_ffprobe(ffmpeg_override: Option<&str>, data_dir: &Path) -> Option<PathBuf> {
+    if let Some(custom) = ffmpeg_override {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() {
+            let path = PathBuf::from(trimmed);
+            if let Some(parent) = path.parent() {
+                let sibling = parent.join(if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" });
+                if sibling.is_file() {
+                    return Some(sibling);
+                }
+            }
+        }
+    }
+    let managed = managed_ffprobe(data_dir);
+    if managed.is_file() {
+        return Some(managed);
+    }
+    which::which("ffprobe").ok()
+}
+
 fn managed_binary_name() -> &'static str {
     if cfg!(windows) {
         "yt-dlp.exe"

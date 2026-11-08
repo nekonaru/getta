@@ -43,6 +43,10 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::init())
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![])))
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let data_dir = storage::data_dir();
             std::fs::create_dir_all(&data_dir).ok();
@@ -66,6 +70,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::analyze_url,
+            commands::run_tool,
             commands::start_download,
             commands::pause_download,
             commands::resume_download,

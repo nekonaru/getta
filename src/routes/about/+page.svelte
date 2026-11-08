@@ -48,10 +48,10 @@
 		width: 104px;
 		height: 104px;
 		border-radius: 28px;
-		background: var(--spruce);
+		background: var(--accent);
 		display: grid;
 		place-items: center;
-		color: var(--accent);
+		color: var(--on-accent);
 		margin-bottom: 10px;
 	}
 
@@ -124,3 +124,5 @@
 		font-size: 12px;
 	}
 </style>
+
+

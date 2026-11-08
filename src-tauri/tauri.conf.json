@@ -9,6 +9,15 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../build"
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "getta"
+        ]
+      }
+    }
+  },
   "app": {
     "windows": [
       {

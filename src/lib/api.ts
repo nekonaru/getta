@@ -11,6 +11,12 @@ export interface VideoQuality {
 	format: string | null;
 }
 
+export interface PlaylistEntry {
+	index: number;
+	title: string;
+	url: string;
+}
+
 export interface Analysis {
 	platform: string;
 	supported: boolean;
@@ -22,6 +28,7 @@ export interface Analysis {
 	is_playlist: boolean;
 	entry_count: number | null;
 	qualities: VideoQuality[];
+	playlist_entries: PlaylistEntry[];
 }
 
 export interface QueueItemInfo {
@@ -82,6 +89,8 @@ export interface AppSettings {
 	theme: "system" | "light" | "dark";
 	language: "en" | "id";
 	reduce_motion: boolean;
+	autostart: boolean;
+	onboarding_completed: boolean;
 	cookies_from_browser: string;
 	proxy: string;
 	notifications: boolean;
@@ -112,6 +121,31 @@ export interface StartOptions {
 	output_dir: string | null;
 }
 
+export type ToolName = "audio_mp3" | "gif" | "compress";
+
+export interface ToolRequest {
+	tool: ToolName;
+	input: string;
+	output?: string | null;
+	start_secs?: number | null;
+	duration?: number | null;
+	width?: number | null;
+	fps?: number | null;
+	crf?: number | null;
+}
+
+export interface ToolProgressEvent {
+	tool: string;
+	percent: number;
+}
+
+export interface ToolFinishedEvent {
+	tool: string;
+	success: boolean;
+	output: string | null;
+	message: string | null;
+}
+
 function messageOf(e: unknown): string {
 	if (e instanceof Error) return e.message;
 	if (typeof e === "string") return e;
@@ -132,6 +166,7 @@ async function call<T>(fn: () => Promise<T>): Promise<T> {
 
 export const api = {
 	analyzeUrl: (url: string) => call(() => invoke<Analysis>("analyze_url", { url })),
+	runTool: (request: ToolRequest) => call(() => invoke<string>("run_tool", { request })),
 	startDownload: (options: StartOptions) =>
 		call(() => invoke<number>("start_download", { options })),
 	pauseDownload: (id: number) => call(() => invoke<void>("pause_download", { id })),
@@ -160,5 +195,13 @@ export const api = {
 
 export function onQueueChanged(callback: (items: QueueItemInfo[]) => void): Promise<UnlistenFn> {
 	return listen<QueueItemInfo[]>("queue-changed", (event) => callback(event.payload));
+}
+
+export function onToolProgress(callback: (e: ToolProgressEvent) => void): Promise<UnlistenFn> {
+	return listen<ToolProgressEvent>("tool-progress", (event) => callback(event.payload));
+}
+
+export function onToolFinished(callback: (e: ToolFinishedEvent) => void): Promise<UnlistenFn> {
+	return listen<ToolFinishedEvent>("tool-finished", (event) => callback(event.payload));
 }
 

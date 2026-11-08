@@ -8,85 +8,123 @@
 
 	import { page } from "$app/state";
 	import Toaster from "#lib/components/Toaster.svelte";
+	import CommandPalette from "#lib/components/CommandPalette.svelte";
+	import Onboarding from "#lib/components/Onboarding.svelte";
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
+	import { toastStore } from "#lib/stores/toast.svelte";
+	import { enqueueFromClipboardText } from "#lib/enqueue";
 	import { t } from "#lib/i18n.svelte";
+	import { api } from "#lib/api";
+	import { readText } from "@tauri-apps/plugin-clipboard-manager";
+	import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
+	import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
+	import pkg from "../../package.json";
 
 	let { children }: { children: Snippet } = $props();
+
+	let engineReady = $state<boolean | null>(null);
+
+	const nav = [
+		{ href: "/", key: "home", index: "01" },
+		{ href: "/queue", key: "queue", index: "02" },
+		{ href: "/library", key: "library", index: "03" },
+		{ href: "/tools", key: "tools", index: "04" },
+		{ href: "/settings", key: "settings", index: "05" }
+	] as const;
+
+	const activeCount = $derived(downloadsStore.activeCount + downloadsStore.queuedCount);
 
 	onMount(() => {
 		void settingsStore.load();
 		void downloadsStore.start();
+		void api.engineStatus().then((engine) => (engineReady = engine.ytdlp.found));
+
+		// CmdOrCtrl+Shift+D: fetch from clipboard anywhere.
+		void register("CmdOrCtrl+Shift+D", async () => {
+			try {
+				const text = await readText();
+				await enqueueFromClipboardText(text ?? "");
+			} catch {
+				toastStore.push(t("home.invalidUrl"), "error");
+			}
+		}).catch((e) => console.debug("global shortcut unavailable", e));
+
+		// getta://<url> links land here from the OS.
+		void getCurrent().then((urls) => {
+			for (const url of urls ?? []) void enqueueFromClipboardText(decodeURIComponent(url.replace(/^getta:\/\//, "")));
+		});
+		const unlisten = onOpenUrl(async (urls) => {
+			for (const url of urls) {
+				const decoded = (() => {
+					try {
+						return decodeURIComponent(url.replace(/^getta:\/\//, ""));
+					} catch {
+						return url.replace(/^getta:\/\//, "");
+					}
+				})();
+				await enqueueFromClipboardText(decoded);
+			}
+		});
+
+		return () => {
+			void unregisterAll().catch(() => {});
+			void unlisten.then((fn) => fn?.()).catch(() => {});
+		};
 	});
-
-	const nav = [
-		{ href: "/", key: "home" as const },
-		{ href: "/downloads", key: "downloads" as const },
-		{ href: "/settings", key: "settings" as const },
-		{ href: "/about", key: "about" as const }
-	];
-
-	const activeCount = $derived(downloadsStore.activeCount);
 </script>
 
 <div class="app-shell">
-	<nav class="rail" aria-label="Main navigation">
-		<a class="rail-logo" href="/" aria-label="Getta">
-			<LogoMark size={26} />
+	<aside class="sidebar">
+		<a class="wordmark" href="/">
+			<LogoMark size={34} />
+			<span>
+				<span class="wordmark-name">getta</span>
+				<span class="wordmark-meta">link in · file out</span>
+			</span>
 		</a>
-		<div class="rail-nav">
+
+		<nav aria-label="Main">
 			{#each nav as item (item.href)}
-				<a
-					class="rail-item"
-					href={item.href}
-					aria-current={page.url.pathname === item.href ? "page" : undefined}
-				>
-					{#if item.key === "home"}
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5" /><path d="M6.5 10v9h11v-9" /></svg>
-					{:else if item.key === "downloads"}
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M4.5 19h15" /></svg>
-					{:else if item.key === "settings"}
-						<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v3.5M12 18v3.5M2.5 12H6M18 12h3.5M5 5l2.5 2.5M16.5 16.5 19 19M19 5l-2.5 2.5M7.5 16.5 5 19" /></svg>
-					{:else}
-						<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5" /><circle cx="12" cy="7.6" r="0.4" fill="currentColor" stroke="none" /></svg>
-					{/if}
-					<span>{t(`nav.${item.key}`)}</span>
-					{#if item.key === "downloads" && activeCount > 0}
-						<span class="rail-badge">{activeCount > 99 ? "99+" : activeCount}</span>
+				<a class="nav-item" href={item.href} aria-current={page.url.pathname === item.href ? "page" : undefined}>
+					<span class="nav-index">{item.index}</span>
+					<span class="nav-label">{t(`nav.${item.key}`)}</span>
+					{#if item.key === "queue" && activeCount > 0}
+						<span class="nav-count">{activeCount > 99 ? "99+" : activeCount}</span>
 					{/if}
 				</a>
 			{/each}
+		</nav>
+
+		<div class="sidebar-foot">
+			<a class="engine-chip" class:engine-ready={engineReady === true} href="/settings" style="text-decoration:none">
+				<span class="engine-dot"></span>
+				<span>{engineReady === false ? t("home.engineMissing") : "engine ready"}</span>
+			</a>
+			<div class="sidebar-links">
+				<a href="https://github.com/nekonaru/getta" target="_blank" rel="noreferrer">GitHub</a>
+				<a href="/about">v{pkg.version}</a>
+			</div>
 		</div>
-	</nav>
+	</aside>
 
 	<main class="content">
 		{@render children()}
 	</main>
 
-	<nav class="bottom-bar" aria-label="Main navigation">
+	<nav class="bottom-bar" aria-label="Main">
 		{#each nav as item (item.href)}
-			<a
-				class="rail-item"
-				href={item.href}
-				aria-current={page.url.pathname === item.href ? "page" : undefined}
-			>
-				{#if item.key === "home"}
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5" /><path d="M6.5 10v9h11v-9" /></svg>
-				{:else if item.key === "downloads"}
-					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M4.5 19h15" /></svg>
-				{:else if item.key === "settings"}
-					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v3.5M12 18v3.5M2.5 12H6M18 12h3.5M5 5l2.5 2.5M16.5 16.5 19 19M19 5l-2.5 2.5M7.5 16.5 5 19" /></svg>
-				{:else}
-					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5" /><circle cx="12" cy="7.6" r="0.4" fill="currentColor" stroke="none" /></svg>
-				{/if}
-				<span>{t(`nav.${item.key}`)}</span>
-				{#if item.key === "downloads" && activeCount > 0}
-					<span class="rail-badge">{activeCount > 99 ? "99+" : activeCount}</span>
+			<a class="nav-item" href={item.href} aria-current={page.url.pathname === item.href ? "page" : undefined} aria-label={t(`nav.${item.key}`)}>
+				<span class="nav-label">{t(`nav.${item.key}`)}</span>
+				{#if item.key === "queue" && activeCount > 0}
+					<span class="nav-count">{activeCount > 99 ? "99+" : activeCount}</span>
 				{/if}
 			</a>
 		{/each}
 	</nav>
 </div>
 
+<CommandPalette />
+<Onboarding />
 <Toaster />

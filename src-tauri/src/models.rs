@@ -12,6 +12,13 @@ pub struct VideoQuality {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PlaylistEntry {
+    pub index: u32,
+    pub title: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Analysis {
     pub platform: String,
     pub supported: bool,
@@ -22,7 +29,10 @@ pub struct Analysis {
     pub media_kind: Option<String>,
     pub is_playlist: bool,
     pub entry_count: Option<u32>,
+    #[serde(default)]
     pub qualities: Vec<VideoQuality>,
+    #[serde(default)]
+    pub playlist_entries: Vec<PlaylistEntry>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -147,4 +157,24 @@ pub struct StartOptions {
     pub playlist_items: Option<String>,
     #[serde(default)]
     pub output_dir: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ToolRequest {
+    pub tool: String,
+    pub input: String,
+    pub output: Option<String>,
+    pub start_secs: Option<f64>,
+    pub duration: Option<f64>,
+    pub width: Option<u32>,
+    pub fps: Option<u32>,
+    pub crf: Option<u32>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ToolFinishedEvent {
+    pub tool: String,
+    pub success: bool,
+    pub output: Option<String>,
+    pub message: Option<String>,
 }

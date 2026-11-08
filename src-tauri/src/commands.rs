@@ -17,6 +17,14 @@ pub async fn analyze_url(app: AppHandle, url: String) -> Result<Analysis, String
 }
 
 #[tauri::command]
+pub async fn run_tool(
+    app: AppHandle,
+    request: crate::models::ToolRequest,
+) -> Result<String, String> {
+    crate::queue::run_tool(&app, request).await
+}
+
+#[tauri::command]
 pub async fn start_download(app: AppHandle, options: StartOptions) -> Result<u64, String> {
     app.try_state::<AppState>()
         .ok_or_else(|| "App is not ready yet.".to_string())?

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { open } from "@tauri-apps/plugin-dialog";
+	import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
 	import { api, type EngineStatus } from "#lib/api";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
@@ -10,12 +11,30 @@
 	let category = $state<Category>("output");
 	let engine = $state<EngineStatus | null>(null);
 	let installBusy = $state<string | null>(null);
+	let autostartEnabled = $state(false);
 
 	const settings = $derived(settingsStore.value);
 
 	onMount(async () => {
 		await refreshEngine();
+		try {
+			autostartEnabled = await isEnabled();
+		} catch {
+			autostartEnabled = settingsStore.value?.autostart ?? false;
+		}
 	});
+
+	async function toggleAutostart() {
+		const next = !autostartEnabled;
+		try {
+			if (next) await enable();
+			else await disable();
+			autostartEnabled = next;
+			await settingsStore.update({ autostart: next });
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
 
 	async function refreshEngine() {
 		try {
@@ -188,6 +207,10 @@
 							</div>
 						</div>
 						<div class="row row-switch">
+							<span class="switch-label">{t("settings.autostart")}</span>
+							<button class="switch" role="switch" aria-checked={autostartEnabled} aria-label={t("settings.autostart")} onclick={toggleAutostart}></button>
+						</div>
+						<div class="row row-switch">
 							<span class="switch-label">{t("settings.reduceMotion")}</span>
 							<button class="switch" role="switch" aria-checked={settings.reduce_motion} aria-label={t("settings.reduceMotion")} onclick={() => patch({ reduce_motion: !settings.reduce_motion })}></button>
 						</div>
@@ -236,6 +259,10 @@
 		font-size: 1.9rem;
 		font-weight: 700;
 		margin-bottom: 16px;
+	}
+
+	.panel-col {
+		min-width: 0;
 	}
 
 	.layout {
