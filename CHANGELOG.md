@@ -3,6 +3,14 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.3.1
+
+No more console window behind the app.
+
+## Bug fixes
+
+- **Stray terminal on Windows.** Release builds now declare the Windows GUI subsystem, so no console window opens behind Getta and closing it can no longer end the app.
+
 ## v0.3.0
 
 Editorial redesign and a serious feature pass.

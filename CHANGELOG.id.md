@@ -3,6 +3,14 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.3.1
+
+Tidak ada lagi terminal di belakang aplikasi.
+
+## Perbaikan bug
+
+- **Terminal liar di Windows.** Build rilis kini mendeklarasikan subsistem GUI Windows, jadi tidak ada console window terbuka di belakang Getta dan menutupnya tidak lagi mematikan aplikasi.
+
 ## v0.3.0
 
 Redesain editorial dan kumpulan fitur besar.
