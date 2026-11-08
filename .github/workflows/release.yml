@@ -68,7 +68,7 @@ jobs:
           } > RELEASE_NOTES.md
           cat RELEASE_NOTES.md
       - name: Publish the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Getta ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
