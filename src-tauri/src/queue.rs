@@ -19,7 +19,7 @@ use crate::platform;
 use crate::ytdlp;
 use crate::{AppState, history};
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 static ID_SEED: AtomicU64 = AtomicU64::new(0);
 
@@ -920,7 +920,7 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
 
     let settings = app
         .try_state::<AppState>()
-        .and_then(|state| state.settings.lock().ok().cloned())
+        .and_then(|state| state.settings.lock().ok().map(|guard| guard.clone()))
         .unwrap_or_default();
     let data_dir = app
         .try_state::<AppState>()
