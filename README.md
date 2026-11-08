@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/nekonaru/getta/main/assets/logo/getta-symbol.svg" alt="Getta" width="120" />
+  <img src="https://raw.githubusercontent.com/nekonaru/getta/main/assets/logo/getta-app-icon.svg" alt="Getta" width="120" />
   <h1>Getta: Every link, delivered.</h1>
   <p><b>Paste a link. Getta saves the video, audio, image or file straight to your folder.<br/>Free, open source, no account, no terminal.</b></p>
   <a href="https://github.com/nekonaru/getta/releases/latest"><img src="https://img.shields.io/github/v/release/nekonaru/getta?style=flat-square&color=00C896" alt="Latest release" /></a>

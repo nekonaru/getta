@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/nekonaru/getta/main/assets/logo/getta-symbol.svg" alt="Getta" width="120" />
+  <img src="https://raw.githubusercontent.com/nekonaru/getta/main/assets/logo/getta-app-icon.svg" alt="Getta" width="120" />
   <h1>Getta: Setiap tautan, terkirim.</h1>
   <p><b>Tempel tautan. Getta menyimpan video, audio, gambar, atau file langsung ke foldermu.<br/>Gratis, open source, tanpa akun, tanpa terminal.</b></p>
   <a href="https://github.com/nekonaru/getta/releases/latest"><img src="https://img.shields.io/github/v/release/nekonaru/getta?style=flat-square&color=00C896" alt="Rilis terbaru" /></a>

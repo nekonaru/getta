@@ -134,7 +134,7 @@ impl QueueManager {
             id: next_id(),
             url: trimmed.to_string(),
             platform: platform_info.display_name.clone(),
-            title: title_from_url(trimmed),
+            title: title_from_url(&trimmed),
             download_mode: DownloadMode::parse(&options.download_mode),
             quality: if options.quality.trim().is_empty() { "best".to_string() } else { options.quality.trim().to_string() },
             format_id: options.format_id.clone(),
