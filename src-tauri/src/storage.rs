@@ -70,7 +70,7 @@ mod tests {
 
         std::fs::write(&path, "{not json").unwrap();
         let value: serde_json::Value = read_json_or_default(&path);
-        assert_eq!(value, serde_json::Value::Object(Default::default()));
+        assert_eq!(value, serde_json::Value::Null);
         std::fs::remove_dir_all(&dir).ok();
     }
 }
