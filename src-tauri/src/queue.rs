@@ -102,6 +102,10 @@ pub struct QueueManager {
 pub(crate) fn validate_url(url: &str) -> Result<String, String> {
     let trimmed = url.trim();
     if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        let path_part = trimmed.split(['?', '#']).next().unwrap_or(trimmed);
+        if path_part.to_ascii_lowercase().ends_with(".torrent") {
+            return Err("Torrents and magnet links arrive in a later release.".to_string());
+        }
         return Ok(trimmed.to_string());
     }
     let lower = trimmed.to_ascii_lowercase();

@@ -49,7 +49,7 @@ url = "2"
 tokio-util = "0.7"
 sha2 = "0.10"
 hex = "0.4"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 which = "8"
 open = "5"
 keepawake = "0.5"
