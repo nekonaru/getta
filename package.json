@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Getta fetches media and files from across the web into your own folders. Free, open source, no account, no terminal.",
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "license": "MIT",
   "author": "Nicolas Dwi Dharma (https://github.com/nekonaru)",
   "repository": {
@@ -30,14 +33,17 @@
     "@tauri-apps/plugin-notification": "^2.3.0"
   },
   "devDependencies": {
-    "@sveltejs/adapter-static": "^3.0.6",
-    "@sveltejs/kit": "^2.22.0",
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@sveltejs/adapter-static": "^4.0.1",
+    "@sveltejs/kit": "^3.1.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tauri-apps/cli": "^2.9.0",
-    "svelte": "^5.38.0",
-    "svelte-check": "^4.3.0",
-    "typescript": "~5.9.2",
-    "vite": "^6.3.5",
-    "vitest": "^3.2.4"
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.7.8",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   }
 }
+
+
+

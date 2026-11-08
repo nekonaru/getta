@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { open } from "@tauri-apps/plugin-dialog";
-	import { api, type EngineStatus } from "$lib/api";
-	import { settingsStore } from "$lib/stores/settings.svelte";
-	import { toastStore } from "$lib/stores/toast.svelte";
-	import { t } from "$lib/i18n";
+	import { api, type EngineStatus } from "#lib/api";
+	import { settingsStore } from "#lib/stores/settings.svelte";
+	import { toastStore } from "#lib/stores/toast.svelte";
+	import { t } from "#lib/i18n";
 
 	type Category = "output" | "transfer" | "appearance" | "engine";
 	let category = $state<Category>("output");
@@ -25,7 +25,7 @@
 		}
 	}
 
-	async function patch(p: Partial<import("$lib/api").AppSettings>) {
+	async function patch(p: Partial<import("#lib/api").AppSettings>) {
 		try {
 			await settingsStore.update(p);
 		} catch (e) {
@@ -108,7 +108,7 @@
 						{#each [{ id: "organize_by_platform", label: t("settings.organizeByPlatform"), value: settings.organize_by_platform }, { id: "always_ask_path", label: t("settings.alwaysAsk"), value: settings.always_ask_path }, { id: "skip_existing", label: t("settings.skipExisting"), value: settings.skip_existing }] as flag (flag.id)}
 							<div class="row row-switch">
 								<span class="switch-label">{flag.label}</span>
-								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("$lib/api").AppSettings>)}></button>
+								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
 							</div>
 						{/each}
 					</section>
@@ -147,7 +147,7 @@
 						{#each [{ id: "embed_metadata", label: t("settings.embedMetadata"), value: settings.embed_metadata }, { id: "embed_thumbnail", label: t("settings.embedThumbnail"), value: settings.embed_thumbnail }, { id: "write_subtitles", label: t("settings.writeSubs"), value: settings.write_subtitles }, { id: "sponsorblock", label: t("settings.sponsorblock"), value: settings.sponsorblock }, { id: "notifications", label: t("settings.notifications"), value: settings.notifications }, { id: "prevent_sleep", label: t("settings.preventSleep"), value: settings.prevent_sleep }] as flag (flag.id)}
 							<div class="row row-switch">
 								<span class="switch-label">{flag.label}</span>
-								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("$lib/api").AppSettings>)}></button>
+								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
 							</div>
 						{/each}
 						{#if settings.write_subtitles}

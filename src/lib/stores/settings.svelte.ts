@@ -1,5 +1,5 @@
-import { api, type AppSettings } from "$lib/api";
-import { setLocale } from "$lib/i18n";
+import { api, type AppSettings } from "#lib/api";
+import { setLocale } from "#lib/i18n";
 
 export type ThemeSetting = "system" | "light" | "dark";
 

@@ -2,13 +2,13 @@
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
 	import { open } from "@tauri-apps/plugin-dialog";
-	import { api, type Analysis, type EngineStatus } from "$lib/api";
-	import { downloadsStore } from "$lib/stores/downloads.svelte";
-	import { toastStore } from "$lib/stores/toast.svelte";
-	import { settingsStore } from "$lib/stores/settings.svelte";
-	import { t } from "$lib/i18n";
-	import { formatBytes, formatDuration } from "$lib/format";
-	import LogoMark from "$lib/components/LogoMark.svelte";
+	import { api, type Analysis, type EngineStatus } from "#lib/api";
+	import { downloadsStore } from "#lib/stores/downloads.svelte";
+	import { toastStore } from "#lib/stores/toast.svelte";
+	import { settingsStore } from "#lib/stores/settings.svelte";
+	import { t } from "#lib/i18n";
+	import { formatBytes, formatDuration } from "#lib/format";
+	import LogoMark from "#lib/components/LogoMark.svelte";
 
 	let url = $state("");
 	let busy = $state<"idle" | "analyzing" | "ready" | "starting" | "error">("idle");

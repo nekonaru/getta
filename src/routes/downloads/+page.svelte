@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
-	import { api, type HistoryEntry, type QueueItemInfo } from "$lib/api";
-	import { downloadsStore } from "$lib/stores/downloads.svelte";
-	import { settingsStore } from "$lib/stores/settings.svelte";
-	import { toastStore } from "$lib/stores/toast.svelte";
-	import { t } from "$lib/i18n";
-	import { formatBytes, formatEta, formatRelativeTime, formatSpeed } from "$lib/format";
+	import { api, type HistoryEntry, type QueueItemInfo } from "#lib/api";
+	import { downloadsStore } from "#lib/stores/downloads.svelte";
+	import { settingsStore } from "#lib/stores/settings.svelte";
+	import { toastStore } from "#lib/stores/toast.svelte";
+	import { t } from "#lib/i18n";
+	import { formatBytes, formatEta, formatRelativeTime, formatSpeed } from "#lib/format";
 
 	type Filter = "all" | "active" | "queued" | "done" | "failed";
 	let tab = $state<"queue" | "history">("queue");
