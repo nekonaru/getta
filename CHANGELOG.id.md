@@ -3,6 +3,29 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.3.0
+
+Redesain editorial dan kumpulan fitur besar.
+
+## Fitur baru
+
+- **Redesain editorial.** Sidebar baru bernomor, palet bone hangat dengan aksen cobalt, tipografi Fraunces, daftar unduhan bergaya manifest.
+- **Pustaka.** Unduhan selesai tampil sebagai grid; putar video, audio, dan gambar langsung di aplikasi, atau tampilkan di file manager.
+- **Command palette.** Ctrl/Cmd+K membuka launcher fuzzy: lompat ke halaman mana pun, atau jalankan aksi seperti jeda semua, lanjutkan semua, bersihkan selesai, dan unduh dari clipboard.
+- **Alat.** Meja kerja lokal: Video ke MP3, Video ke GIF, Kompres video dengan H.264, ditenagai FFmpeg yang sudah kamu punya.
+- **Pemilih daftar putar.** Playlist dianalisis dengan daftar ceklis; unduh semuanya atau hanya entri yang kamu mau, dengan format terpilih.
+- **Onboarding.** Wizard peluncuran pertama mengatur bahasa dan tema, memasang mesin unduhan, dan memilih folder tujuan.
+- **Progres real-time.** Sparkline kecepatan, ETA live, fase transfer, dan strip agregat di atas antrean.
+- **Global hotkey.** Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun.
+- **Deep link.** Tautan getta:// membuka Getta dan mengantrekan URL-nya.
+- **Autostart.** Opsi menjalankan Getta saat sistem menyala di Pengaturan.
+
+## Peningkatan
+
+- Tampilan antrean kini terbagi (Dalam perjalanan, Menunggu, Terkirim, Gagal) dengan jumlah per bagian.
+- Baris statistik di Beranda: file tersimpan dan total byte yang diambil.
+- Notifikasi toast lebih sederhana di tengah bawah.
+
 ## v0.2.0
 
 Desktop terasa seperti aplikasi native. Mobile tidak lagi direncanakan.

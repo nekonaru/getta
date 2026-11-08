@@ -3,6 +3,29 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.3.0
+
+Editorial redesign and a serious feature pass.
+
+## New features
+
+- **Editorial redesign.** New sidebar with numbered sections, warm bone-paper palette with cobalt accent, Fraunces display type, manifest-style download list.
+- **Library.** Completed downloads show up as a grid; play videos, audio and images inline, or reveal them in the file manager.
+- **Command palette.** Ctrl/Cmd+K opens a fuzzy launcher: jump to any page, or run actions like pause all, resume all, clear finished, and download from clipboard.
+- **Tools.** A local workbench: Video to MP3, Video to GIF, Compress video with H.264, powered by the FFmpeg you already have.
+- **Playlist picker.** Playlists analyze with a checkbox list; download everything or just the entries you want, at the selected format.
+- **Onboarding.** A first-run wizard sets language and theme, installs the download engine, and picks the download folder.
+- **Real-time progress.** Speed sparklines, live ETA, transfer phases and an aggregate strip over the queue.
+- **Global hotkey.** Ctrl/Cmd+Shift+D fetches from your clipboard from anywhere.
+- **Deep links.** getta:// links open Getta and queue the URL.
+- **Autostart.** Optional start with the system in Settings.
+
+## Improvements
+
+- Queue view is now sectioned (In transit, Queued, Delivered, Failed) with per-section counts.
+- Stats line on Home: files saved and total bytes fetched.
+- Fewer, calmer toasts at the bottom center.
+
 ## v0.2.0
 
 Desktop feels like a native app. Mobile is no longer planned.

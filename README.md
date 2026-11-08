@@ -55,6 +55,7 @@ Getta is an original implementation under the MIT license.
 | **Omnibox** | One input for single links, multiple pasted links and direct file URLs |
 | **Platform detection** | Recognizes YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud and more, plus generic web pages and direct files |
 | **Media preview** | Title, author, duration, thumbnail and an on-demand quality list before you download |
+| **Playlist picker** | Playlists analyze with a checkbox list; download everything or only the entries you want |
 | **Modes** | Video + audio, audio only (m4a), or video only |
 | **Batch pastes** | Many links at once: Getta queues them all |
 | **Filename template** | yt-dlp field template with live defaults, e.g. `%(title).200s [%(id)s].%(ext)s` |
@@ -66,9 +67,20 @@ Getta is an original implementation under the MIT license.
 | **Pause and resume** | Process-level pause on Windows and Linux/macOS; downloads pick up where they stopped |
 | **Retry with backoff** | Automatic retry for rate limits and transient errors with exponential backoff |
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |
-| **Speed limit** | Cap the download rate globally (MB/s), changeable from the Downloads screen |
-| **Live stats** | Speed, ETA, downloaded bytes and percent per item |
+| **Speed limit** | Cap the download rate globally (MB/s), changeable from the Queue screen |
+| **Live progress** | Speed sparkline, ETA countdown, transfer phases and an aggregate strip over the queue |
 | **History** | Finished downloads with size, actions to re-download, reveal or delete |
+
+### Your files, one place
+
+| Feature | Description |
+|---------|-------------|
+| **Library** | Grid of your completed downloads; play videos, audio and images inline, filter by type |
+| **Tools** | Local workbench: Video to MP3, Video to GIF, Compress video (H.264), powered by FFmpeg |
+| **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
+| **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
+| **Deep links** | `getta://<url>` opens Getta and queues the link |
+| **Onboarding** | First-run wizard: language, theme, engine install, download folder |
 
 ### Made to be used
 
@@ -76,6 +88,9 @@ Getta is an original implementation under the MIT license.
 |---------|-------------|
 | **Bilingual UI** | English and Bahasa Indonesia everywhere |
 | **Light, dark and system themes** | Follows the OS, switchable in Settings |
+| **Editorial design** | Warm bone-paper canvas, cobalt accent, manifest-style queue list, numbered sidebar |
+| **System tray** | Left click toggles the window; right click shows Show / Quit in your language |
+| **Autostart** | Optional start with the system in Settings |
 | **No account, no telemetry** | Getta does not collect anything about what you download |
 | **Self-updating engine** | Optional verified install of yt-dlp and FFmpeg, with SHA-256 checking |
 
@@ -209,7 +224,7 @@ Settings live in **Settings** inside the app: output folder and file name templa
 ```
 getta/
 ├── src/                    # SvelteKit frontend (Svelte 5)
-│   ├── routes/             # Home, Downloads, Settings, About
+│   ├── routes/             # Home, Queue, Library, Tools, Settings, About
 │   ├── lib/                # API bridge, stores, i18n (en/id), formatting
 │   └── app.css             # design tokens and base styles
 ├── src-tauri/              # Rust backend (Tauri 2)
@@ -325,4 +340,5 @@ No. Getta is a desktop app (Windows, macOS, Linux). There is no mobile build and
 ## License
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+
 
