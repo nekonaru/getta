@@ -23,6 +23,24 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   rust:
     strategy:
       fail-fast: false
@@ -41,6 +59,6 @@ jobs:
         with:
           workspaces: src-tauri
       - name: Check
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml
       - name: Test
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml

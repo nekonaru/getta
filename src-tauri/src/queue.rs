@@ -99,6 +99,18 @@ pub struct QueueManager {
     data_dir: PathBuf,
 }
 
+pub(crate) fn validate_url(url: &str) -> Result<String, String> {
+    let trimmed = url.trim();
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        return Ok(trimmed.to_string());
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    if trimmed.starts_with("magnet:") || lower.ends_with(".torrent") {
+        return Err("Torrents and magnet links arrive in a later release.".to_string());
+    }
+    Err("Only http(s) links are supported right now.".to_string())
+}
+
 impl QueueManager {
     pub fn new(data_dir: PathBuf) -> Self {
         Self {
@@ -112,14 +124,8 @@ impl QueueManager {
     }
 
     pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {
-        let trimmed = url.trim();
-        if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
-            if trimmed.starts_with("magnet:") || trimmed.to_ascii_lowercase().ends_with(".torrent") {
-                return Err("Torrents and magnet links arrive in a later release.".to_string());
-            }
-            return Err("Only http(s) links are supported.".to_string());
-        }
-        let platform_info = platform::detect(trimmed);
+        let trimmed = validate_url(url)?;
+        let platform_info = platform::detect(&trimmed);
         if !platform_info.supported {
             return Err(format!("{} links are not supported yet.", platform_info.display_name));
         }
@@ -898,11 +904,8 @@ fn kill_process(pid: u32) {
 /* ========== analysis (preview without downloading) ========== */
 
 pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, String> {
-    let trimmed = url.trim();
-    if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
-        return Err("Only http(s) links are supported right now.".to_string());
-    }
-    let platform_info = platform::detect(trimmed);
+    let trimmed = validate_url(url)?;
+    let platform_info = platform::detect(&trimmed);
     if !platform_info.supported {
         return Ok(Analysis {
             platform: platform_info.display_name,
@@ -1078,6 +1081,15 @@ mod tests {
         assert!(joined.contains("/tmp/out/%(extractor_key)s/"));
     }
 
+    #[test]
+    fn validate_url_accepts_http_only() {
+        assert_eq!(validate_url("https://example.com/watch?v=1").unwrap(), "https://example.com/watch?v=1");
+        assert_eq!(validate_url("  https://example.com/  ").unwrap(), "https://example.com/");
+        assert!(validate_url("ftp://example.com/file").is_err());
+        assert!(validate_url("javascript:alert(1)").is_err());
+        assert!(validate_url("magnet:?xt=urn:btih:abc").is_err());
+        assert_eq!(validate_url("https://example.com/file.torrent").unwrap_err(), "Torrents and magnet links arrive in a later release.");
+    }
     #[test]
     fn title_from_url_falls_back_to_host() {
         assert_eq!(title_from_url("https://example.com/path/to/file.mp4"), "file.mp4");

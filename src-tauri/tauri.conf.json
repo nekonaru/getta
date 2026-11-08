@@ -32,6 +32,11 @@
             "$DOWNLOAD/**",
             "$TEMP/**"
           ],
+          "deny": [
+            "**/.ssh/**",
+            "**/.aws/**",
+            "**/.git/**"
+          ],
           "requireLiteralLeadingDot": true
         }
       }
