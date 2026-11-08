@@ -1,0 +1,114 @@
+//! Persisted settings. One JSON file, written atomically, forward-compatible
+//! through serde defaults.
+
+use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
+
+use crate::storage;
+
+fn default_output_dir() -> String {
+    dirs::download_dir()
+        .or_else(|| dirs::home_dir().map(|home| home.join("Downloads")))
+        .unwrap_or_else(|| PathBuf::from("."))
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn default_filename_template() -> String {
+    "%(title).200s [%(id)s].%(ext)s".to_string()
+}
+
+fn default_quality() -> String {
+    "best".to_string()
+}
+
+fn default_sublang() -> String {
+    "en".to_string()
+}
+
+fn default_theme() -> String {
+    "system".to_string()
+}
+
+fn default_language() -> String {
+    "en".to_string()
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AppSettings {
+    pub output_dir: String,
+    pub always_ask_path: bool,
+    pub organize_by_platform: bool,
+    pub skip_existing: bool,
+    pub filename_template: String,
+    pub video_quality: String,
+    pub max_concurrent: u32,
+    pub concurrent_fragments: u32,
+    pub max_retries: u32,
+    pub speed_limit_mbps: u32,
+    pub embed_metadata: bool,
+    pub embed_thumbnail: bool,
+    pub write_subtitles: bool,
+    pub subtitle_lang: String,
+    pub sponsorblock: bool,
+    pub theme: String,
+    pub language: String,
+    pub reduce_motion: bool,
+    pub cookies_from_browser: String,
+    pub proxy: String,
+    pub notifications: bool,
+    pub prevent_sleep: bool,
+    pub ytdlp_path: Option<String>,
+    pub ffmpeg_path: Option<String>,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            output_dir: default_output_dir(),
+            always_ask_path: false,
+            organize_by_platform: false,
+            skip_existing: true,
+            filename_template: default_filename_template(),
+            video_quality: default_quality(),
+            max_concurrent: 2,
+            concurrent_fragments: 8,
+            max_retries: 3,
+            speed_limit_mbps: 0,
+            embed_metadata: true,
+            embed_thumbnail: true,
+            write_subtitles: false,
+            subtitle_lang: default_sublang(),
+            sponsorblock: false,
+            theme: default_theme(),
+            language: default_language(),
+            reduce_motion: false,
+            cookies_from_browser: String::new(),
+            proxy: String::new(),
+            notifications: true,
+            prevent_sleep: true,
+            ytdlp_path: None,
+            ffmpeg_path: None,
+        }
+    }
+}
+
+fn settings_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("settings.json")
+}
+
+pub fn load(data_dir: &Path) -> AppSettings {
+    storage::read_json_or_default(&settings_path(data_dir))
+}
+
+pub fn save(data_dir: &Path, settings: &AppSettings) -> std::io::Result<()> {
+    storage::write_json_atomic(&settings_path(data_dir), settings)
+}
+
+pub fn reset(data_dir: &Path) -> std::io::Result<AppSettings> {
+    let fresh = AppSettings::default();
+    save(data_dir, &fresh)?;
+    Ok(fresh)
+}

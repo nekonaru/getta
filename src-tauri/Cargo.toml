@@ -1,0 +1,68 @@
+[package]
+name = "getta"
+version = "0.1.0"
+description = "Getta: a free, open source app that fetches media from across the web into your own folders"
+authors = ["Nicolas Dwi Dharma"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/nekonaru/getta"
+keywords = ["download", "yt-dlp", "media", "desktop", "tauri"]
+categories = ["multimedia::video"]
+
+[lib]
+name = "getta_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-single-instance = "2"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "cookies",
+    "stream",
+    "gzip",
+    "socks",
+    "native-tls",
+] }
+futures = "0.3"
+async-trait = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+sanitize-filename = "0.5"
+unicode-normalization = "0.1"
+url = "2"
+tokio-util = "0.7"
+sha2 = "0.10"
+hex = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+which = "8"
+open = "5"
+keepawake = "0.5"
+
+[target.'cfg(not(windows))'.dependencies]
+libc = "0.2"
+
+[profile.dev]
+debug = 0
+codegen-units = 256
+
+[profile.release]
+lto = "thin"
+codegen-units = 16
+strip = true
+
