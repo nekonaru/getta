@@ -7,6 +7,7 @@
 	import "../app.css";
 
 	import { page } from "$app/state";
+	import { listen } from "@tauri-apps/api/event";
 	import Toaster from "#lib/components/Toaster.svelte";
 	import CommandPalette from "#lib/components/CommandPalette.svelte";
 	import Onboarding from "#lib/components/Onboarding.svelte";
@@ -19,7 +20,6 @@
 	import { api } from "#lib/api";
 	import { readText } from "@tauri-apps/plugin-clipboard-manager";
 	import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
-	import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 	import pkg from "../../package.json";
 
 	let { children }: { children: Snippet } = $props();
@@ -41,15 +41,15 @@
 		void downloadsStore.start();
 		void api.engineStatus().then((engine) => (engineReady = engine.ytdlp.found));
 
-		// CmdOrCtrl+Shift+D: fetch from clipboard anywhere.
-		void register("CmdOrCtrl+Shift+D", async () => {
+		// CmdOrCtrl+Shift+D is registered on the Rust side and arrives as an event.
+		const unlistenGlobalShortcut = listen("global-download-requested", async () => {
 			try {
 				const text = await readText();
 				await enqueueFromClipboardText(text ?? "");
 			} catch {
 				toastStore.push(t("home.invalidUrl"), "error");
 			}
-		}).catch((e) => console.debug("global shortcut unavailable", e));
+		});
 
 		// getta://<url> links land here from the OS.
 		void getCurrent().then((urls) => {
@@ -69,7 +69,7 @@
 		});
 
 		return () => {
-			void unregisterAll().catch(() => {});
+			void unlistenGlobalShortcut.then((fn) => fn?.()).catch(() => {});
 			void unlisten.then((fn) => fn?.()).catch(() => {});
 		};
 	});

@@ -1045,7 +1045,7 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
     }
     let settings = app
         .try_state::<AppState>()
-        .and_then(|state| state.settings.lock().ok().cloned())
+        .and_then(|state| state.settings.lock().ok().map(|guard| guard.clone()))
         .unwrap_or_default();
     let data_dir = app
         .try_state::<AppState>()

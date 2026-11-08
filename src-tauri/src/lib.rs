@@ -43,7 +43,17 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_global_shortcut::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    use tauri_plugin_global_shortcut::ShortcutState;
+                    if event.state() == ShortcutState::Pressed {
+                        use tauri::Emitter;
+                        let _ = app.emit("global-download-requested", ());
+                    }
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -66,6 +76,19 @@ pub fn run() {
                 .unwrap_or_else(|| "en".to_string());
             let (show_label, quit_label) = tray::tray_labels(&language);
             tray::setup(app, &show_label, &quit_label)?;
+
+            // Register the global fetch shortcut (CmdOrCtrl+Shift+D).
+            {
+                use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+                match "CmdOrCtrl+Shift+D".parse::<Shortcut>() {
+                    Ok(shortcut) => {
+                        if let Err(e) = app.global_shortcut().register(shortcut) {
+                            tracing::warn!("global shortcut unavailable: {e}");
+                        }
+                    }
+                    Err(e) => tracing::warn!("invalid shortcut: {e}"),
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
