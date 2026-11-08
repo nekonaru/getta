@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+		<meta name="color-scheme" content="light dark" />
+		<meta
+			name="description"
+			content="Getta fetches video, audio, courses, images and files from across the web into your own folders. Free, open source, no account, no terminal."
+		/>
+		<title>Getta</title>
+		<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f6f5" />
+		<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101e1a" />
+		<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+		<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		%sveltekit.head%
+		<script>
+			// Restore the saved theme before first paint to avoid a flash.
+			(function () {
+				try {
+					var t = localStorage.getItem("getta.theme");
+					if (t === "light" || t === "dark" || t === "system") {
+						document.documentElement.dataset.theme = t;
+					}
+				} catch (e) {
+					/* storage unavailable: keep default */
+				}
+			})();
+		</script>
+	</head>
+	<body>
+		<div id="app">%sveltekit.body%</div>
+	</body>
+</html>
