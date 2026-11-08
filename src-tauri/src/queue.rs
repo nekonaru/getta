@@ -19,6 +19,8 @@ use crate::platform;
 use crate::ytdlp;
 use crate::{AppState, history};
 
+use tauri::Manager;
+
 static ID_SEED: AtomicU64 = AtomicU64::new(0);
 
 fn next_id() -> u64 {
@@ -380,7 +382,7 @@ fn sync_prevent_sleep(app: &tauri::AppHandle) {
         })
         .unwrap_or(false);
 
-    static GUARD: std::sync::OnceLock<std::sync::Mutex<Option<keepawake::IdleGuard>>> = std::sync::OnceLock::new();
+    static GUARD: std::sync::OnceLock<std::sync::Mutex<Option<keepawake::KeepAwake>>> = std::sync::OnceLock::new();
     let slot = GUARD.get_or_init(|| std::sync::Mutex::new(None));
     let mut guard = match slot.lock() {
         Ok(g) => g,
@@ -388,7 +390,13 @@ fn sync_prevent_sleep(app: &tauri::AppHandle) {
     };
     if should {
         if guard.is_none() {
-            match keepawake::Builder::default().idle().reason("Getta is downloading").create() {
+            match keepawake::Builder::default()
+                .idle(true)
+                .reason("Getta is downloading")
+                .app_name("Getta")
+                .app_reverse_domain("com.getta.app")
+                .create()
+            {
                 Ok(created) => *guard = Some(created),
                 Err(e) => tracing::warn!("prevent_sleep unavailable: {e}"),
             }

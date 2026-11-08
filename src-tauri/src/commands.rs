@@ -3,7 +3,7 @@
 
 use std::process::Command;
 
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::history;
 use crate::models::{Analysis, DependencyInfo, EngineStatus, StartOptions};

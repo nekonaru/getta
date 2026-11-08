@@ -205,6 +205,8 @@ pub async fn install_ffmpeg(data_dir: &Path) -> Result<PathBuf, EngineError> {
         return Err(EngineError::NotFound);
     }
 
+    #[cfg(not(target_os = "linux"))]
+    {
     let bin_dir = data_dir.join("bin");
     std::fs::create_dir_all(&bin_dir).map_err(|_| EngineError::DownloadFailed)?;
 
@@ -261,6 +263,7 @@ pub async fn install_ffmpeg(data_dir: &Path) -> Result<PathBuf, EngineError> {
         return Err(EngineError::VerificationFailed);
     }
     Ok(ffmpeg)
+    }
 }
 
 pub fn version_of(path: &Path, args: &[&str]) -> Option<String> {
@@ -412,6 +415,7 @@ pub fn classify_error(message: &str) -> (&'static str, bool) {
 }
 
 /// Trivial unit test hook: exposed for tests only.
+#[cfg(test)]
 #[doc(hidden)]
 pub fn parse_sums_for_test(sums: &str, file: &str) -> Option<String> {
     parse_sums(sums, file)
