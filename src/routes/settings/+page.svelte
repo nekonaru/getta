@@ -178,7 +178,7 @@
 								<p class="hint">{t("settings.speedLimitHint")}</p>
 							</div>
 						</div>
-						{#each [{ id: "embed_metadata", label: t("settings.embedMetadata"), value: settings.embed_metadata }, { id: "embed_thumbnail", label: t("settings.embedThumbnail"), value: settings.embed_thumbnail }, { id: "write_subtitles", label: t("settings.writeSubs"), value: settings.write_subtitles }, { id: "sponsorblock", label: t("settings.sponsorblock"), value: settings.sponsorblock }, { id: "notifications", label: t("settings.notifications"), value: settings.notifications }, { id: "prevent_sleep", label: t("settings.preventSleep"), value: settings.prevent_sleep }] as flag (flag.id)}
+						{#each [{ id: "embed_metadata", label: t("settings.embedMetadata"), value: settings.embed_metadata }, { id: "embed_thumbnail", label: t("settings.embedThumbnail"), value: settings.embed_thumbnail }, { id: "write_subtitles", label: t("settings.writeSubs"), value: settings.write_subtitles }, { id: "sponsorblock", label: t("settings.sponsorblock"), value: settings.sponsorblock }, { id: "split_by_chapters", label: t("settings.splitByChapters"), value: settings.split_by_chapters }, { id: "live_from_start", label: t("settings.liveFromStart"), value: settings.live_from_start }, { id: "notifications", label: t("settings.notifications"), value: settings.notifications }, { id: "prevent_sleep", label: t("settings.preventSleep"), value: settings.prevent_sleep }] as flag (flag.id)}
 							<div class="row row-switch">
 								<span class="switch-label">{flag.label}</span>
 								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>

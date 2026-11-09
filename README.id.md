@@ -92,6 +92,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **System tray** | Klik kiri membuka/menyembunyikan window; klik kanan menu Tampilkan / Keluar dalam bahasa kamu |
 | **Autostart** | Opsi menjalankan Getta saat sistem menyala di Pengaturan |
 | **Tutup ke tray** | Opsi: tutup menyembunyikan ke tray alih-alih keluar; buka lagi lewat ikon tray |
+| **Pemulihan terputus** | Crash atau kill saat mengunduh? Saat dibuka ditawarkan lanjut dari file `.part` |
+| **Urutan antrean manual** | Pindahkan item menunggu naik/turun; scheduler menjalankannya sesuai urutanmu |
 | **Tanpa akun, tanpa telemetri** | Getta tidak mengumpulkan apa pun soal apa yang kamu unduh |
 | **Mesin yang memasang dirinya** | Pemasangan yt-dlp dan FFmpeg terverifikasi dengan pengecekan SHA-256 |
 

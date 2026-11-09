@@ -245,6 +245,8 @@
 													<button class="btn-icon" title={t("queue.resume")} aria-label={t("queue.resume")} onclick={() => api.resumeDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" /></svg></button>
 													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "queued"}
+													<button class="btn-icon" title={t("queue.moveUp")} aria-label={t("queue.moveUp")} onclick={() => api.moveItem(item.id, -1)}><svg viewBox="0 0 24 24"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg></button>
+													<button class="btn-icon" title={t("queue.moveDown")} aria-label={t("queue.moveDown")} onclick={() => api.moveItem(item.id, 1)}><svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m18 13-6 6-6-6" /></svg></button>
 													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "done"}
 													<button class="btn-icon" title={t("queue.reveal")} aria-label={t("queue.reveal")} onclick={() => reveal(item.file_path)}><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg></button>

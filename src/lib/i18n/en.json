@@ -81,6 +81,8 @@
 		"clearHistory": "Clear history",
 		"clearHistoryConfirm": "Delete the whole history?",
 		"redownload": "Download again",
+		"moveUp": "Move up",
+		"moveDown": "Move down",
 		"statusQueued": "Queued",
 		"statusActive": "Downloading",
 		"statusPaused": "Paused",
@@ -201,6 +203,8 @@
 		"writeSubs": "Download subtitles",
 		"subLang": "Subtitle language",
 		"sponsorblock": "Remove SponsorBlock segments",
+		"splitByChapters": "Split the file into separate chapters",
+		"liveFromStart": "Stream live from the beginning",
 		"theme": "Theme",
 		"themeSystem": "System",
 		"themeLight": "Light",
@@ -236,6 +240,12 @@
 		"releases": "Release notes",
 		"report": "Report an issue",
 		"support": "Support Getta"
+	},
+	"recovery": {
+		"title": "Unfinished downloads",
+		"body": "Getta closed with unfinished downloads. Resume them now?",
+		"restore": "Resume",
+		"dismiss": "Dismiss"
 	},
 	"common": {
 		"ok": "OK",

@@ -8,6 +8,7 @@ mod history;
 mod models;
 mod platform;
 mod queue;
+mod recovery;
 mod settings;
 mod storage;
 mod tray;
@@ -130,6 +131,10 @@ pub fn run() {
             commands::pause_all,
             commands::resume_all,
             commands::queue_snapshot,
+            commands::move_item,
+            commands::get_recovery_items,
+            commands::restore_recovery,
+            commands::dismiss_recovery,
             commands::history_list,
             commands::history_clear,
             commands::settings_get,

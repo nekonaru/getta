@@ -81,6 +81,8 @@
 		"clearHistory": "Hapus riwayat",
 		"clearHistoryConfirm": "Hapus seluruh riwayat?",
 		"redownload": "Unduh lagi",
+		"moveUp": "Naikkan",
+		"moveDown": "Turunkan",
 		"statusQueued": "Menunggu",
 		"statusActive": "Mengunduh",
 		"statusPaused": "Dijeda",
@@ -201,6 +203,8 @@
 		"writeSubs": "Unduh subtitle",
 		"subLang": "Bahasa subtitle",
 		"sponsorblock": "Hapus segmen SponsorBlock",
+		"splitByChapters": "Pisahkan file menjadi bab-bab terpisah",
+		"liveFromStart": "Putar live dari awal",
 		"theme": "Tema",
 		"themeSystem": "Sistem",
 		"themeLight": "Terang",
@@ -236,6 +240,12 @@
 		"releases": "Catatan rilis",
 		"report": "Laporkan masalah",
 		"support": "Dukung Getta"
+	},
+	"recovery": {
+		"title": "Unduhan belum selesai",
+		"body": "Getta ditutup dengan unduhan belum selesai. Lanjutkan sekarang?",
+		"restore": "Lanjutkan",
+		"dismiss": "Tutup"
 	},
 	"common": {
 		"ok": "OK",

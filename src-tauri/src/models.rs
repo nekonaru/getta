@@ -116,6 +116,18 @@ pub struct QueueItemInfo {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RecoveryEntry {
+    pub id: u64,
+    pub url: String,
+    pub title: String,
+    pub download_mode: String,
+    pub quality: String,
+    pub format_id: Option<String>,
+    pub playlist_items: Option<String>,
+    pub output_dir: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HistoryEntry {
     pub id: String,
     pub url: String,

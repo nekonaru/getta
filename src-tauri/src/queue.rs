@@ -14,8 +14,9 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-use crate::models::{Analysis, DownloadMode, QueueItemInfo, QueueStatus};
+use crate::models::{Analysis, DownloadMode, QueueItemInfo, QueueStatus, RecoveryEntry};
 use crate::platform;
+use crate::recovery;
 use crate::ytdlp;
 use crate::{AppState, history};
 
@@ -168,10 +169,23 @@ impl QueueManager {
                 .filter(|s| !s.trim().is_empty())
                 .filter(|s| s.chars().all(|c| c.is_ascii_digit() || matches!(c, ',' | '-' | ' '))),
         };
+        let item_title = item.title.clone();
         let id = item.id;
         {
             self.inner.lock().expect("queue mutex").items.push(item);
         }
+        // Remember it: if the process dies mid-download, launch can offer it back.
+        let recovery_entry = RecoveryEntry {
+            id,
+            url: trimmed.to_string(),
+            title: item_title,
+            download_mode: options.download_mode.clone(),
+            quality: options.quality.clone(),
+            format_id: options.format_id.clone(),
+            playlist_items: options.playlist_items.clone(),
+            output_dir: options.output_dir.clone(),
+        };
+        let _ = recovery::push(&self.data_dir, recovery_entry);
         emit_queue(app);
         self.try_start_next(app);
         Ok(id)
@@ -194,7 +208,7 @@ impl QueueManager {
                 .filter(|i| i.status == QueueStatus::Queued)
                 .map(|i| i.id)
                 .collect();
-            queued.sort_unstable();
+            // Keep the user's manual order (drag / move up/down): spawn in Vec order.
             for id in queued.into_iter().take(free as usize) {
                 if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                     item.status = QueueStatus::Active;
@@ -300,6 +314,7 @@ impl QueueManager {
         if let Some(pid) = pid {
             kill_process(pid);
         }
+        let _ = recovery::remove(&self.data_dir, id);
         emit_queue(app);
         self.try_start_next(app);
         sync_prevent_sleep(app);
@@ -345,9 +360,42 @@ impl QueueManager {
         if let Some(path) = file_path {
             let _ = std::fs::remove_file(&path);
         }
+        let _ = recovery::remove(&self.data_dir, id);
         emit_queue(app);
         self.try_start_next(app);
         sync_prevent_sleep(app);
+    }
+
+    pub fn move_item(&self, app: &tauri::AppHandle, id: u64, delta: i32) -> Result<(), String> {
+        {
+            let mut inner = self.inner.lock().expect("queue mutex");
+            let len = inner.items.len();
+            let index = inner.items.iter().position(|i| i.id == id).ok_or("item not found")?;
+            if inner.items[index].status != QueueStatus::Queued {
+                return Err("Only queued items can be reordered".to_string());
+            }
+            if delta < 0 {
+                let mut i = index;
+                while i > 0 {
+                    i -= 1;
+                    if inner.items[i].status == QueueStatus::Queued {
+                        inner.items.swap(i, index);
+                        break;
+                    }
+                }
+            } else {
+                let mut i = index;
+                while i + 1 < len {
+                    i += 1;
+                    if inner.items[i].status == QueueStatus::Queued {
+                        inner.items.swap(i, index);
+                        break;
+                    }
+                }
+            }
+        }
+        emit_queue(app);
+        Ok(())
     }
 
     pub fn clear_finished(&self, app: &tauri::AppHandle) {
@@ -565,6 +613,12 @@ fn build_args(
     if settings.sponsorblock {
         args.push("--sponsorblock-remove".to_string());
         args.push("sponsor,selfpromo,interaction".to_string());
+    }
+    if settings.split_by_chapters {
+        args.push("--split-chapters".to_string());
+    }
+    if settings.live_from_start {
+        args.push("--live-from-start".to_string());
     }
     if settings.speed_limit_mbps > 0 {
         args.push("--limit-rate".to_string());
@@ -792,6 +846,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                         download_mode: Some(mode),
                     },
                 );
+                let _ = recovery::remove(&state.data_dir, id);
             }
             emit_queue(&app);
             if let Some(state) = app.try_state::<AppState>() {
@@ -896,6 +951,7 @@ fn finalize_error(app: &tauri::AppHandle, id: u64, message: &str, retryable: boo
                 download_mode: Some(mode),
             },
         );
+        let _ = recovery::remove(&state.data_dir, id);
     }
     emit_queue(app);
     if let Some(state) = app.try_state::<AppState>() {

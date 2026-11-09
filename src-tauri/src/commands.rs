@@ -91,6 +91,42 @@ pub async fn resume_all(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn move_item(state: State<'_, AppState>, app: AppHandle, id: u64, delta: i32) -> Result<(), String> {
+    state.queue.move_item(&app, id, delta)
+}
+
+#[tauri::command]
+pub async fn get_recovery_items(state: State<'_, AppState>) -> Result<Vec<crate::models::RecoveryEntry>, String> {
+    Ok(crate::recovery::list(&state.data_dir))
+}
+
+#[tauri::command]
+pub async fn restore_recovery(app: AppHandle, state: State<'_, AppState>) -> Result<u64, String> {
+    let entries = crate::recovery::list(&state.data_dir);
+    let mut restored = 0u64;
+    for entry in entries {
+        let options = StartOptions {
+            url: entry.url,
+            download_mode: entry.download_mode,
+            quality: entry.quality,
+            format_id: entry.format_id,
+            playlist_items: entry.playlist_items,
+            output_dir: entry.output_dir,
+        };
+        if state.queue.start(&app, &options.url, &options).is_ok() {
+            restored += 1;
+        }
+    }
+    crate::recovery::clear(&state.data_dir).map_err(|e| e.to_string())?;
+    Ok(restored)
+}
+
+#[tauri::command]
+pub async fn dismiss_recovery(state: State<'_, AppState>) -> Result<(), String> {
+    crate::recovery::clear(&state.data_dir).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn queue_snapshot(state: State<'_, AppState>) -> Result<Vec<crate::models::QueueItemInfo>, String> {
     Ok(state.queue.snapshot())
 }

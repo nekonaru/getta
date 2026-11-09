@@ -3,6 +3,17 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.5.0
+
+Interrupted downloads come back, and the queue can be re-arranged.
+
+## New features
+
+- **Interruption recovery.** If Getta is closed or the app dies mid-download, launch shows a dialog to resume the unfinished downloads from their `.part` files.
+- **Manual queue order.** Queued items have move up and move down buttons in the manifest; the scheduler spawns them in your order.
+- **Split by chapters.** Optional: downloads chapters as separate files (yt-dlp).
+- **Live from start.** Optional: stream live events from the beginning (yt-dlp).
+
 ## v0.4.1
 
 Native polish and a calmer, faster experience.

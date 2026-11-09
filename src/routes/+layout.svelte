@@ -13,6 +13,7 @@
 	import Toaster from "#lib/components/Toaster.svelte";
 	import CommandPalette from "#lib/components/CommandPalette.svelte";
 	import Onboarding from "#lib/components/Onboarding.svelte";
+	import RecoveryDialog from "#lib/components/RecoveryDialog.svelte";
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
@@ -145,4 +146,5 @@
 
 <CommandPalette />
 <Onboarding />
+<RecoveryDialog />
 <Toaster />

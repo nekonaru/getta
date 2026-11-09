@@ -70,6 +70,17 @@ export interface HistoryEntry {
 	download_mode: DownloadMode | null;
 }
 
+export interface RecoveryEntry {
+	id: number;
+	url: string;
+	title: string;
+	download_mode: string;
+	quality: string;
+	format_id: string | null;
+	playlist_items: string | null;
+	output_dir: string | null;
+}
+
 export interface AppSettings {
 	output_dir: string;
 	always_ask_path: boolean;
@@ -86,6 +97,8 @@ export interface AppSettings {
 	write_subtitles: boolean;
 	subtitle_lang: string;
 	sponsorblock: boolean;
+	split_by_chapters: boolean;
+	live_from_start: boolean;
 	theme: "system" | "light" | "dark";
 	language: "en" | "id";
 	reduce_motion: boolean;
@@ -181,6 +194,10 @@ export const api = {
 	pauseAll: () => call(() => invoke<void>("pause_all")),
 	resumeAll: () => call(() => invoke<void>("resume_all")),
 	queueSnapshot: () => call(() => invoke<QueueItemInfo[]>("queue_snapshot")),
+	moveItem: (id: number, delta: number) => call(() => invoke<void>("move_item", { id, delta })),
+	getRecoveryItems: () => call(() => invoke<RecoveryEntry[]>("get_recovery_items")),
+	restoreRecovery: () => call(() => invoke<number>("restore_recovery")),
+	dismissRecovery: () => call(() => invoke<void>("dismiss_recovery")),
 	historyList: () => call(() => invoke<HistoryEntry[]>("history_list")),
 	historyClear: () => call(() => invoke<void>("history_clear")),
 	settingsGet: () => call(() => invoke<AppSettings>("settings_get")),

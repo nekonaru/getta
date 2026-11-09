@@ -3,6 +3,17 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.5.0
+
+Unduhan yang terputus kembali, dan antrean bisa diatur ulang.
+
+## Fitur baru
+
+- **Pemulihan terputus.** Jika Getta ditutup atau aplikasi mati di tengah unduhan, saat dibuka tampil dialog untuk melanjutkan unduhan yang belum selesai dari file `.part`.
+- **Urutan antrean manual.** Item menunggu punya tombol naik dan turun di manifest; scheduler menjalankannya sesuai urutanmu.
+- **Pisahkan per bab.** Opsional: unduh bab-bab sebagai file terpisah (yt-dlp).
+- **Live dari awal.** Opsional: putar live streaming dari awal (yt-dlp).
+
 ## v0.4.1
 
 Polish native dan pengalaman yang lebih tenang dan cepat.
