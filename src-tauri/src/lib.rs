@@ -10,6 +10,7 @@ mod platform;
 mod queue;
 mod settings;
 mod storage;
+mod tray;
 mod ytdlp;
 
 use std::path::PathBuf;
@@ -33,15 +34,55 @@ pub fn run() {
         .init();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
+            }
+            // A second instance carrying a link forwards it into the running app.
+            if let Some(url) = argv.iter().find(|arg| {
+                arg.starts_with("http://")
+                    || arg.starts_with("https://")
+                    || arg.starts_with("magnet:")
+                    || arg.starts_with("p2p:")
+                    || arg.starts_with("getta://")
+            }) {
+                use tauri::Emitter;
+                let _ = app.emit("deep-link-request", url.clone());
             }
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    use tauri_plugin_global_shortcut::ShortcutState;
+                    if event.state() == ShortcutState::Pressed {
+                        use tauri::Emitter;
+                        let _ = app.emit("global-download-requested", ());
+                    }
+                })
+                .build(),
+        )
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![])))
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .on_window_event(|window, event| {
+            // Optional behavior: hide to tray instead of quitting on X.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let close_to_tray = window
+                    .app_handle()
+                    .try_state::<AppState>()
+                    .and_then(|state| state.settings.lock().ok().map(|s| s.close_to_tray))
+                    .unwrap_or(false);
+                if close_to_tray {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
+            }
+        })
         .setup(|app| {
             let data_dir = storage::data_dir();
             std::fs::create_dir_all(&data_dir).ok();
@@ -53,13 +94,32 @@ pub fn run() {
                 queue: queue::QueueManager::new(data_dir),
             });
             if let Some(window) = app.get_webview_window("main") {
-                let title = format!("Getta");
-                let _ = window.set_title(&title);
+                let _ = window.set_title("Getta");
+            }
+            let language = app
+                .try_state::<AppState>()
+                .and_then(|state| state.settings.lock().ok().map(|s| s.language.clone()))
+                .unwrap_or_else(|| "en".to_string());
+            let (show_label, quit_label) = tray::tray_labels(&language);
+            tray::setup(app, &show_label, &quit_label)?;
+
+            // Register the global fetch shortcut (CmdOrCtrl+Shift+D).
+            {
+                use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+                match "CmdOrCtrl+Shift+D".parse::<Shortcut>() {
+                    Ok(shortcut) => {
+                        if let Err(e) = app.global_shortcut().register(shortcut) {
+                            tracing::warn!("global shortcut unavailable: {e}");
+                        }
+                    }
+                    Err(e) => tracing::warn!("invalid shortcut: {e}"),
+                }
             }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::analyze_url,
+            commands::run_tool,
             commands::start_download,
             commands::pause_download,
             commands::resume_download,
