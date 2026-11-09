@@ -18,10 +18,14 @@ pub fn setup(app: &tauri::App, show_label: &str, quit_label: &str) -> tauri::Res
     let quit = MenuItemBuilder::with_id("quit", quit_label).build(app)?;
     let menu = MenuBuilder::new(app).item(&show).item(&quit).build()?;
 
-    let icon = app
-        .default_window_icon()
-        .cloned()
-        .unwrap_or_else(|| tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png")).expect("embedded tray icon"));
+    let icon = match app.default_window_icon().cloned() {
+        Some(icon) => icon,
+        None => {
+            // Nothing to show: keep the app usable without a tray instead of panicking.
+            tracing::warn!("no default window icon; skipping tray icon");
+            return Ok(());
+        }
+    };
     let tray = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
         .tooltip("Getta")
