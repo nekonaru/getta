@@ -1,6 +1,6 @@
 {
   "name": "getta",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "Getta fetches media and files from across the web into your own folders. Free, open source, no account, no terminal.",
   "type": "module",
   "imports": {
@@ -33,7 +33,8 @@
     "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
     "@tauri-apps/plugin-deep-link": "^2.6.3",
     "@tauri-apps/plugin-dialog": "^2.4.0",
-    "@tauri-apps/plugin-notification": "^2.3.0"
+    "@tauri-apps/plugin-notification": "^2.3.0",
+    "@tauri-apps/plugin-opener": "^2.7.2"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^4.0.1",
@@ -47,7 +48,4 @@
     "vitest": "^5.1.0"
   }
 }
-
-
-
 

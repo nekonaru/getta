@@ -5,7 +5,22 @@
 		"library": "Library",
 		"tools": "Tools",
 		"settings": "Settings",
+		"support": "Support",
 		"about": "About"
+	},
+	"support": {
+		"kicker": "Keep it flying",
+		"title": "Support Getta",
+		"intro": "Getta is free, open source, and never shows ads. If it saves you time, a tip keeps it alive and moving forward.",
+		"github": "GitHub Sponsors",
+		"githubDesc": "Monthly or one-time sponsorship through GitHub.",
+		"saweria": "Saweria",
+		"saweriaDesc": "One-time or recurring support, popular in Indonesia.",
+		"sociabuzz": "SociaBuzz",
+		"sociabuzzDesc": "Donate through SociaBuzz, popular in Indonesia.",
+		"bagibagi": "BagiBagi",
+		"bagibagiDesc": "Quick tip via BagiBagi, popular in Indonesia.",
+		"open": "Open"
 	},
 	"home": {
 		"kicker": "Link in. File out.",
@@ -218,7 +233,8 @@
 		"license": "Distributed under the MIT License.",
 		"source": "Source code",
 		"releases": "Release notes",
-		"report": "Report an issue"
+		"report": "Report an issue",
+		"support": "Support Getta"
 	},
 	"common": {
 		"ok": "OK",

@@ -3,6 +3,22 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.4.0
+
+Halaman dukung tersedia dengan semua cara mendukung Getta, dan hyperlink eksternal kembali berfungsi.
+
+## Fitur baru
+
+- **Dukung Getta.** Halaman dukung baru dengan GitHub Sponsors, Saweria, SociaBuzz, dan BagiBagi. Buka dari sidebar, halaman Dukung, atau Tentang.
+
+## Perbaikan bug
+
+- **Hyperlink eksternal mati.** Tautan yang membuka browser sistem sekarang berfungsi di mana pun (Tentang, sidebar): GitHub, rilis, issues, dan tautan sponsor.
+
+## Peningkatan
+
+- **Thumbnail pustaka.** Kartu sekarang memudar dengan lembut di atas placeholder shimmer alih-alih muncul tiba-tiba.
+
 ## v0.3.3
 
 Login situs kembali berfungsi, progres sekarang terlihat hidup, dan kasus-kasus edge dari lapangan diperbaiki.

@@ -330,6 +330,17 @@ No. Getta is a desktop app (Windows, macOS, Linux). There is no mobile build and
 
 ---
 
+## Support
+
+Getta is free and open source, with no ads and no account. If it saves you time, you can support its development:
+
+- [GitHub Sponsors](https://github.com/sponsors/nekonaru)
+- [Saweria](https://saweria.co/nekonaruu)
+- [SociaBuzz](https://sociabuzz.com/nekonaru/donate)
+- [BagiBagi](https://bagibagi.co/Nekonaru)
+
+---
+
 ## Author
 
 <div align="center">

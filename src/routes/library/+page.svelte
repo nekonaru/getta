@@ -111,9 +111,9 @@
 					{@const kind = kindOf(entry.file_path)}
 					<li>
 						<button class="media-card" onclick={() => openEntry(entry)}>
-							<span class="media-thumb" aria-hidden="true">
+							<span class="media-thumb {entry.thumbnail_url ? 'skeleton' : ''}" aria-hidden="true">
 								{#if entry.thumbnail_url}
-									<img src={entry.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" />
+									<img src={entry.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" onload={(e) => (e.currentTarget as HTMLImageElement).classList.add('loaded')} onerror={(e) => (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'} />
 								{:else}
 									<span class="media-letter">{(entry.platform || "?").slice(0, 1).toUpperCase()}</span>
 								{/if}
@@ -230,6 +230,12 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		opacity: 0;
+		transition: opacity 0.35s ease;
+	}
+
+	:global(.media-thumb img.loaded) {
+		opacity: 1;
 	}
 
 	.media-letter {

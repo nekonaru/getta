@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { t } from "#lib/i18n.svelte";
+	import { openExternal } from "#lib/external";
 	import pkg from "../../../package.json";
 
 	const version = pkg.version;
@@ -25,9 +26,10 @@
 			</dl>
 
 			<nav class="about-links">
-				<a href="https://github.com/nekonaru/getta" target="_blank" rel="noreferrer">{t("about.source")}</a>
-				<a href="https://github.com/nekonaru/getta/releases" target="_blank" rel="noreferrer">{t("about.releases")}</a>
-				<a href="https://github.com/nekonaru/getta/issues/new" target="_blank" rel="noreferrer">{t("about.report")}</a>
+				<button class="text-link" onclick={() => openExternal("https://github.com/nekonaru/getta")}>{t("about.source")}</button>
+				<button class="text-link" onclick={() => openExternal("https://github.com/nekonaru/getta/releases")}>{t("about.releases")}</button>
+				<button class="text-link" onclick={() => openExternal("https://github.com/nekonaru/getta/issues/new")}>{t("about.report")}</button>
+				<a class="text-link" href="/support">{t("about.support")}</a>
 			</nav>
 			<p class="muted license-line">{t("about.license")}</p>
 		</div>
@@ -109,14 +111,19 @@
 		flex-wrap: wrap;
 	}
 
-	.about-links a {
+	.about-links .text-link {
 		color: var(--accent);
 		font-weight: 600;
 		font-size: 13.5px;
 		text-decoration: none;
+		background: transparent;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		font-family: var(--font-body);
 	}
 
-	.about-links a:hover {
+	.about-links .text-link:hover {
 		text-decoration: underline;
 	}
 

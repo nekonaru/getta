@@ -9,6 +9,7 @@
 	import { listen } from "@tauri-apps/api/event";
 
 	import { page } from "$app/state";
+	import { openExternal } from "#lib/external";
 	import Toaster from "#lib/components/Toaster.svelte";
 	import CommandPalette from "#lib/components/CommandPalette.svelte";
 	import Onboarding from "#lib/components/Onboarding.svelte";
@@ -119,8 +120,9 @@
 				<span>{engineReady === false ? t("home.engineMissing") : "engine ready"}</span>
 			</a>
 			<div class="sidebar-links">
-				<a href="https://github.com/nekonaru/getta" target="_blank" rel="noreferrer">GitHub</a>
-				<a href="/about">v{pkg.version}</a>
+				<button class="sidebar-link" onclick={() => openExternal("https://github.com/nekonaru/getta")}>GitHub</button>
+				<a class="sidebar-link" href="/support">{t("nav.support")}</a>
+				<a class="sidebar-link" href="/about">v{pkg.version}</a>
 			</div>
 		</div>
 	</aside>

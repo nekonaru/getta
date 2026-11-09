@@ -364,18 +364,23 @@ button {
 	display: flex;
 	gap: 12px;
 	padding: 0 8px;
+	align-items: center;
 }
 
-.sidebar-links a {
+.sidebar-link {
 	font-family: var(--font-mono);
 	font-size: 10px;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: var(--muted);
 	text-decoration: none;
+	background: transparent;
+	border: none;
+	padding: 0;
+	cursor: pointer;
 }
 
-.sidebar-links a:hover {
+.sidebar-link:hover {
 	color: var(--text);
 }
 

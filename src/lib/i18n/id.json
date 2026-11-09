@@ -5,7 +5,22 @@
 		"library": "Pustaka",
 		"tools": "Alat",
 		"settings": "Pengaturan",
+		"support": "Dukung",
 		"about": "Tentang"
+	},
+	"support": {
+		"kicker": "Biar terus terbang",
+		"title": "Dukung Getta",
+		"intro": "Getta gratis, open source, dan tanpa iklan. Kalau ini mempercepat kerjamu, tip sekecil apa pun sangat berarti.",
+		"github": "GitHub Sponsors",
+		"githubDesc": "Dukungan bulanan atau sekali lewat GitHub.",
+		"saweria": "Saweria",
+		"saweriaDesc": "Dukungan sekali atau rutin, populer di Indonesia.",
+		"sociabuzz": "SociaBuzz",
+		"sociabuzzDesc": "Donasi lewat SociaBuzz, populer di Indonesia.",
+		"bagibagi": "BagiBagi",
+		"bagibagiDesc": "Tip cepat lewat BagiBagi, populer di Indonesia.",
+		"open": "Buka"
 	},
 	"home": {
 		"kicker": "Link masuk. File keluar.",
@@ -218,7 +233,8 @@
 		"license": "Didistribusikan di bawah MIT License.",
 		"source": "Kode sumber",
 		"releases": "Catatan rilis",
-		"report": "Laporkan masalah"
+		"report": "Laporkan masalah",
+		"support": "Dukung Getta"
 	},
 	"common": {
 		"ok": "OK",

@@ -3,6 +3,22 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.4.0
+
+A support page with every way to back Getta, and external links that work again.
+
+## New features
+
+- **Support Getta.** New Support page with GitHub Sponsors, Saweria, SociaBuzz and BagiBagi. Open them from the sidebar, the Support page, or About.
+
+## Bug fixes
+
+- **Dead external links.** Links that open the system browser now work everywhere (About, sidebar): GitHub, releases, issues and the sponsor links.
+
+## Improvements
+
+- **Library thumbnails.** Cards now fade in smoothly over a shimmer placeholder instead of flashing in.
+
 ## v0.3.3
 
 Site logins work again, progress is visibly live, and edge cases from the field are fixed.

@@ -330,6 +330,17 @@ Tidak. Getta adalah aplikasi desktop (Windows, macOS, Linux). Belum ada build mo
 
 ---
 
+## Dukungan
+
+Getta gratis dan open source, tanpa iklan dan tanpa akun. Kalau ini mempercepat kerjamu, kamu bisa mendukung pengembangannya:
+
+- [GitHub Sponsors](https://github.com/sponsors/nekonaru)
+- [Saweria](https://saweria.co/nekonaruu)
+- [SociaBuzz](https://sociabuzz.com/nekonaru/donate)
+- [BagiBagi](https://bagibagi.co/Nekonaru)
+
+---
+
 ## Penulis
 
 <div align="center">

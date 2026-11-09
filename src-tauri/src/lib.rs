@@ -66,6 +66,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {

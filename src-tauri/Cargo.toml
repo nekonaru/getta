@@ -1,6 +1,6 @@
 [package]
 name = "getta"
-version = "0.3.3"
+version = "0.4.0"
 description = "Getta: a free, open source app that fetches media from across the web into your own folders"
 authors = ["Nicolas Dwi Dharma"]
 edition = "2021"
@@ -26,6 +26,7 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-clipboard-manager = "2"
+tauri-plugin-opener = "2"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", default-features = false, features = [
     "json",
@@ -69,6 +70,8 @@ codegen-units = 256
 lto = "thin"
 codegen-units = 16
 strip = true
+
+
 
 
 
