@@ -601,6 +601,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
         .env_remove("PYTHONHOME")
         .env_remove("PYTHONPATH")
         .kill_on_drop(true);
+    ytdlp::hide_console_tokio(&mut command);
 
     let mut child = match command.spawn() {
         Ok(child) => child,
@@ -1026,12 +1027,13 @@ fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
 }
 
 async fn probe_duration_secs(app_ffprobe: &std::path::Path, input: &std::path::Path) -> Option<f64> {
-    let output = std::process::Command::new(app_ffprobe)
+    let mut command = std::process::Command::new(app_ffprobe);
+    command
         .args(["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"])
         .arg(input)
-        .stdin(Stdio::null())
-        .output()
-        .ok()?;
+        .stdin(Stdio::null());
+    ytdlp::hide_console_std(&mut command);
+    let output = command.output().ok()?;
     String::from_utf8_lossy(&output.stdout).trim().parse::<f64>().ok().filter(|d| *d > 0.0)
 }
 
@@ -1075,12 +1077,15 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
     args.push("-progress".to_string());
     args.push("pipe:1".to_string());
 
-    let mut child = tokio::process::Command::new(&ffmpeg)
+    let mut ffmpeg_command = tokio::process::Command::new(&ffmpeg);
+    ffmpeg_command
         .args(&args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(true)
+        .kill_on_drop(true);
+    ytdlp::hide_console_tokio(&mut ffmpeg_command);
+    let mut child = ffmpeg_command
         .spawn()
         .map_err(|e| format!("Could not start FFmpeg: {e}"))?;
 
@@ -1206,6 +1211,7 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
         .env_remove("PYTHONHOME")
         .env_remove("PYTHONPATH")
         .kill_on_drop(true);
+    ytdlp::hide_console_tokio(&mut command);
 
     let output = tokio::time::timeout(Duration::from_secs(45), command.output())
         .await

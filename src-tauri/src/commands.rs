@@ -236,9 +236,10 @@ pub async fn reveal_in_folder(path: String) -> Result<(), String> {
     }
     if cfg!(target_os = "windows") {
         // explorer /select highlights the file; fall back to opening the parent.
-        let status = Command::new("explorer")
-            .arg("/select,")
-            .arg(&target)
+        let mut explorer = Command::new("explorer");
+        explorer.arg("/select,").arg(&target);
+        ytdlp::hide_console_std(&mut explorer);
+        let status = explorer
             .status()
             .map_err(|e| format!("Could not open the folder: {e}"))?;
         if status.success() {

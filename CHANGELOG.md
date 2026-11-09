@@ -3,6 +3,14 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.3.2
+
+No more stray console windows while Getta runs.
+
+## Bug fixes
+
+- **Console flash.** Every engine check spawned a console process on Windows, so a terminal window flashed on startup, on every Settings or engine check, and when switching pages. All child processes now spawn without a console window.
+
 ## v0.3.1
 
 No more console window behind the app.

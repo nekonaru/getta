@@ -3,6 +3,14 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.3.2
+
+Tidak ada lagi jendela console liar saat Getta berjalan.
+
+## Perbaikan bug
+
+- **Console flash.** Setiap pengecekan mesin memanggil proses console di Windows, sehingga terminal jendela muncul sekejap saat aplikasi dibuka, setiap buka Settings atau cek mesin, dan saat pindah halaman. Semua proses anak sekarang dibuat tanpa jendela console.
+
 ## v0.3.1
 
 Tidak ada lagi terminal di belakang aplikasi.
