@@ -358,6 +358,12 @@ button {
 .engine-ready .engine-dot {
 	background: var(--good);
 	box-shadow: 0 0 0 3px var(--good-soft);
+	animation: dot-pulse 1.6s ease-in-out infinite;
+}
+
+.engine-checking .engine-dot {
+	background: var(--warn);
+	animation: dot-pulse 1.2s ease-in-out infinite;
 }
 
 .sidebar-links {

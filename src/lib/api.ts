@@ -91,6 +91,7 @@ export interface AppSettings {
 	reduce_motion: boolean;
 	autostart: boolean;
 	onboarding_completed: boolean;
+	close_to_tray: boolean;
 	cookies_from_browser: string;
 	cookie_file: string;
 	proxy: string;

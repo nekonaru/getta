@@ -3,6 +3,20 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.4.1
+
+Native polish and a calmer, faster experience.
+
+## New features
+
+- **Close to tray.** Optional: the close button hides Getta to the system tray instead of quitting; restore it anytime from the tray icon.
+
+## Improvements
+
+- **Engine status chip.** The sidebar chip now shows a checking state until the engine check completes, instead of a misleading steady "engine ready".
+- **Window backdrop.** The native window backdrop is the warm paper tone instead of a leftover dark green.
+- **Tidier strings.** Unused placeholders removed from the locale files.
+
 ## v0.4.0
 
 A support page with every way to back Getta, and external links that work again.

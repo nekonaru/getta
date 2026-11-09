@@ -226,6 +226,10 @@
 							<button class="switch" role="switch" aria-checked={autostartEnabled} aria-label={t("settings.autostart")} onclick={toggleAutostart}></button>
 						</div>
 						<div class="row row-switch">
+							<span class="switch-label">{t("settings.closeToTray")}</span>
+							<button class="switch" role="switch" aria-checked={settings.close_to_tray} aria-label={t("settings.closeToTray")} onclick={() => patch({ close_to_tray: !settings.close_to_tray })}></button>
+						</div>
+						<div class="row row-switch">
 							<span class="switch-label">{t("settings.reduceMotion")}</span>
 							<button class="switch" role="switch" aria-checked={settings.reduce_motion} aria-label={t("settings.reduceMotion")} onclick={() => patch({ reduce_motion: !settings.reduce_motion })}></button>
 						</div>

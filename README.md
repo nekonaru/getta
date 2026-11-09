@@ -91,6 +91,7 @@ Getta is an original implementation under the MIT license.
 | **Editorial design** | Warm bone-paper canvas, cobalt accent, manifest-style queue list, numbered sidebar |
 | **System tray** | Left click toggles the window; right click shows Show / Quit in your language |
 | **Autostart** | Optional start with the system in Settings |
+| **Close to tray** | Optional: close hides to tray instead of quitting; bring it back via the tray icon |
 | **No account, no telemetry** | Getta does not collect anything about what you download |
 | **Self-updating engine** | Optional verified install of yt-dlp and FFmpeg, with SHA-256 checking |
 

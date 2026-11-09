@@ -115,9 +115,9 @@
 		</nav>
 
 		<div class="sidebar-foot">
-			<a class="engine-chip" class:engine-ready={engineReady === true} href="/settings" style="text-decoration:none">
+			<a class="engine-chip" class:engine-ready={engineReady === true} class:engine-checking={engineReady === null} href="/settings" style="text-decoration:none">
 				<span class="engine-dot"></span>
-				<span>{engineReady === false ? t("home.engineMissing") : "engine ready"}</span>
+				<span>{engineReady === null ? t("home.engineChecking") : engineReady ? "engine ready" : t("home.engineMissing")}</span>
 			</a>
 			<div class="sidebar-links">
 				<button class="sidebar-link" onclick={() => openExternal("https://github.com/nekonaru/getta")}>GitHub</button>

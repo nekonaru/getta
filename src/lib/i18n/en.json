@@ -32,6 +32,7 @@
 		"fetching": "Reading…",
 		"hint": "YouTube, Instagram, TikTok, X, Reddit and 1,800+ sites. Free, no account.",
 		"engineMissing": "The download engine is not installed yet.",
+		"engineChecking": "Checking engine…",
 		"engineMissingCta": "Install now",
 		"recent": "Cargo manifest",
 		"openQueue": "Open queue",
@@ -94,8 +95,7 @@
 		"reveal": "Reveal in folder",
 		"remove": "Remove from queue",
 		"removeFile": "Remove and delete file",
-		"confirmRemoveFile": "Delete \"{title}\" from disk? This cannot be undone.",
-		"bytesOf": "{done} of {total}"
+		"confirmRemoveFile": "Delete \"{title}\" from disk? This cannot be undone."
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -208,6 +208,7 @@
 		"language": "Language",
 		"reduceMotion": "Reduce motion",
 		"autostart": "Start Getta with the system",
+		"closeToTray": "Close to tray instead of quitting",
 		"ytdlp": "yt-dlp",
 		"ffmpeg": "FFmpeg",
 		"installed": "Installed",

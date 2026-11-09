@@ -3,6 +3,20 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.4.1
+
+Polish native dan pengalaman yang lebih tenang dan cepat.
+
+## Fitur baru
+
+- **Tutup ke tray.** Opsi: tombol tutup menyembunyikan Getta ke tray alih-alih keluar; kembalikan kapan saja lewat ikon tray.
+
+## Peningkatan
+
+- **Chip status mesin.** Chip sidebar kini menampilkan status "memeriksa" sampai pengecekan mesin selesai, bukan "engine ready" yang menyesatkan.
+- **Latar jendela.** Latar native jendela sekarang warna paper hangat, bukan hijau gelap yang tersisa.
+- **String lebih rapi.** Placeholder tak terpakai dihapus dari berkas locale.
+
 ## v0.4.0
 
 Halaman dukung tersedia dengan semua cara mendukung Getta, dan hyperlink eksternal kembali berfungsi.

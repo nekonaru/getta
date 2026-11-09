@@ -69,6 +69,20 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_clipboard_manager::init())
+        .on_window_event(|window, event| {
+            // Optional behavior: hide to tray instead of quitting on X.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let close_to_tray = window
+                    .app_handle()
+                    .try_state::<AppState>()
+                    .and_then(|state| state.settings.lock().ok().map(|s| s.close_to_tray))
+                    .unwrap_or(false);
+                if close_to_tray {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
+            }
+        })
         .setup(|app| {
             let data_dir = storage::data_dir();
             std::fs::create_dir_all(&data_dir).ok();
