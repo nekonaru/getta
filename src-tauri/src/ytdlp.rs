@@ -28,6 +28,50 @@ impl std::fmt::Display for EngineError {
     }
 }
 
+pub fn managed_ffprobe(data_dir: &Path) -> PathBuf {
+    data_dir.join("bin").join(if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" })
+}
+
+/// Locate ffprobe: alongside a custom FFmpeg, the managed copy, then PATH.
+pub fn locate_ffprobe(ffmpeg_override: Option<&str>, data_dir: &Path) -> Option<PathBuf> {
+    if let Some(custom) = ffmpeg_override {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() {
+            let path = PathBuf::from(trimmed);
+            if let Some(parent) = path.parent() {
+                let sibling = parent.join(if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" });
+                if sibling.is_file() {
+                    return Some(sibling);
+                }
+            }
+        }
+    }
+    let managed = managed_ffprobe(data_dir);
+    if managed.is_file() {
+        return Some(managed);
+    }
+    which::which("ffprobe").ok()
+}
+
+/* ---------- spawn without a console window (Windows) ---------- */
+
+#[cfg(windows)]
+pub(crate) fn hide_console_std(cmd: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000);
+}
+
+#[cfg(not(windows))]
+pub(crate) fn hide_console_std(_cmd: &mut std::process::Command) {}
+
+#[cfg(windows)]
+pub(crate) fn hide_console_tokio(cmd: &mut tokio::process::Command) {
+    cmd.creation_flags(0x0800_0000);
+}
+
+#[cfg(not(windows))]
+pub(crate) fn hide_console_tokio(_cmd: &mut tokio::process::Command) {}
+
 fn managed_binary_name() -> &'static str {
     if cfg!(windows) {
         "yt-dlp.exe"
@@ -184,8 +228,10 @@ pub async fn install_ytdlp(data_dir: &Path) -> Result<PathBuf, EngineError> {
     }
 
     // Refuse an unusable binary: it must print a version.
-    let output = std::process::Command::new(&target)
-        .arg("--version")
+    let mut verify = std::process::Command::new(&target);
+    verify.arg("--version");
+    hide_console_std(&mut verify);
+    let output = verify
         .output()
         .map_err(|_| EngineError::VerificationFailed)?;
     if !output.status.success() || String::from_utf8_lossy(&output.stdout).trim().is_empty() {
@@ -255,8 +301,10 @@ pub async fn install_ffmpeg(data_dir: &Path) -> Result<PathBuf, EngineError> {
     if !ffmpeg.is_file() {
         return Err(EngineError::VerificationFailed);
     }
-    let output = std::process::Command::new(&ffmpeg)
-        .arg("-version")
+    let mut ffmpeg_check = std::process::Command::new(&ffmpeg);
+    ffmpeg_check.arg("-version");
+    hide_console_std(&mut ffmpeg_check);
+    let output = ffmpeg_check
         .output()
         .map_err(|_| EngineError::VerificationFailed)?;
     if !output.status.success() {
@@ -267,7 +315,10 @@ pub async fn install_ffmpeg(data_dir: &Path) -> Result<PathBuf, EngineError> {
 }
 
 pub fn version_of(path: &Path, args: &[&str]) -> Option<String> {
-    let output = std::process::Command::new(path).args(args).output().ok()?;
+    let mut command = std::process::Command::new(path);
+    command.args(args);
+    hide_console_std(&mut command);
+    let output = command.output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -402,6 +453,9 @@ pub fn classify_error(message: &str) -> (&'static str, bool) {
     if retryable_rate(&lower) {
         ("rate_limited", true)
     } else if auth(&lower) {
+        ("auth_required", false)
+    } else if lower.contains("dpapi") {
+        // Chrome 127+ app-bound encryption: cookie decryption always fails on Windows.
         ("auth_required", false)
     } else if not_found(&lower) {
         ("not_found", false)

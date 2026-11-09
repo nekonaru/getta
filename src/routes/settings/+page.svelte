@@ -1,21 +1,40 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { open } from "@tauri-apps/plugin-dialog";
+	import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
 	import { api, type EngineStatus } from "#lib/api";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 
 	type Category = "output" | "transfer" | "appearance" | "engine";
 	let category = $state<Category>("output");
 	let engine = $state<EngineStatus | null>(null);
 	let installBusy = $state<string | null>(null);
+	let autostartEnabled = $state(false);
 
 	const settings = $derived(settingsStore.value);
 
 	onMount(async () => {
 		await refreshEngine();
+		try {
+			autostartEnabled = await isEnabled();
+		} catch {
+			autostartEnabled = settingsStore.value?.autostart ?? false;
+		}
 	});
+
+	async function toggleAutostart() {
+		const next = !autostartEnabled;
+		try {
+			if (next) await enable();
+			else await disable();
+			autostartEnabled = next;
+			await settingsStore.update({ autostart: next });
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
 
 	async function refreshEngine() {
 		try {
@@ -38,6 +57,21 @@
 			const picked = await open({ directory: true, multiple: false });
 			if (typeof picked === "string" && picked) {
 				await patch({ output_dir: picked });
+			}
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function pickCookieFile() {
+		try {
+			const picked = await open({
+				multiple: false,
+				directory: false,
+				filters: [{ name: "cookies.txt", extensions: ["txt"] }]
+			});
+			if (typeof picked === "string" && picked) {
+				await patch({ cookie_file: picked });
 			}
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
@@ -188,6 +222,14 @@
 							</div>
 						</div>
 						<div class="row row-switch">
+							<span class="switch-label">{t("settings.autostart")}</span>
+							<button class="switch" role="switch" aria-checked={autostartEnabled} aria-label={t("settings.autostart")} onclick={toggleAutostart}></button>
+						</div>
+						<div class="row row-switch">
+							<span class="switch-label">{t("settings.closeToTray")}</span>
+							<button class="switch" role="switch" aria-checked={settings.close_to_tray} aria-label={t("settings.closeToTray")} onclick={() => patch({ close_to_tray: !settings.close_to_tray })}></button>
+						</div>
+						<div class="row row-switch">
 							<span class="switch-label">{t("settings.reduceMotion")}</span>
 							<button class="switch" role="switch" aria-checked={settings.reduce_motion} aria-label={t("settings.reduceMotion")} onclick={() => patch({ reduce_motion: !settings.reduce_motion })}></button>
 						</div>
@@ -221,6 +263,15 @@
 								<label class="field-label" for="cookies">{t("settings.cookiesFromBrowser")}</label>
 								<input id="cookies" class="input mono" type="text" placeholder="chrome, firefox, edge, brave, safari" value={settings.cookies_from_browser} onchange={(e) => patch({ cookies_from_browser: (e.currentTarget as HTMLInputElement).value })} />
 								<p class="hint">{t("settings.cookiesHint")}</p>
+								<label class="field-label" for="cookie-file" style="margin-top:12px">{t("settings.cookieFile")}</label>
+								<div class="cookie-file-row">
+									<code class="cookie-file-value">{settings.cookie_file || "—"}</code>
+									<button class="btn btn-sm" onclick={pickCookieFile}>{t("settings.cookieFilePick")}</button>
+									{#if settings.cookie_file}
+										<button class="btn btn-sm btn-ghost" onclick={() => patch({ cookie_file: "" })}>{t("settings.cookieFileClear")}</button>
+									{/if}
+								</div>
+								<p class="hint">{t("settings.cookieFileWarning")}</p>
 							</div>
 						</div>
 					</section>
@@ -236,6 +287,10 @@
 		font-size: 1.9rem;
 		font-weight: 700;
 		margin-bottom: 16px;
+	}
+
+	.panel-col {
+		min-width: 0;
 	}
 
 	.layout {
@@ -313,6 +368,27 @@
 		padding: 10px 12px;
 		background: var(--card-2);
 		border-radius: var(--r-md);
+	}
+
+	.cookie-file-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 6px 0;
+	}
+
+	.cookie-file-value {
+		flex: 1;
+		min-width: 0;
+		font-family: var(--font-mono);
+		font-size: 10.5px;
+		border: 1px solid var(--border);
+		padding: 7px 9px;
+		border-radius: var(--r-sm);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--muted);
 	}
 
 	.dep-name {
