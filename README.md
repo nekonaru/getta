@@ -298,6 +298,12 @@ No. Getta downloads and runs the official yt-dlp binary. Python is not involved.
 
 </details>
 
+<details><summary><b>Downloads from Instagram or X just say "Failed to decrypt with DPAPI"?</b></summary>
+
+Chrome and Edge (version 127 and newer) block other programs from reading their cookies. Either use Firefox for the "Browser for cookies" setting, or export a `cookies.txt` file from the browser, then pick it in Settings, Engine, Cookie file.
+
+</details>
+
 <details><summary><b>Can Getta download DRM-protected videos?</b></summary>
 
 No. Getta does not bypass DRM, paywalls or access controls.

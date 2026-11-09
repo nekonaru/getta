@@ -63,6 +63,21 @@
 		}
 	}
 
+	async function pickCookieFile() {
+		try {
+			const picked = await open({
+				multiple: false,
+				directory: false,
+				filters: [{ name: "cookies.txt", extensions: ["txt"] }]
+			});
+			if (typeof picked === "string" && picked) {
+				await patch({ cookie_file: picked });
+			}
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function installEngine(name: "ytdlp" | "ffmpeg") {
 		installBusy = name;
 		try {
@@ -244,6 +259,15 @@
 								<label class="field-label" for="cookies">{t("settings.cookiesFromBrowser")}</label>
 								<input id="cookies" class="input mono" type="text" placeholder="chrome, firefox, edge, brave, safari" value={settings.cookies_from_browser} onchange={(e) => patch({ cookies_from_browser: (e.currentTarget as HTMLInputElement).value })} />
 								<p class="hint">{t("settings.cookiesHint")}</p>
+								<label class="field-label" for="cookie-file" style="margin-top:12px">{t("settings.cookieFile")}</label>
+								<div class="cookie-file-row">
+									<code class="cookie-file-value">{settings.cookie_file || "—"}</code>
+									<button class="btn btn-sm" onclick={pickCookieFile}>{t("settings.cookieFilePick")}</button>
+									{#if settings.cookie_file}
+										<button class="btn btn-sm btn-ghost" onclick={() => patch({ cookie_file: "" })}>{t("settings.cookieFileClear")}</button>
+									{/if}
+								</div>
+								<p class="hint">{t("settings.cookieFileWarning")}</p>
 							</div>
 						</div>
 					</section>
@@ -340,6 +364,27 @@
 		padding: 10px 12px;
 		background: var(--card-2);
 		border-radius: var(--r-md);
+	}
+
+	.cookie-file-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 6px 0;
+	}
+
+	.cookie-file-value {
+		flex: 1;
+		min-width: 0;
+		font-family: var(--font-mono);
+		font-size: 10.5px;
+		border: 1px solid var(--border);
+		padding: 7px 9px;
+		border-radius: var(--r-sm);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--muted);
 	}
 
 	.dep-name {

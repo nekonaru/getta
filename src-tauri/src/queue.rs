@@ -237,26 +237,54 @@ impl QueueManager {
     }
 
     pub fn resume(&self, app: &tauri::AppHandle, id: u64) -> Result<(), String> {
-        let pid = {
-            let mut inner = self.inner.lock().expect("queue mutex");
-            let item = inner.items.iter_mut().find(|i| i.id == id).ok_or("item not found")?;
+        let (pid, active_now, max_concurrent) = {
+            let inner = self.inner.lock().expect("queue mutex");
+            let item = inner.items.iter().find(|i| i.id == id).ok_or("item not found")?;
             if item.status != QueueStatus::Paused {
                 return Err("Only paused downloads can be resumed.".to_string());
             }
-            item.pid
+            let active = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
+            let max = app
+                .try_state::<AppState>()
+                .and_then(|state| state.settings.lock().ok().map(|s| s.max_concurrent))
+                .unwrap_or(2)
+                .max(1);
+            (item.pid, active, max)
         };
-        if let Some(pid) = pid {
-            suspend_process(pid, false).map_err(|e| format!("Could not resume the download: {e}"))?;
-        }
-        {
-            let mut inner = self.inner.lock().expect("queue mutex");
-            if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
-                item.status = QueueStatus::Active;
-                item.phase = Some("downloading".to_string());
+
+        // Pause freezing frees the concurrency slot; try_start_next fills it.
+        // So on resume: continue in place only if a slot is free; otherwise kill
+        // the frozen process and re-queue it (yt-dlp resumes from .part files).
+        if pid.is_some() && active_now < max_concurrent {
+            if let Some(pid) = pid {
+                suspend_process(pid, false).map_err(|e| format!("Could not resume the download: {e}"))?;
             }
+            {
+                let mut inner = self.inner.lock().expect("queue mutex");
+                if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                    item.status = QueueStatus::Active;
+                    item.phase = Some("downloading".to_string());
+                }
+            }
+            emit_queue(app);
+            sync_prevent_sleep(app);
+        } else {
+            if let Some(pid) = pid {
+                kill_process(pid);
+            }
+            {
+                let mut inner = self.inner.lock().expect("queue mutex");
+                if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                    // yt-dlp picks up from the .part file in the output dir.
+                    item.pid = None;
+                    item.status = QueueStatus::Queued;
+                    item.phase = Some("resuming".to_string());
+                    item.speed_bps = 0;
+                }
+            }
+            emit_queue(app);
+            self.try_start_next(app);
         }
-        emit_queue(app);
-        sync_prevent_sleep(app);
         Ok(())
     }
 
@@ -333,6 +361,7 @@ impl QueueManager {
 
     /// Internal test hook: read a consistent item view.
     #[doc(hidden)]
+    #[allow(dead_code)]
     pub fn items_len(&self) -> usize {
         self.inner.lock().map(|inner| inner.items.len()).unwrap_or(0)
     }
@@ -545,9 +574,18 @@ fn build_args(
         args.push("--concurrent-fragments".to_string());
         args.push(settings.concurrent_fragments.to_string());
     }
-    if !settings.cookies_from_browser.trim().is_empty() {
-        args.push("--cookies-from-browser".to_string());
-        args.push(settings.cookies_from_browser.trim().to_string());
+    {
+        let cookie_file = settings.cookie_file.trim();
+        let cookie_browser = settings.cookies_from_browser.trim();
+        // A cookies file takes precedence: Chrome 127+ blocks DPAPI access,
+        // so --cookies-from-browser fails the whole download on Windows.
+        if !cookie_file.is_empty() && std::path::PathBuf::from(cookie_file).is_file() {
+            args.push("--cookies".to_string());
+            args.push(cookie_file.to_string());
+        } else if !cookie_browser.is_empty() {
+            args.push("--cookies-from-browser".to_string());
+            args.push(cookie_browser.to_string());
+        }
     }
     if !settings.proxy.trim().is_empty() {
         args.push("--proxy".to_string());

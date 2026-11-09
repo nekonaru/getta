@@ -298,6 +298,12 @@ Tidak. Getta mengunduh dan menjalankan binary resmi yt-dlp. Python tidak terliba
 
 </details>
 
+<details><summary><b>Unduhan dari Instagram atau X tiba-tiba error "Failed to decrypt with DPAPI"?</b></summary>
+
+Chrome dan Edge versi 127 ke atas memblokir program lain membaca cookie mereka. Gunakan Firefox untuk pengaturan "Browser untuk cookies", atau ekspor file `cookies.txt` dari browser, lalu pilih di Pengaturan, Mesin, File cookie.
+
+</details>
+
 <details><summary><b>Bisakah Getta mengunduh video yang diproteksi DRM?</b></summary>
 
 Tidak. Getta tidak membobol DRM, paywall, atau kontrol akses.

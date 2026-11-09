@@ -454,6 +454,9 @@ pub fn classify_error(message: &str) -> (&'static str, bool) {
         ("rate_limited", true)
     } else if auth(&lower) {
         ("auth_required", false)
+    } else if lower.contains("dpapi") {
+        // Chrome 127+ app-bound encryption: cookie decryption always fails on Windows.
+        ("auth_required", false)
     } else if not_found(&lower) {
         ("not_found", false)
     } else if restricted(&lower) {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api, type HistoryEntry, type QueueItemInfo } from "#lib/api";
+	import { humanize } from "#lib/errors";
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
@@ -26,8 +27,19 @@
 		if (activeItems.length === 0) return null;
 		const speed = activeItems.reduce((sum, i) => sum + i.speed_bps, 0);
 		const etas = activeItems.map((i) => i.eta_seconds).filter((v): v is number => v != null);
+		const percentages = activeItems.map((i) => i.percent);
+		// Prefer byte-accurate math when every active item knows its size.
+		const bytesKnown = activeItems.every((i) => (i.total_bytes ?? 0) > 0 && i.downloaded_bytes != null);
+		let percent: number;
+		if (bytesKnown) {
+			const total = activeItems.reduce((sum, i) => sum + (i.total_bytes ?? 0), 0);
+			const done = activeItems.reduce((sum, i) => sum + i.downloaded_bytes, 0);
+			percent = total > 0 ? (done / total) * 100 : 0;
+		} else {
+			percent = percentages.reduce((sum, p) => sum + p, 0) / percentages.length;
+		}
 		const eta = etas.length ? Math.max(...etas) : null;
-		return { speed, eta, count: activeItems.length };
+		return { speed, eta, percent: Math.min(100, Math.max(0, percent)), count: activeItems.length };
 	});
 
 	const history = $derived(downloadsStore.history);
@@ -164,8 +176,13 @@
 		{#if tab === "queue"}
 			{#if aggregate}
 				{@const agg = aggregate}
-				<div class="aggregate mono" aria-live="polite">
-					{t("queue.aggLine", { active: agg.count, speed: formatSpeed(agg.speed), eta: agg.eta != null ? formatEta(agg.eta) : "…" })}
+				<div class="aggregate-wrap">
+					<div class="aggregate mono" aria-live="polite">
+						{t("queue.aggLine", { active: agg.count, speed: formatSpeed(agg.speed), eta: agg.eta != null ? formatEta(agg.eta) : "…" })}
+					</div>
+					<div class="progress aggregate-bar" role="progressbar" aria-valuenow={Math.round(agg.percent)} aria-valuemin="0" aria-valuemax="100">
+						<div class="progress-fill progress-sheen" style="width: {agg.percent}%"></div>
+					</div>
 				</div>
 			{/if}
 
@@ -206,6 +223,7 @@
 													{#if item.status === "active" && item.speed_bps > 0}<span class="mono">· {formatSpeed(item.speed_bps)}</span>{/if}
 													{#if item.status === "active" && item.eta_seconds != null}<span>· {t("queue.eta", { time: formatEta(item.eta_seconds) })}</span>{/if}
 													{#if item.status === "paused"}<span>· {formatBytes(item.downloaded_bytes)}</span>{/if}
+									{#if item.status === "active" && item.phase && item.phase !== "downloading"}<span class="phase-chip mono">{item.phase}</span>{/if}
 												</div>
 												{#if item.error_message}
 													<div class="error-box">{item.error_message}</div>
@@ -323,10 +341,19 @@
 		color: var(--accent);
 		border: 1px solid var(--accent);
 		background: var(--accent-soft);
-		border-radius: var(--r-sm);
-		padding: 8px 12px;
-		margin-bottom: 16px;
+		border-radius: var(--r-sm) var(--r-sm) 0 0;
+		padding: 8px 12px 4px;
+		margin-bottom: 0;
 		letter-spacing: 0.02em;
+	}
+
+	.aggregate-wrap {
+		margin-bottom: 16px;
+	}
+
+	.aggregate-bar {
+		height: 5px;
+		border-radius: 0 0 var(--r-sm) var(--r-sm);
 	}
 
 	.manifest-section + .manifest-section {
@@ -428,6 +455,17 @@
 		display: flex;
 		gap: 4px;
 		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.phase-chip {
+		font-size: 9px;
+		color: var(--accent);
+		background: var(--accent-soft);
+		border-radius: 3px;
+		padding: 1px 5px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
 	}
 
 	.state {

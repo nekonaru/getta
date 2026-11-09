@@ -6,8 +6,9 @@
 	import "@fontsource/ibm-plex-mono/500.css";
 	import "../app.css";
 
-	import { page } from "$app/state";
 	import { listen } from "@tauri-apps/api/event";
+
+	import { page } from "$app/state";
 	import Toaster from "#lib/components/Toaster.svelte";
 	import CommandPalette from "#lib/components/CommandPalette.svelte";
 	import Onboarding from "#lib/components/Onboarding.svelte";
@@ -41,6 +42,24 @@
 		void downloadsStore.start();
 		void api.engineStatus().then((engine) => (engineReady = engine.ytdlp.found));
 
+		const handledDeep = new Map<string, number>();
+		const handleDeepUrl = async (raw: string) => {
+			const decoded = (() => {
+				try {
+					return decodeURIComponent(raw.replace(/^getta:\/\//, ""));
+				} catch {
+					return raw.replace(/^getta:\/\//, "");
+				}
+			})();
+			const now = Date.now();
+			for (const [key, at] of handledDeep) {
+				if (now - at > 2500) handledDeep.delete(key);
+			}
+			if (handledDeep.has(decoded)) return;
+			handledDeep.set(decoded, now);
+			await enqueueFromClipboardText(decoded);
+		};
+
 		// CmdOrCtrl+Shift+D is registered on the Rust side and arrives as an event.
 		const unlistenGlobalShortcut = listen("global-download-requested", async () => {
 			try {
@@ -51,25 +70,22 @@
 			}
 		});
 
+		// Second-instance deep links forward here as an event.
+		const unlistenDeepLinkRequest = listen<string>("deep-link-request", (event) => {
+			void handleDeepUrl(event.payload);
+		});
+
 		// getta://<url> links land here from the OS.
 		void getCurrent().then((urls) => {
-			for (const url of urls ?? []) void enqueueFromClipboardText(decodeURIComponent(url.replace(/^getta:\/\//, "")));
+			for (const url of urls ?? []) void handleDeepUrl(url);
 		});
 		const unlisten = onOpenUrl(async (urls) => {
-			for (const url of urls) {
-				const decoded = (() => {
-					try {
-						return decodeURIComponent(url.replace(/^getta:\/\//, ""));
-					} catch {
-						return url.replace(/^getta:\/\//, "");
-					}
-				})();
-				await enqueueFromClipboardText(decoded);
-			}
+			for (const url of urls) await handleDeepUrl(url);
 		});
 
 		return () => {
 			void unlistenGlobalShortcut.then((fn) => fn?.()).catch(() => {});
+			void unlistenDeepLinkRequest.then((fn) => fn?.()).catch(() => {});
 			void unlisten.then((fn) => fn?.()).catch(() => {});
 		};
 	});

@@ -34,10 +34,21 @@ pub fn run() {
         .init();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
+            }
+            // A second instance carrying a link forwards it into the running app.
+            if let Some(url) = argv.iter().find(|arg| {
+                arg.starts_with("http://")
+                    || arg.starts_with("https://")
+                    || arg.starts_with("magnet:")
+                    || arg.starts_with("p2p:")
+                    || arg.starts_with("getta://")
+            }) {
+                use tauri::Emitter;
+                let _ = app.emit("deep-link-request", url.clone());
             }
         }))
         .plugin(tauri_plugin_shell::init())

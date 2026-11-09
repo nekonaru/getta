@@ -3,6 +3,26 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.3.3
+
+Login situs kembali berfungsi, progres sekarang terlihat hidup, dan kasus-kasus edge dari lapangan diperbaiki.
+
+## Fitur baru
+
+- **Dukungan file cookie.** Pilih ekspor `cookies.txt` di Pengaturan, Mesin; file ini diutamakan daripada membaca cookie dari browser.
+- **Progress bar agregat.** Layar antrean menampilkan satu progress bar keseluruhan di atas manifest, dihitung berdasarkan byte bila diketahui.
+
+## Peningkatan
+
+- **Error yang bisa dimengerti.** Kegagalan mesin dipetakan menjadi panduan yang bisa ditindaklanjuti, bukan dump stack yt-dlp mentah.
+- **Tautan instance kedua.** Tautan getta:// yang dikirim ke launch kedua diteruskan ke aplikasi yang sedang berjalan, bukan diabaikan.
+
+## Perbaikan bug
+
+- **Kegagalan DPAPI Chrome 127+.** Edge dan Chrome tidak lagi bisa dibaca pihak ketiga; Getta kini membimbing pengguna dan menerima cookies.txt sebagai jalur resmi.
+- **Resume menghormati concurrency.** Melanjutkan unduhan yang dijeda akan mengantrekannya sesuai batas, bukan langsung melompat.
+- **Enqueue deep-link ganda.** Menjalankan aplikasi lewat getta:// saat aplikasi sedang berjalan bisa mengantrekankan URL yang sama dua kali.
+
 ## v0.3.2
 
 Tidak ada lagi jendela console liar saat Getta berjalan.

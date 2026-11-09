@@ -18,12 +18,12 @@ pub fn setup(app: &tauri::App, show_label: &str, quit_label: &str) -> tauri::Res
     let quit = MenuItemBuilder::with_id("quit", quit_label).build(app)?;
     let menu = MenuBuilder::new(app).item(&show).item(&quit).build()?;
 
+    let icon = app
+        .default_window_icon()
+        .cloned()
+        .unwrap_or_else(|| tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png")).expect("embedded tray icon"));
     let tray = TrayIconBuilder::with_id("main-tray")
-        .icon(
-            app.default_window_icon()
-                .expect("bundled window icon")
-                .clone(),
-        )
+        .icon(icon)
         .tooltip("Getta")
         .show_menu_on_left_click(false)
         .menu(&menu)

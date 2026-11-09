@@ -13,6 +13,7 @@ import {
 	requestPermission,
 	sendNotification
 } from "@tauri-apps/plugin-notification";
+import { humanize } from "#lib/errors";
 
 const STATS_KEY = "getta.stats";
 const HISTORY_LEN = 48;
@@ -132,10 +133,7 @@ class DownloadsStore {
 			}
 
 			if (item.status === "error") {
-				toastStore.push(
-					`${t("queue.statusError")}: ${item.error_message ?? item.title}`,
-					"error"
-				);
+				toastStore.push(`${t("queue.statusError")}: ${humanize(item.error_message)}`, "error");
 			}
 		}
 	}

@@ -3,6 +3,26 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.3.3
+
+Site logins work again, progress is visibly live, and edge cases from the field are fixed.
+
+## New features
+
+- **Cookie file support.** Pick a `cookies.txt` export in Settings, Engine; it takes precedence over reading cookies from a browser.
+- **Aggregate progress bar.** The queue screen shows a single overall progress bar above the manifest, weighted by bytes where known.
+
+## Improvements
+
+- **Humanized errors.** Engine failures map to actionable guidance instead of raw yt-dlp stack dumps.
+- **Second-instance links.** getta:// links passed to a second launch are forwarded into the running app instead of silently ignored.
+
+## Bug fixes
+
+- **Chrome 127+ DPAPI failure.** Edge and Chrome cookies can no longer be read by third parties; Getta now guides the user and accepts cookies.txt as the supported route.
+- **Resume respects concurrency.** Resuming a paused download queues it back within the limit instead of jumping ahead.
+- **Duplicate deep-link enqueue.** Starting the app via getta:// while it was running could enqueue the same URL twice.
+
 ## v0.3.2
 
 No more stray console windows while Getta runs.

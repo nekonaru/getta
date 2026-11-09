@@ -92,6 +92,7 @@ export interface AppSettings {
 	autostart: boolean;
 	onboarding_completed: boolean;
 	cookies_from_browser: string;
+	cookie_file: string;
 	proxy: string;
 	notifications: boolean;
 	prevent_sleep: boolean;
