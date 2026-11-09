@@ -52,7 +52,7 @@ sanitize-filename = "0.5"
 unicode-normalization = "0.1"
 url = "2"
 tokio-util = "0.7"
-sha2 = "0.10"
+sha2 = "0.11"
 hex = "0.4"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 which = "8"
