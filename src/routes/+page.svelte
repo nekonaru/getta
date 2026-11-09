@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
-	import { open } from "@tauri-apps/plugin-dialog";
 	import { api, type Analysis, type EngineStatus } from "#lib/api";
-	import { downloadsStore } from "#lib/stores/downloads.svelte";
+	import { downloadsStore, readStats } from "#lib/stores/downloads.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { settingsStore } from "#lib/stores/settings.svelte";
-	import { t } from "#lib/i18n";
+	import { t } from "#lib/i18n.svelte";
 	import { formatBytes, formatDuration } from "#lib/format";
 	import LogoMark from "#lib/components/LogoMark.svelte";
 
@@ -18,16 +17,17 @@
 	let engineInstalling = $state(false);
 	let quality = $state("best");
 	let mode = $state<"auto" | "audio" | "mute">("auto");
+	let playlistSelected = $state<Set<number>>(new Set());
 	let analyzeTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const links = $derived(parseLinks(url));
 	const singleLink = $derived(links.length === 1 ? links[0] : null);
 
 	const recentItems = $derived(
-		[...downloadsStore.items]
-			.sort((a, b) => b.id - a.id)
-			.slice(0, 3)
+		[...downloadsStore.items].sort((a, b) => b.id - a.id).slice(0, 4)
 	);
+
+	const stats = readStats();
 
 	onMount(async () => {
 		try {
@@ -40,10 +40,9 @@
 	function parseLinks(text: string): string[] {
 		const tokens = text
 			.split(/\s+/)
-			.map((t) => t.trim())
-			.filter((t) => /^(https?:\/\/|magnet:|p2p:)/.test(t));
-		const unique = [...new Set(tokens)];
-		return unique.slice(0, 200);
+			.map((token) => token.trim())
+			.filter((token) => /^(https?:\/\/|magnet:|p2p:)/.test(token));
+		return [...new Set(tokens)].slice(0, 200);
 	}
 
 	function looksLikeUrl(text: string): boolean {
@@ -71,21 +70,26 @@
 			analysis = result;
 			busy = "ready";
 			quality = "best";
+			playlistSelected = new Set(result.playlist_entries.map((e) => e.index));
 		} catch (e) {
 			busy = "error";
 			errorMessage = e instanceof Error ? e.message : String(e);
 		}
 	}
 
-	async function startDownload() {
+	async function startDownload(playlistItems?: string) {
 		if (!singleLink) return;
 		busy = "starting";
 		try {
 			const alwaysAsk = settingsStore.value?.always_ask_path;
 			let dir: string | null = null;
 			if (alwaysAsk) {
+				const { open } = await import("@tauri-apps/plugin-dialog");
 				const picked = await open({ directory: true, multiple: false });
-				if (typeof picked !== "string" || !picked) return;
+				if (typeof picked !== "string" || !picked) {
+					busy = "ready";
+					return;
+				}
 				dir = picked;
 			}
 			await api.startDownload({
@@ -93,17 +97,35 @@
 				download_mode: mode,
 				quality,
 				format_id: null,
-				playlist_items: null,
+				playlist_items: playlistItems ?? null,
 				output_dir: dir
 			});
 			url = "";
 			analysis = null;
 			busy = "idle";
-			await goto("/downloads");
+			await goto("/queue");
 		} catch (e) {
 			busy = "error";
 			errorMessage = e instanceof Error ? e.message : String(e);
+			busy = "ready";
 		}
+	}
+
+	async function startPlaylistDownload() {
+		const indices = [...playlistSelected].sort((a, b) => a - b);
+		if (indices.length === 0) return;
+		const ranges: string[] = [];
+		let rangeStart = indices[0];
+		let previous = indices[0];
+		for (let i = 1; i <= indices.length; i++) {
+			const current = indices[i];
+			if (current !== previous + 1) {
+				ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}-${previous}`);
+				rangeStart = current;
+			}
+			previous = current;
+		}
+		await startDownload(ranges.join(","));
 	}
 
 	async function startBatch() {
@@ -122,7 +144,7 @@
 			}
 		}
 		url = "";
-		await goto("/downloads");
+		await goto("/queue");
 	}
 
 	async function installEngine() {
@@ -149,61 +171,65 @@
 				)
 			: [{ label: t("home.best"), height: null as number | null }]
 	);
+
+	const isPlaylist = $derived(analysis?.is_playlist === true && (analysis?.playlist_entries?.length ?? 0) > 0);
 </script>
 
 <div class="page">
 	<div class="page-inner home-inner">
-		<header class="hero">
-			<div class="hero-mark" aria-hidden="true">
-				<LogoMark size={64} />
-			</div>
-			<h1 class="hero-headline">{t("home.headline")}</h1>
-			<p class="hero-sub">{t("home.sub")}</p>
-		</header>
+		<div class="home-left">
+			<p class="kicker">{t("home.kicker")}</p>
+			<h1 class="headline">
+				<span class="headline-line">{t("home.headline1")}</span>
+				<span class="headline-line headline-accent">{t("home.headline2")}</span>
+			</h1>
+			<p class="sub">{t("home.sub")}</p>
 
-		{#if engine && !engine.ytdlp.found}
-			<div class="engine-banner" role="alert">
-				<span class="spinner" hidden={!engineInstalling}></span>
-				<span>{t("home.engineMissing")}</span>
-				<button class="btn btn-accent btn-sm" onclick={installEngine} disabled={engineInstalling}>
-					{engineInstalling ? t("common.installing") : t("home.engineMissingCta")}
+			{#if engine && !engine.ytdlp.found}
+				<div class="engine-banner" role="alert">
+					<span>{t("home.engineMissing")}</span>
+					<button class="btn btn-accent btn-sm" onclick={installEngine} disabled={engineInstalling}>
+						{engineInstalling ? t("common.installing") : t("home.engineMissingCta")}
+					</button>
+				</div>
+			{/if}
+
+			<div class="omnibox card">
+				<LogoMark size={30} />
+				<input
+					class="omnibox-input"
+					type="text"
+					bind:value={url}
+					oninput={onInput}
+					placeholder={t("home.placeholder")}
+					aria-label={t("home.placeholder")}
+					spellcheck="false"
+					autocapitalize="none"
+					autocorrect="off"
+				/>
+				{#if busy === "analyzing"}
+					<div class="spinner" role="status" aria-label={t("home.analyzing")}></div>
+				{/if}
+				<button class="btn btn-accent fetch-btn" onclick={() => startDownload()} disabled={busy === "analyzing" || busy === "starting" || !singleLink}>
+					{busy === "starting" ? t("home.fetching") : t("home.button")}
 				</button>
 			</div>
-		{/if}
 
-		<div class="card omnibox">
-			<svg class="omnibox-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M4.5 19h15" /></svg>
-			<input
-				class="omnibox-input"
-				type="text"
-				bind:value={url}
-				oninput={onInput}
-				placeholder={t("home.placeholder")}
-				aria-label={t("home.placeholder")}
-				spellcheck="false"
-				autocapitalize="none"
-				autocorrect="off"
-			/>
-			{#if busy === "analyzing"}
-				<div class="spinner" role="status" aria-label={t("home.analyzing")}></div>
-			{/if}
-		</div>
+			<p class="hint hotkey-hint">
+				<kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">Shift</kbd>+<kbd class="kbd">D</kbd>
+				{t("home.hotkeyHint")}
+			</p>
 
-		{#if errorMessage && busy === "error"}
-			<div class="card panel error-panel" role="alert">
-				<p class="panel-title">{t("home.errorTitle")}</p>
-				<p class="muted mono">{errorMessage}</p>
-				<div class="panel-actions">
+			{#if busy === "error"}
+				<div class="card panel error-panel" role="alert">
+					<p class="panel-title">{t("home.errorTitle")}</p>
+					<p class="muted mono">{errorMessage}</p>
 					<button class="btn btn-sm" onclick={() => { busy = "idle"; errorMessage = ""; }}>{t("home.retry")}</button>
 				</div>
-			</div>
-		{/if}
+			{/if}
 
-		{#if analysis && busy === "ready" && singleLink}
-			<div class="card panel">
-				{#if !analysis.supported}
-					<p class="panel-title">{t("home.unsupported")}</p>
-				{:else}
+			{#if analysis && busy === "ready" && analysis.supported && singleLink}
+				<div class="card panel">
 					<div class="preview">
 						{#if analysis.thumbnail_url}
 							<img class="preview-thumb" src={analysis.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.visibility = "hidden")} />
@@ -211,102 +237,161 @@
 						<div class="preview-meta">
 							<p class="preview-title">{analysis.title ?? singleLink}</p>
 							<div class="preview-sub muted">
-								{#if analysis.author}<span>{analysis.author}</span><span aria-hidden="true"> · </span>{/if}
-								<span>{analysis.platform}</span>
-								{#if analysis.duration_seconds}<span aria-hidden="true"> · </span><span>{formatDuration(analysis.duration_seconds)}</span>{/if}
+								<span class="mono">{analysis.platform}</span>
+								{#if analysis.duration_seconds}<span>· {formatDuration(analysis.duration_seconds)}</span>{/if}
+								{#if analysis.author}<span>· {analysis.author}</span>{/if}
 							</div>
-							{#if analysis.is_playlist}<p class="hint">{t("home.playlistNote")}</p>{/if}
 						</div>
 					</div>
 
-					<div class="quality-row" role="group" aria-label="Quality">
-						{#each qualityOptions as q (q.label)}
-							<button class="pill pill-btn" class:active={quality === (q.height ? String(q.height) : "best")} onclick={() => (quality = q.height ? String(q.height) : "best")}>{q.label}</button>
+					{#if isPlaylist}
+						<div class="playlist-block">
+							<div class="playlist-head">
+								<span class="field-label" style="margin:0">{t("home.playlistNote")}</span>
+								<span class="playlist-actions">
+									<button class="btn btn-sm btn-ghost" onclick={() => (playlistSelected = new Set(analysis?.playlist_entries.map((e) => e.index) ?? []))}>{t("home.playlistSelectAll")}</button>
+									<button class="btn btn-sm btn-ghost" onclick={() => (playlistSelected = new Set())}>{t("home.playlistSelectNone")}</button>
+								</span>
+							</div>
+							<ul class="playlist-list">
+								{#each analysis.playlist_entries as entry (entry.index)}
+									<li>
+										<label class="playlist-entry">
+											<input type="checkbox" checked={playlistSelected.has(entry.index)} onchange={() => {
+												const next = new Set(playlistSelected);
+												if (next.has(entry.index)) next.delete(entry.index);
+												else next.add(entry.index);
+												playlistSelected = next;
+											}} />
+											<span class="playlist-index mono">{entry.index}</span>
+											<span class="playlist-entry-title">{entry.title}</span>
+										</label>
+									</li>
+								{/each}
+							</ul>
+							<div class="mode-row">
+								<div class="segmented" role="group" aria-label="Mode">
+									<button aria-pressed={mode === "auto"} onclick={() => (mode = "auto")}>{t("home.modeAuto")}</button>
+									<button aria-pressed={mode === "audio"} onclick={() => (mode = "audio")}>{t("home.modeAudio")}</button>
+									<button aria-pressed={mode === "mute"} onclick={() => (mode = "mute")}>{t("home.modeMute")}</button>
+								</div>
+								<button class="btn btn-accent" onclick={startPlaylistDownload} disabled={playlistSelected.size === 0}>
+									{t("home.playlistDownload", { count: playlistSelected.size })}
+								</button>
+							</div>
+						</div>
+					{:else}
+						<div class="quality-row" role="group" aria-label="Quality">
+							{#each qualityOptions as q (q.label)}
+								<button class="pill pill-btn" class:active={quality === (q.height ? String(q.height) : "best")} onclick={() => (quality = q.height ? String(q.height) : "best")}>{q.label}</button>
+							{/each}
+						</div>
+
+						<div class="mode-row">
+							<div class="segmented" role="group" aria-label="Mode">
+								<button aria-pressed={mode === "auto"} onclick={() => (mode = "auto")}>{t("home.modeAuto")}</button>
+								<button aria-pressed={mode === "audio"} onclick={() => (mode = "audio")}>{t("home.modeAudio")}</button>
+								<button aria-pressed={mode === "mute"} onclick={() => (mode = "mute")}>{t("home.modeMute")}</button>
+							</div>
+							<button class="btn btn-accent" onclick={() => startDownload()}>{t("home.download")}</button>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			{#if analysis && busy === "ready" && !analysis.supported}
+				<div class="card panel">
+					<p class="panel-title">{t("home.unsupported")}</p>
+				</div>
+			{/if}
+
+			{#if links.length > 1}
+				<div class="card panel">
+					<div class="batch-row">
+						<div>
+							<p class="panel-title">{t("home.batchFound", { count: links.length })}</p>
+							<p class="muted hint">{t("home.hint")}</p>
+						</div>
+						<button class="btn btn-accent" onclick={startBatch}>{t("home.downloadAll", { count: links.length })}</button>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<aside class="home-right">
+			<div class="cargo card">
+				<div class="cargo-head">
+					<h2 class="cargo-title">{t("home.recent")}</h2>
+					<a class="cargo-link" href="/queue">{t("home.openQueue")} →</a>
+				</div>
+				{#if recentItems.length === 0}
+					<p class="muted cargo-empty">{t("queue.emptyHint")}</p>
+				{:else}
+					<ul class="cargo-list">
+						{#each recentItems as item (item.id)}
+							<li class="cargo-item">
+								<span class="cargo-index mono">{item.status === "active" ? "→" : item.status === "done" ? "✓" : "·"}</span>
+								<span class="cargo-body">
+									<span class="cargo-title-text">{item.title}</span>
+									<span class="cargo-status mono">{item.status === "active" ? t("queue.statusActive") : item.status === "done" ? t("queue.statusDone") : item.status}</span>
+								</span>
+								{#if item.status === "active"}
+									<span class="cargo-pct mono">{Math.floor(item.percent)}%</span>
+								{/if}
+							</li>
 						{/each}
-					</div>
-
-					<div class="mode-row">
-						<div class="segmented" role="group" aria-label="Mode">
-							<button aria-pressed={mode === "auto"} onclick={() => (mode = "auto")}>{t("home.modeAuto")}</button>
-							<button aria-pressed={mode === "audio"} onclick={() => (mode = "audio")}>{t("home.modeAudio")}</button>
-							<button aria-pressed={mode === "mute"} onclick={() => (mode = "mute")}>{t("home.modeMute")}</button>
-						</div>
-						<button class="btn btn-accent" onclick={startDownload}>{t("home.download")}</button>
-					</div>
+					</ul>
 				{/if}
 			</div>
-		{/if}
 
-		{#if links.length > 1}
-			<div class="card panel">
-				<div class="batch-row">
-					<div>
-						<p class="panel-title">{t("home.batchFound", { count: links.length })}</p>
-						<p class="muted hint">{t("home.hint")}</p>
-					</div>
-					<button class="btn btn-accent" onclick={startBatch}>{t("home.downloadAll")}</button>
-				</div>
-			</div>
-		{/if}
-
-		{#if recentItems.length > 0}
-			<section class="recent">
-				<div class="recent-head">
-					<h2>{t("home.recent")}</h2>
-					<a class="recent-link" href="/downloads">{t("home.openQueue")} →</a>
-				</div>
-				<ul class="recent-list">
-					{#each recentItems as item (item.id)}
-						<li class="recent-item">
-							<span class="recent-title">{item.title}</span>
-							<span class="recent-status muted">{item.status === "error" ? item.error_message : item.phase ?? item.status}</span>
-						</li>
-					{/each}
-				</ul>
-			</section>
-		{/if}
+			<p class="stats-line mono" aria-live="polite">
+				{t("home.statsLine", { count: stats.downloads, bytes: formatBytes(stats.bytes) })}
+			</p>
+		</aside>
 	</div>
 </div>
 
 <style>
 	.home-inner {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding-top: clamp(24px, 8vh, 72px);
-		gap: 18px;
-	}
-
-	.hero {
-		text-align: center;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 6px;
-	}
-
-	.hero-mark {
-		width: 88px;
-		height: 88px;
-		border-radius: 24px;
-		background: var(--spruce);
 		display: grid;
-		place-items: center;
-		color: var(--accent);
-		margin-bottom: 6px;
+		grid-template-columns: 1.25fr 0.75fr;
+		gap: 28px;
+		align-items: start;
+		padding-top: clamp(8px, 5vh, 40px);
 	}
 
-	.hero-headline {
+	.kicker {
+		margin-bottom: 18px;
+	}
+
+	.headline {
 		font-family: var(--font-display);
-		font-size: clamp(2.2rem, 6vw, 3.4rem);
 		font-weight: 800;
-		letter-spacing: -0.02em;
+		letter-spacing: -0.03em;
+		font-size: clamp(3rem, 8.2vw, 4.6rem);
+		line-height: 0.98;
+		display: flex;
+		flex-direction: column;
 	}
 
-	.hero-sub {
+	.headline-line {
+		display: block;
+	}
+
+	.home-left {
+		min-width: 0;
+	}
+
+	.headline-accent {
+		font-style: italic;
+		color: var(--accent);
+	}
+
+	.sub {
 		color: var(--muted);
-		max-width: 460px;
-		margin: 0;
+		max-width: 52ch;
+		margin: 18px 0 22px;
+		font-size: 14.5px;
 	}
 
 	.engine-banner {
@@ -316,29 +401,24 @@
 		background: var(--warn-soft);
 		border: 1px solid var(--warn);
 		color: var(--warn);
+		border-radius: var(--r-sm);
 		padding: 10px 14px;
-		border-radius: var(--r-md);
-		font-size: 13px;
-		max-width: 640px;
+		font-size: 12.5px;
+		font-weight: 600;
+		margin-bottom: 12px;
+		justify-content: space-between;
 	}
 
 	.omnibox {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 6px 18px;
-		width: min(640px, 100%);
-		border-radius: var(--r-pill);
+		gap: 12px;
+		padding: 6px 8px 6px 18px;
+		border-radius: var(--r-sm);
 	}
 
-	.omnibox-icon {
-		width: 30px;
-		height: 30px;
-		stroke: var(--accent);
-		fill: none;
-		stroke-width: 1.8;
-		stroke-linecap: round;
-		stroke-linejoin: round;
+	.omnibox :global(svg) {
+		color: var(--accent);
 		flex: none;
 	}
 
@@ -348,18 +428,29 @@
 		background: transparent;
 		outline: none;
 		color: var(--text);
-		font-size: 17px;
+		font-size: 16.5px;
 		padding: 14px 0;
 		min-width: 0;
+		font-family: var(--font-body);
 	}
 
 	.omnibox-input::placeholder {
 		color: var(--muted);
 	}
 
+	.fetch-btn {
+		flex: none;
+		padding: 12px 22px;
+		font-size: 13px;
+	}
+
+	.hotkey-hint {
+		margin-top: 10px;
+	}
+
 	.panel {
-		padding: 18px 20px;
-		width: min(640px, 100%);
+		padding: 16px 18px;
+		margin-top: 14px;
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
@@ -370,13 +461,8 @@
 		margin: 0;
 	}
 
-	.panel-actions {
-		display: flex;
-		gap: 8px;
-	}
-
 	.error-panel {
-		border-color: var(--danger);
+		border-color: var(--bad);
 	}
 
 	.preview {
@@ -386,12 +472,13 @@
 	}
 
 	.preview-thumb {
-		width: 132px;
-		height: 88px;
+		width: 148px;
+		height: 92px;
 		object-fit: cover;
-		border-radius: var(--r-md);
+		border-radius: var(--r-sm);
 		background: var(--card-2);
 		flex: none;
+		border: 1px solid var(--border-soft);
 	}
 
 	.preview-meta {
@@ -399,8 +486,8 @@
 	}
 
 	.preview-title {
-		font-weight: 650;
 		margin: 0 0 4px;
+		font-weight: 650;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
@@ -409,7 +496,10 @@
 	}
 
 	.preview-sub {
-		font-size: 12.5px;
+		font-size: 11.5px;
+		display: flex;
+		gap: 4px;
+		flex-wrap: wrap;
 	}
 
 	.quality-row {
@@ -418,19 +508,59 @@
 		flex-wrap: wrap;
 	}
 
-	.pill-btn {
-		border: 1px solid transparent;
+	.playlist-block {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.playlist-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.playlist-actions {
+		display: flex;
+		gap: 6px;
+	}
+
+	.playlist-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		max-height: 220px;
+		overflow-y: auto;
+		border: 1px solid var(--border);
+		border-radius: var(--r-sm);
+	}
+
+	.playlist-entry {
+		display: grid;
+		grid-template-columns: 18px 34px 1fr;
+		gap: 10px;
+		align-items: center;
+		padding: 8px 12px;
+		font-size: 12px;
 		cursor: pointer;
 	}
 
-	.pill-btn:hover {
-		border-color: var(--border-strong);
+	.playlist-entry:hover {
+		background: var(--card-2);
 	}
 
-	.pill-btn.active {
-		background: var(--accent-soft);
-		color: var(--accent);
-		border-color: var(--accent);
+	.playlist-index {
+		color: var(--muted);
+	}
+
+	.playlist-entry-title {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.mode-row {
@@ -449,65 +579,116 @@
 		flex-wrap: wrap;
 	}
 
-	.recent {
-		width: min(640px, 100%);
+	.home-right {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
 	}
 
-	.recent-head {
+	.cargo {
+		padding: 16px 18px;
+	}
+
+	.cargo-head {
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
-		margin-bottom: 8px;
+		margin-bottom: 12px;
+		border-bottom: 2px solid var(--border);
+		padding-bottom: 10px;
 	}
 
-	.recent-head h2 {
-		font-size: 13px;
-		font-family: var(--font-body);
-		font-weight: 700;
+	.cargo-title {
+		font-family: var(--font-mono);
+		font-size: 10.5px;
+		letter-spacing: 0.2em;
 		text-transform: uppercase;
-		letter-spacing: 0.07em;
-		color: var(--muted);
+		color: var(--text);
+		font-weight: 500;
 	}
 
-	.recent-link {
-		font-size: 12.5px;
-		font-weight: 600;
+	.cargo-link {
+		font-family: var(--font-mono);
+		font-size: 10.5px;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 		color: var(--accent);
 		text-decoration: none;
 	}
 
-	.recent-list {
+	.cargo-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
 	}
 
-	.recent-item {
-		display: flex;
+	.cargo-item {
+		display: grid;
+		grid-template-columns: 22px 1fr auto;
+		gap: 10px;
 		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		background: var(--card);
-		border: 1px solid var(--border);
-		border-radius: var(--r-md);
-		padding: 8px 12px;
+		padding: 9px 0;
+		border-bottom: 1px solid var(--border-soft);
 	}
 
-	.recent-title {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.cargo-item:last-child {
+		border-bottom: none;
+	}
+
+	.cargo-index {
+		color: var(--accent);
 		font-size: 13px;
 	}
 
-	.recent-status {
-		font-size: 11px;
-		flex: none;
-		max-width: 40%;
+	.cargo-body {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.cargo-title-text {
+		font-size: 12px;
+		font-weight: 600;
+		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.cargo-status {
+		font-size: 9px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-top: 2px;
+	}
+
+	.cargo-pct {
+		font-size: 12px;
+		color: var(--accent);
+	}
+
+	.cargo-empty {
+		font-size: 12px;
+		margin: 8px 0 0;
+	}
+
+	.stats-line {
+		font-size: 10px;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--muted);
+		padding: 0 2px;
+	}
+
+	@media (max-width: 960px) {
+		.home-inner {
+			grid-template-columns: 1fr;
+		}
+
+		.headline {
+			font-size: clamp(2.6rem, 13vw, 4rem);
+		}
 	}
 </style>

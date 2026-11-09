@@ -60,6 +60,7 @@ struct QueueItem {
     pid: Option<u32>,
     started_at: Option<i64>,
     output_dir: Option<String>,
+    playlist_items: Option<String>,
 }
 
 impl QueueItem {
@@ -161,6 +162,11 @@ impl QueueManager {
             pid: None,
             started_at: None,
             output_dir: options.output_dir.clone().filter(|d| !d.trim().is_empty()),
+            playlist_items: options
+                .playlist_items
+                .clone()
+                .filter(|s| !s.trim().is_empty())
+                .filter(|s| s.chars().all(|c| c.is_ascii_digit() || matches!(c, ',' | '-' | ' '))),
         };
         let id = item.id;
         {
@@ -231,26 +237,54 @@ impl QueueManager {
     }
 
     pub fn resume(&self, app: &tauri::AppHandle, id: u64) -> Result<(), String> {
-        let pid = {
-            let mut inner = self.inner.lock().expect("queue mutex");
-            let item = inner.items.iter_mut().find(|i| i.id == id).ok_or("item not found")?;
+        let (pid, active_now, max_concurrent) = {
+            let inner = self.inner.lock().expect("queue mutex");
+            let item = inner.items.iter().find(|i| i.id == id).ok_or("item not found")?;
             if item.status != QueueStatus::Paused {
                 return Err("Only paused downloads can be resumed.".to_string());
             }
-            item.pid
+            let active = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
+            let max = app
+                .try_state::<AppState>()
+                .and_then(|state| state.settings.lock().ok().map(|s| s.max_concurrent))
+                .unwrap_or(2)
+                .max(1);
+            (item.pid, active, max)
         };
-        if let Some(pid) = pid {
-            suspend_process(pid, false).map_err(|e| format!("Could not resume the download: {e}"))?;
-        }
-        {
-            let mut inner = self.inner.lock().expect("queue mutex");
-            if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
-                item.status = QueueStatus::Active;
-                item.phase = Some("downloading".to_string());
+
+        // Pause freezing frees the concurrency slot; try_start_next fills it.
+        // So on resume: continue in place only if a slot is free; otherwise kill
+        // the frozen process and re-queue it (yt-dlp resumes from .part files).
+        if pid.is_some() && active_now < max_concurrent {
+            if let Some(pid) = pid {
+                suspend_process(pid, false).map_err(|e| format!("Could not resume the download: {e}"))?;
             }
+            {
+                let mut inner = self.inner.lock().expect("queue mutex");
+                if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                    item.status = QueueStatus::Active;
+                    item.phase = Some("downloading".to_string());
+                }
+            }
+            emit_queue(app);
+            sync_prevent_sleep(app);
+        } else {
+            if let Some(pid) = pid {
+                kill_process(pid);
+            }
+            {
+                let mut inner = self.inner.lock().expect("queue mutex");
+                if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                    // yt-dlp picks up from the .part file in the output dir.
+                    item.pid = None;
+                    item.status = QueueStatus::Queued;
+                    item.phase = Some("resuming".to_string());
+                    item.speed_bps = 0;
+                }
+            }
+            emit_queue(app);
+            self.try_start_next(app);
         }
-        emit_queue(app);
-        sync_prevent_sleep(app);
         Ok(())
     }
 
@@ -327,6 +361,7 @@ impl QueueManager {
 
     /// Internal test hook: read a consistent item view.
     #[doc(hidden)]
+    #[allow(dead_code)]
     pub fn items_len(&self) -> usize {
         self.inner.lock().map(|inner| inner.items.len()).unwrap_or(0)
     }
@@ -421,6 +456,15 @@ fn emit_queue(app: &tauri::AppHandle) {
         return;
     };
     let snapshot = state.queue.snapshot();
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        let active = snapshot.iter().filter(|i| i.status == "active").count();
+        let tooltip = if active == 0 {
+            "Getta".to_string()
+        } else {
+            format!("Getta · {active} downloading")
+        };
+        let _ = tray.set_tooltip(Some(&tooltip));
+    }
     let _ = app.emit("queue-changed", snapshot);
 }
 
@@ -448,7 +492,15 @@ fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
-fn build_args(item_url: &str, mode: DownloadMode, quality: &str, format_id: Option<&str>, settings: &crate::settings::AppSettings, output_dir: &str) -> Vec<String> {
+fn build_args(
+    item_url: &str,
+    mode: DownloadMode,
+    quality: &str,
+    format_id: Option<&str>,
+    playlist_items: Option<&str>,
+    settings: &crate::settings::AppSettings,
+    output_dir: &str,
+) -> Vec<String> {
     let mut args: Vec<String> = vec![
         "--newline".to_string(),
         "--no-colors".to_string(),
@@ -463,6 +515,11 @@ fn build_args(item_url: &str, mode: DownloadMode, quality: &str, format_id: Opti
     };
     args.push("-o".to_string());
     args.push(template);
+
+    if let Some(items) = playlist_items.map(str::trim).filter(|s| !s.is_empty()) {
+        args.push("--playlist-items".to_string());
+        args.push(items.to_string());
+    }
 
     if settings.skip_existing {
         args.push("--no-overwrites".to_string());
@@ -517,9 +574,18 @@ fn build_args(item_url: &str, mode: DownloadMode, quality: &str, format_id: Opti
         args.push("--concurrent-fragments".to_string());
         args.push(settings.concurrent_fragments.to_string());
     }
-    if !settings.cookies_from_browser.trim().is_empty() {
-        args.push("--cookies-from-browser".to_string());
-        args.push(settings.cookies_from_browser.trim().to_string());
+    {
+        let cookie_file = settings.cookie_file.trim();
+        let cookie_browser = settings.cookies_from_browser.trim();
+        // A cookies file takes precedence: Chrome 127+ blocks DPAPI access,
+        // so --cookies-from-browser fails the whole download on Windows.
+        if !cookie_file.is_empty() && std::path::PathBuf::from(cookie_file).is_file() {
+            args.push("--cookies".to_string());
+            args.push(cookie_file.to_string());
+        } else if !cookie_browser.is_empty() {
+            args.push("--cookies-from-browser".to_string());
+            args.push(cookie_browser.to_string());
+        }
     }
     if !settings.proxy.trim().is_empty() {
         args.push("--proxy".to_string());
@@ -550,7 +616,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
             .filter(|d| !d.trim().is_empty())
             .unwrap_or_else(|| settings.output_dir.clone());
         let ytdlp_path = ytdlp::locate_ytdlp(settings.ytdlp_path.as_deref(), &state.data_dir);
-        let args = build_args(&item.url, item.download_mode, &item.quality, item.format_id.as_deref(), &settings, &output_dir);
+        let args = build_args(&item.url, item.download_mode, &item.quality, item.format_id.as_deref(), item.playlist_items.as_deref(), &settings, &output_dir);
         (output_dir, args, ytdlp_path)
     };
 
@@ -573,6 +639,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
         .env_remove("PYTHONHOME")
         .env_remove("PYTHONPATH")
         .kill_on_drop(true);
+    ytdlp::hide_console_tokio(&mut command);
 
     let mut child = match command.spawn() {
         Ok(child) => child,
@@ -905,6 +972,235 @@ fn kill_process(pid: u32) {
     }
 }
 
+/* ========== tools (local FFmpeg workbench) ========== */
+
+#[derive(serde::Serialize, Clone)]
+pub struct ToolProgressEvent {
+    pub tool: String,
+    pub percent: f64,
+}
+
+fn unique_output(path: std::path::PathBuf) -> std::path::PathBuf {
+    if !path.exists() {
+        return path;
+    }
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("out").to_string();
+    let ext = path.extension().and_then(|s| s.to_str()).map(|e| format!(".{e}")).unwrap_or_default();
+    for n in 1..100 {
+        let candidate = path.with_file_name(format!("{stem}-{n}{ext}"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    path.with_file_name(format!("{stem}-x{ext}"))
+}
+
+fn tool_args(request: &crate::models::ToolRequest, output: &std::path::Path) -> Result<Vec<String>, String> {
+    let input = request.input.clone();
+    let out = output.to_string_lossy().to_string();
+    match request.tool.as_str() {
+        "audio_mp3" => Ok(vec![
+            "-y".to_string(),
+            "-i".to_string(),
+            input,
+            "-vn".to_string(),
+            "-codec:a".to_string(),
+            "libmp3lame".to_string(),
+            "-q:a".to_string(),
+            "2".to_string(),
+            out,
+        ]),
+        "gif" => {
+            let start = request.start_secs.unwrap_or(0.0).max(0.0);
+            let duration = request.duration.unwrap_or(5.0).clamp(0.2, 600.0);
+            let fps = request.fps.unwrap_or(10).clamp(1, 50);
+            let width = request.width.unwrap_or(480).clamp(64, 1920);
+            Ok(vec![
+                "-y".to_string(),
+                "-ss".to_string(),
+                format!("{start}"),
+                "-t".to_string(),
+                format!("{duration}"),
+                "-i".to_string(),
+                input,
+                "-vf".to_string(),
+                format!("fps={fps},scale={width}:-1:flags=lanczos"),
+                "-loop".to_string(),
+                "0".to_string(),
+                out,
+            ])
+        }
+        "compress" => {
+            let crf = request.crf.unwrap_or(30).clamp(18, 45);
+            Ok(vec![
+                "-y".to_string(),
+                "-i".to_string(),
+                input,
+                "-c:v".to_string(),
+                "libx264".to_string(),
+                "-crf".to_string(),
+                crf.to_string(),
+                "-preset".to_string(),
+                "medium".to_string(),
+                "-c:a".to_string(),
+                "aac".to_string(),
+                "-b:a".to_string(),
+                "128k".to_string(),
+                out,
+            ])
+        }
+        other => Err(format!("Unknown tool '{other}'.")),
+    }
+}
+
+fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
+    let input = std::path::Path::new(&request.input);
+    let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output").to_string();
+    let parent = input.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
+    match request.tool.as_str() {
+        "audio_mp3" => parent.join(format!("{stem}.mp3")),
+        "gif" => parent.join(format!("{stem}.gif")),
+        _ => parent.join(format!("{stem}-compressed.mp4")),
+    }
+}
+
+async fn probe_duration_secs(app_ffprobe: &std::path::Path, input: &std::path::Path) -> Option<f64> {
+    let mut command = std::process::Command::new(app_ffprobe);
+    command
+        .args(["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"])
+        .arg(input)
+        .stdin(Stdio::null());
+    ytdlp::hide_console_std(&mut command);
+    let output = command.output().ok()?;
+    String::from_utf8_lossy(&output.stdout).trim().parse::<f64>().ok().filter(|d| *d > 0.0)
+}
+
+pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolRequest) -> Result<String, String> {
+    let input = std::path::PathBuf::from(&request.input);
+    if !input.is_file() {
+        return Err("That file no longer exists.".to_string());
+    }
+    if !matches!(request.tool.as_str(), "audio_mp3" | "gif" | "compress") {
+        return Err(format!("Unknown tool '{}'.", request.tool));
+    }
+    let settings = app
+        .try_state::<AppState>()
+        .and_then(|state| state.settings.lock().ok().map(|guard| guard.clone()))
+        .unwrap_or_default();
+    let data_dir = app
+        .try_state::<AppState>()
+        .map(|state| state.data_dir.clone())
+        .unwrap_or_else(|| PathBuf::from("."));
+    let ffmpeg = ytdlp::locate_ffmpeg(settings.ffmpeg_path.as_deref(), &data_dir)
+        .ok_or_else(|| "FFmpeg is not installed yet. Install it in Settings, Engine.".to_string())?;
+    let ffprobe = ytdlp::locate_ffprobe(settings.ffmpeg_path.as_deref(), &data_dir);
+
+    let output = match &request.output {
+        Some(custom) if !custom.trim().is_empty() => std::path::PathBuf::from(custom),
+        _ => unique_output(default_output(&request)),
+    };
+    if output == input {
+        return Err("The output path must differ from the input file.".to_string());
+    }
+
+    let duration = match &ffprobe {
+        Some(probe) => probe_duration_secs(probe, &input).await,
+        None => None,
+    };
+
+    let mut args = tool_args(&request, &output)?;
+    // Machine-readable progress goes to stdout; we parse it line by line.
+    args.insert(0, "-nostats".to_string());
+    args.insert(0, "-hide_banner".to_string());
+    args.push("-progress".to_string());
+    args.push("pipe:1".to_string());
+
+    let mut ffmpeg_command = tokio::process::Command::new(&ffmpeg);
+    ffmpeg_command
+        .args(&args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    ytdlp::hide_console_tokio(&mut ffmpeg_command);
+    let mut child = ffmpeg_command
+        .spawn()
+        .map_err(|e| format!("Could not start FFmpeg: {e}"))?;
+
+    let tool_name = request.tool.clone();
+    if let Some(stdout) = child.stdout.take() {
+        let mut lines = BufReader::new(stdout).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            if let Some(value) = line.trim().strip_prefix("out_time_us=") {
+                if let Ok(us) = value.parse::<f64>() {
+                    let percent = duration.map(|d| ((us / 1_000_000.0) / d * 100.0).clamp(0.0, 99.9));
+                    if let Some(percent) = percent {
+                        let _ = app.emit(
+                            "tool-progress",
+                            ToolProgressEvent { tool: tool_name.clone(), percent },
+                        );
+                    }
+                }
+            }
+        }
+    }
+    // Drain stderr so the child can exit; keep the tail for the error report.
+    let stderr = child.stderr.take();
+    let stderr_task = tokio::spawn(async move {
+        let mut tail: Vec<String> = Vec::new();
+        if let Some(stream) = stderr {
+            let mut lines = BufReader::new(stream).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                tail.push(line);
+                if tail.len() > 60 {
+                    tail.remove(0);
+                }
+            }
+        }
+        tail
+    });
+
+    let status = child.wait().await.map_err(|e| format!("FFmpeg failed: {e}"))?;
+    let stderr_tail = stderr_task.await.unwrap_or_default();
+
+    let (success, message) = if status.success() {
+        (true, None)
+    } else {
+        let message = stderr_tail
+            .iter()
+            .rev()
+            .find(|l| !l.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| format!("FFmpeg exited with code {}", status.code().unwrap_or(-1)));
+        (false, Some(message))
+    };
+
+    let _ = app.emit(
+        "tool-finished",
+        crate::models::ToolFinishedEvent {
+            tool: tool_name,
+            success,
+            output: if success {
+                Some(output.to_string_lossy().into_owned())
+            } else {
+                None
+            },
+            message,
+        },
+    );
+
+    if success {
+        Ok(output.to_string_lossy().into_owned())
+    } else {
+        Err(stderr_tail
+            .iter()
+            .rev()
+            .find(|l| !l.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| "FFmpeg failed.".to_string()))
+    }
+}
+
 /* ========== analysis (preview without downloading) ========== */
 
 pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, String> {
@@ -922,6 +1218,7 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
             is_playlist: false,
             entry_count: None,
             qualities: Vec::new(),
+            playlist_entries: Vec::new(),
         });
     }
 
@@ -952,6 +1249,7 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
         .env_remove("PYTHONHOME")
         .env_remove("PYTHONPATH")
         .kill_on_drop(true);
+    ytdlp::hide_console_tokio(&mut command);
 
     let output = tokio::time::timeout(Duration::from_secs(45), command.output())
         .await
@@ -974,6 +1272,37 @@ fn analysis_from_json(value: &serde_json::Value, platform_name: &str) -> Analysi
     let entries = value.get("entries").and_then(|e| e.as_array());
     let is_playlist = entries.is_some();
     let entry_count = entries.map(|e| e.len() as u32);
+
+    fn clip_title(text: &str) -> String {
+        let mut t: String = text.chars().take(180).collect();
+        if text.chars().count() > 180 {
+            t.push('…');
+        }
+        t
+    }
+
+    let playlist_entries: Vec<crate::models::PlaylistEntry> = entries
+        .map(|e| {
+            e.iter()
+                .take(200)
+                .enumerate()
+                .map(|(i, entry)| crate::models::PlaylistEntry {
+                    index: (i + 1) as u32,
+                    title: entry
+                        .get("title")
+                        .and_then(|v| v.as_str())
+                        .map(clip_title)
+                        .unwrap_or_else(|| "(untitled)".to_string()),
+                    url: entry
+                        .get("url")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| entry.get("webpage_url").and_then(|v| v.as_str()))
+                        .map(String::from)
+                        .unwrap_or_default(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
     // For playlists, preview the first entry rather than nothing.
     let focus: &serde_json::Value = if is_playlist {
@@ -1029,6 +1358,7 @@ fn analysis_from_json(value: &serde_json::Value, platform_name: &str) -> Analysi
         is_playlist,
         entry_count,
         qualities,
+        playlist_entries,
     }
 }
 
@@ -1043,7 +1373,7 @@ mod tests {
 
     #[test]
     fn build_args_audio_mode_extracts() {
-        let args = build_args("https://example.com/v", DownloadMode::Audio, "best", None, &test_settings(), "/tmp/out");
+        let args = build_args("https://example.com/v", DownloadMode::Audio, "best", None, None, &test_settings(), "/tmp/out");
         let joined = args.join(" ");
         assert!(joined.contains("-x"));
         assert!(joined.contains("--audio-format m4a"));
@@ -1052,14 +1382,14 @@ mod tests {
 
     #[test]
     fn build_args_quality_cap() {
-        let args = build_args("https://example.com/v", DownloadMode::Auto, "1080", None, &test_settings(), "/tmp/out");
+        let args = build_args("https://example.com/v", DownloadMode::Auto, "1080", None, None, &test_settings(), "/tmp/out");
         let joined = args.join(" ");
         assert!(joined.contains("bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b"));
     }
 
     #[test]
     fn build_args_mute_video_only() {
-        let args = build_args("https://example.com/v", DownloadMode::Mute, "720", None, &test_settings(), "/tmp/out");
+        let args = build_args("https://example.com/v", DownloadMode::Mute, "720", None, None, &test_settings(), "/tmp/out");
         let joined = args.join(" ");
         assert!(joined.contains("bv*[height<=720]/bv*"));
         assert!(!joined.contains("+ba"));
@@ -1070,7 +1400,7 @@ mod tests {
         let mut settings = test_settings();
         settings.speed_limit_mbps = 5;
         settings.cookies_from_browser = "firefox".to_string();
-        let args = build_args("https://example.com/v", DownloadMode::Auto, "best", None, &settings, "/tmp/out");
+        let args = build_args("https://example.com/v", DownloadMode::Auto, "best", None, None, &settings, "/tmp/out");
         let joined = args.join(" ");
         assert!(joined.contains("--limit-rate 5M"));
         assert!(joined.contains("--cookies-from-browser firefox"));
@@ -1080,7 +1410,7 @@ mod tests {
     fn build_args_organize_by_platform_prefixes_template() {
         let mut settings = test_settings();
         settings.organize_by_platform = true;
-        let args = build_args("https://example.com/v", DownloadMode::Auto, "best", None, &settings, "/tmp/out");
+        let args = build_args("https://example.com/v", DownloadMode::Auto, "best", None, None, &settings, "/tmp/out");
         let joined = args.join(" ");
         assert!(joined.contains("/tmp/out/%(extractor_key)s/"));
     }

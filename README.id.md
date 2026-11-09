@@ -14,7 +14,7 @@
 [English](README.md) | **Bahasa Indonesia**
 
 > [!NOTE]
-> Getta masih rilis awal. Unduhan inti sudah jalan hari ini. Extractor native, torrent, kursus, Telegram, dan aplikasi mobile ada di roadmap di bawah, belum ada di build ini.
+> Getta masih rilis awal. Unduhan inti sudah jalan hari ini. Extractor native, torrent, kursus, dan Telegram ada di roadmap di bawah, belum ada di build ini.
 
 ---
 
@@ -55,6 +55,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Omnibox** | Satu input untuk tautan tunggal, banyak tautan sekaligus, dan URL file langsung |
 | **Deteksi platform** | Mengenali YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud, dan lainnya, plus halaman web umum dan file langsung |
 | **Pratinjau media** | Judul, penulis, durasi, thumbnail, dan daftar kualitas sebelum mengunduh |
+| **Pemilih daftar putar** | Playlist dianalisis dengan daftar ceklis; unduh semuanya atau hanya entri yang kamu mau |
 | **Mode** | Video + audio, audio saja (m4a), atau video saja |
 | **Banyak tautan** | Tempel banyak link sekaligus: Getta mengantrekan semuanya |
 | **Pola nama file** | Template field yt-dlp dengan default yang aman, misalnya `%(title).200s [%(id)s].%(ext)s` |
@@ -66,9 +67,20 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Jeda dan lanjut** | Jeda level proses di Windows, Linux, dan macOS; unduhan dilanjutkan dari posisi terakhir |
 | **Coba ulang dengan backoff** | Coba ulang otomatis untuk rate limit dan error sementara dengan backoff eksponensial |
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |
-| **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Unduhan |
-| **Statistik live** | Kecepatan, ETA, byte yang diunduh, dan persen per item |
+| **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Antrean |
+| **Progres live** | Sparkline kecepatan, hitung mundur ETA, fase transfer, dan strip agregat di atas antrean |
 | **Riwayat** | Unduhan selesai dengan ukuran, tombol unduh ulang, tampilkan, atau hapus |
+
+### File kamu, satu tempat
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Pustaka** | Grid unduhan selesai kamu; putar video, audio, dan gambar langsung di aplikasi, filter per tipe |
+| **Alat** | Meja kerja lokal: Video ke MP3, Video ke GIF, Kompres video (H.264), ditenagai FFmpeg |
+| **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
+| **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |
+| **Deep link** | `getta://<url>` membuka Getta dan mengantrekan tautannya |
+| **Onboarding** | Wizard peluncuran pertama: bahasa, tema, pasang mesin, pilih folder tujuan |
 
 ### Nyaman dipakai
 
@@ -76,6 +88,10 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 |-------|-----------|
 | **UI dwibahasa** | Bahasa Inggris dan Bahasa Indonesia di semua layar |
 | **Tema terang, gelap, dan sistem** | Mengikuti OS, bisa diubah di Pengaturan |
+| **Desain editorial** | Kanvas bone hangat, aksen cobalt, daftar antrean bergaya manifest, sidebar bernomor |
+| **System tray** | Klik kiri membuka/menyembunyikan window; klik kanan menu Tampilkan / Keluar dalam bahasa kamu |
+| **Autostart** | Opsi menjalankan Getta saat sistem menyala di Pengaturan |
+| **Tutup ke tray** | Opsi: tutup menyembunyikan ke tray alih-alih keluar; buka lagi lewat ikon tray |
 | **Tanpa akun, tanpa telemetri** | Getta tidak mengumpulkan apa pun soal apa yang kamu unduh |
 | **Mesin yang memasang dirinya** | Pemasangan yt-dlp dan FFmpeg terverifikasi dengan pengecekan SHA-256 |
 
@@ -172,7 +188,7 @@ npx tauri build    # buat installer di src-tauri/target/release/bundle
 1. Buka Getta. Layar beranda menampilkan kolom untuk satu URL; banner di atas memberitahu jika mesin unduhan belum terpasang, dengan tombol untuk memasangnya.
 2. Tempel tautan (coba video publik). Getta membacanya dan menampilkan pratinjau.
 3. Pilih kualitas dan mode, lalu tekan **Unduh**.
-4. Pantau di tab Unduhan.
+4. Pantau di tab Antrean.
 
 > [!NOTE]
 > Di peluncuran pertama, Getta bisa menanyakan lokasi penyimpanan file. Default adalah folder Downloads; ubah di Pengaturan, Simpan ke.
@@ -182,7 +198,7 @@ npx tauri build    # buat installer di src-tauri/target/release/bundle
 - **Tempel banyak tautan sekaligus.** Getta mendeteksinya dan mengantrekan semuanya.
 - **Audio saja.** Ganti mode ke "Audio saja" sebelum mengunduh.
 - **Jeda.** Gunakan tombol jeda pada item; lanjutkan saat kamu mau. Di Windows, jeda level proses menjaga file parsial tetap konsisten.
-- **Batasi kecepatan.** Gunakan pilihan batas kecepatan di layar Unduhan, atau pengaturan di Pengaturan, Transfer.
+- **Batasi kecepatan.** Gunakan pilihan batas kecepatan di layar Antrean, atau pengaturan di Pengaturan, Transfer.
 - **Situs yang butuh login.** Di Pengaturan, Mesin, isi browser yang dibaca cookie-nya oleh Getta (misalnya `chrome`, `firefox`).
 - **Bersihkan antrean.** "Bersihkan yang selesai" menghapus item selesai dan gagal dari daftar.
 
@@ -209,7 +225,7 @@ Pengaturan ada di dalam aplikasi: folder output dan pola nama file, konkurensi, 
 ```
 getta/
 ├── src/                    # Frontend SvelteKit (Svelte 5)
-│   ├── routes/             # Beranda, Unduhan, Pengaturan, Tentang
+│   ├── routes/             # Beranda, Antrean, Pustaka, Alat, Pengaturan
 │   ├── lib/                # Jembatan API, stores, i18n (en/id), format
 │   └── app.css             # token desain dan gaya dasar
 ├── src-tauri/              # Backend Rust (Tauri 2)
@@ -271,7 +287,7 @@ Getta mengunduh mesin unduhannya dari penerbit resminya dan memverifikasi SHA-25
 
 ## Roadmap
 
-Direncanakan, belum dirilis: extractor native untuk platform-platform besar (lebih cepat, paham cookies), dukungan bittorrent, pengunduh kursus, integrasi Telegram, mode command-line, dan build Android/iOS. Tidak ada yang dijamin sebelum tag rilis terbit.
+Direncanakan, belum dirilis: extractor native untuk platform-platform besar (lebih cepat, paham cookies), dukungan bittorrent, pengunduh kursus, integrasi Telegram, mode command-line. Tidak ada yang dijamin sebelum tag rilis terbit.
 
 ---
 
@@ -280,6 +296,12 @@ Direncanakan, belum dirilis: extractor native untuk platform-platform besar (leb
 <details><summary><b>Apakah Getta butuh Python?</b></summary>
 
 Tidak. Getta mengunduh dan menjalankan binary resmi yt-dlp. Python tidak terlibat.
+
+</details>
+
+<details><summary><b>Unduhan dari Instagram atau X tiba-tiba error "Failed to decrypt with DPAPI"?</b></summary>
+
+Chrome dan Edge versi 127 ke atas memblokir program lain membaca cookie mereka. Gunakan Firefox untuk pengaturan "Browser untuk cookies", atau ekspor file `cookies.txt` dari browser, lalu pilih di Pengaturan, Mesin, File cookie.
 
 </details>
 
@@ -303,9 +325,20 @@ Getta open source dan tidak ditandatangani dengan sertifikat berbayar. Itu hal n
 
 <details><summary><b>Apakah Getta bisa dipakai di HP?</b></summary>
 
-Belum. Build Android dan iOS ada di roadmap.
+Tidak. Getta adalah aplikasi desktop (Windows, macOS, Linux). Belum ada build mobile dan belum direncanakan.
 
 </details>
+
+---
+
+## Dukungan
+
+Getta gratis dan open source, tanpa iklan dan tanpa akun. Kalau ini mempercepat kerjamu, kamu bisa mendukung pengembangannya:
+
+- [GitHub Sponsors](https://github.com/sponsors/nekonaru)
+- [Saweria](https://saweria.co/nekonaruu)
+- [SociaBuzz](https://sociabuzz.com/nekonaru/donate)
+- [BagiBagi](https://bagibagi.co/Nekonaru)
 
 ---
 
@@ -325,3 +358,5 @@ Belum. Build Android dan iOS ada di roadmap.
 ## Lisensi
 
 Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](LICENSE) untuk informasi lebih lanjut.
+
+
