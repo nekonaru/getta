@@ -7,16 +7,18 @@ import {
 } from "#lib/api";
 import { settingsStore } from "#lib/stores/settings.svelte";
 import { toastStore } from "#lib/stores/toast.svelte";
-import { t } from "#lib/i18n";
+import { t } from "#lib/i18n.svelte";
 import {
 	isPermissionGranted,
 	requestPermission,
 	sendNotification
 } from "@tauri-apps/plugin-notification";
+import { humanize } from "#lib/errors";
 
 const STATS_KEY = "getta.stats";
+const HISTORY_LEN = 48;
 
-function readStats(): { downloads: number; bytes: number } {
+export function readStats(): { downloads: number; bytes: number } {
 	try {
 		const raw = localStorage.getItem(STATS_KEY);
 		if (raw) return JSON.parse(raw);
@@ -37,10 +39,17 @@ function writeStats(stats: { downloads: number; bytes: number }): void {
 class DownloadsStore {
 	items = $state<QueueItemInfo[]>([]);
 	loaded = $state(false);
+	/** Ring buffer of recent speed samples (bytes/s), per item id. */
+	speedHistory = $state<Map<number, number[]>>(new Map());
+	history: HistoryEntry[] = [];
 	private started = false;
 
 	get activeCount(): number {
-		return this.items.filter((i) => i.status === "active" || i.status === "queued").length;
+		return this.items.filter((i) => i.status === "active").length;
+	}
+
+	get queuedCount(): number {
+		return this.items.filter((i) => i.status === "queued").length;
 	}
 
 	get doneCount(): number {
@@ -49,6 +58,10 @@ class DownloadsStore {
 
 	get failedCount(): number {
 		return this.items.filter((i) => i.status === "error").length;
+	}
+
+	get totalSpeed(): number {
+		return this.items.reduce((sum, i) => sum + (i.status === "active" ? i.speed_bps : 0), 0);
 	}
 
 	sorted(statusOrder: QueueStatusName[]): QueueItemInfo[] {
@@ -74,8 +87,22 @@ class DownloadsStore {
 			const previous = new Map(this.items.map((i) => [i.id, i.status]));
 			this.items = items;
 			this.loaded = true;
+			this.recordSpeed(items);
 			this.trackTransitions(previous, items);
 		});
+	}
+
+	private recordSpeed(items: QueueItemInfo[]): void {
+		const next = new Map(this.speedHistory);
+		for (const item of items) {
+			if (item.status !== "active") continue;
+			const history = next.get(item.id) ?? [];
+			next.set(item.id, [...history, item.speed_bps].slice(-HISTORY_LEN));
+		}
+		for (const id of [...next.keys()]) {
+			if (!items.some((i) => i.id === id && i.status === "active")) next.delete(id);
+		}
+		this.speedHistory = next;
 	}
 
 	private trackTransitions(previous: Map<number, QueueStatusName>, items: QueueItemInfo[]): void {
@@ -95,26 +122,21 @@ class DownloadsStore {
 							let granted = await isPermissionGranted();
 							if (!granted) granted = (await requestPermission()) === "granted";
 							if (granted) {
-								sendNotification({ title: t("downloads.statusDone"), body: item.title });
+								sendNotification({ title: t("queue.statusDone"), body: item.title });
 							}
 						} catch {
 							/* notifications unavailable */
 						}
 					})();
 				}
-				toastStore.push(`${t("downloads.statusDone")}: ${item.title}`);
+				toastStore.push(`${t("queue.statusDone")}: ${item.title}`);
 			}
 
 			if (item.status === "error") {
-				toastStore.push(
-					`${t("downloads.statusError")}: ${item.error_message ?? item.title}`,
-					"error"
-				);
+				toastStore.push(`${t("queue.statusError")}: ${humanize(item.error_message)}`, "error");
 			}
 		}
 	}
-
-	history: HistoryEntry[] = [];
 
 	async loadHistory(): Promise<void> {
 		this.history = await api.historyList();

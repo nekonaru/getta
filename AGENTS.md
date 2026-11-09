@@ -1,7 +1,7 @@
 # Getta
 
 Getta is a free, open source app that fetches media and files from across the
-web into your own folders. Windows, macOS, Linux, Android and iOS. No account,
+web into your own folders. Windows, macOS, Linux only. No account,
 no telemetry, no terminal.
 
 Getta is an original implementation. Do not paste code, assets or text from
@@ -17,8 +17,8 @@ other projects into this repository. Every feature is written from scratch.
 | `AUTHOR_GITHUB` | nekonaru |
 | `PROJECT_KIND` | app |
 | `STACK` | Tauri 2 (Rust), SvelteKit (Svelte 5, TypeScript) |
-| `PLATFORMS` | Windows, macOS, Linux, Android, iOS |
-| `MIN_OS` | Windows 10, macOS 12, Android 8, iOS 15 |
+| `PLATFORMS` | Windows, macOS, Linux |
+| `MIN_OS` | Windows 10, macOS 12, Ubuntu 22.04+ |
 | `DEFAULT_BRANCH` | main |
 | `LICENSE` | MIT |
 | `UI_LANGUAGES` | English, Bahasa Indonesia |
@@ -54,3 +54,4 @@ other projects into this repository. Every feature is written from scratch.
 - One logical change per commit. Run `npm run check` and `npm test` first.
 - Native builds are verified in CI. If you change Rust code, expect CI to be
   the source of truth; do not claim it works until CI is green.
+

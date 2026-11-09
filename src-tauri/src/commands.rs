@@ -17,6 +17,14 @@ pub async fn analyze_url(app: AppHandle, url: String) -> Result<Analysis, String
 }
 
 #[tauri::command]
+pub async fn run_tool(
+    app: AppHandle,
+    request: crate::models::ToolRequest,
+) -> Result<String, String> {
+    crate::queue::run_tool(&app, request).await
+}
+
+#[tauri::command]
 pub async fn start_download(app: AppHandle, options: StartOptions) -> Result<u64, String> {
     app.try_state::<AppState>()
         .ok_or_else(|| "App is not ready yet.".to_string())?
@@ -228,9 +236,10 @@ pub async fn reveal_in_folder(path: String) -> Result<(), String> {
     }
     if cfg!(target_os = "windows") {
         // explorer /select highlights the file; fall back to opening the parent.
-        let status = Command::new("explorer")
-            .arg("/select,")
-            .arg(&target)
+        let mut explorer = Command::new("explorer");
+        explorer.arg("/select,").arg(&target);
+        ytdlp::hide_console_std(&mut explorer);
+        let status = explorer
             .status()
             .map_err(|e| format!("Could not open the folder: {e}"))?;
         if status.success() {
