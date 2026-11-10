@@ -3,6 +3,14 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.10.2
+
+Auto-update sekarang berfungsi benar di macOS.
+
+## Perbaikan bug
+
+- **Artifact updater macOS kini berbeda per arsitektur.** Build Apple Silicon dan Intel dikirim sebagai file terpisah, dan manifest updater menunjuk yang tepat untuk setiap Mac.
+
 ## v0.10.1
 
 Perbaikan pipeline rilis; tidak ada perubahan aplikasi.

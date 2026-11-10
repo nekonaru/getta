@@ -3,6 +3,14 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.10.2
+
+Auto-update now works correctly on macOS.
+
+## Bug fixes
+
+- **macOS updater artifacts are now distinct per architecture.** Apple Silicon and Intel builds ship as separate files, and the updater manifest points at the right one for each Mac.
+
 ## v0.10.1
 
 Release pipeline fix; no app changes.

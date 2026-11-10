@@ -51,6 +51,17 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npx tauri build --target ${{ matrix.target }}
+      - name: Name the mac updater artifact by architecture
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          dir=$(find src-tauri/target -type d -path '*release/bundle/macos' -print -quit)
+          for f in "$dir"/*.app.tar.gz "$dir"/*.app.tar.gz.sig; do
+            [ -f "$f" ] || continue
+            suffix="${f##*.app.tar.gz}"
+            mv "$f" "$(dirname "$f")/$(basename "${f%.app.tar.gz*}")-${{ matrix.name }}.app.tar.gz$suffix"
+          done
+          find src-tauri/target -path '*release/bundle/macos*' -type f
       - name: Upload bundle artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -103,11 +114,11 @@ jobs:
             artifacts/bundle-windows-x86_64/nsis/*.exe.sig
             artifacts/bundle-windows-x86_64/msi/*.msi
             artifacts/bundle-darwin-aarch64/dmg/*.dmg
-            artifacts/bundle-darwin-aarch64/macos/*.app.tar.gz
-            artifacts/bundle-darwin-aarch64/macos/*.app.tar.gz.sig
+            artifacts/bundle-darwin-aarch64/macos/*-darwin-aarch64.app.tar.gz
+            artifacts/bundle-darwin-aarch64/macos/*-darwin-aarch64.app.tar.gz.sig
             artifacts/bundle-darwin-x86_64/dmg/*.dmg
-            artifacts/bundle-darwin-x86_64/macos/*.app.tar.gz
-            artifacts/bundle-darwin-x86_64/macos/*.app.tar.gz.sig
+            artifacts/bundle-darwin-x86_64/macos/*-darwin-x86_64.app.tar.gz
+            artifacts/bundle-darwin-x86_64/macos/*-darwin-x86_64.app.tar.gz.sig
             artifacts/bundle-linux-x86_64/appimage/*.AppImage
             artifacts/bundle-linux-x86_64/appimage/*.AppImage.sig
             artifacts/bundle-linux-x86_64/deb/*.deb
