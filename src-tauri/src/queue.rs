@@ -1069,85 +1069,178 @@ fn unique_output(path: std::path::PathBuf) -> std::path::PathBuf {
     path.with_file_name(format!("{stem}-x{ext}"))
 }
 
+/// Numeric param with fallback; blanks and junk fall back to the default.
+fn param_num(params: &std::collections::HashMap<String, String>, key: &str, default: f64) -> f64 {
+    params.get(key).and_then(|v| v.trim().parse().ok()).unwrap_or(default)
+}
+
+/// Lowercased string param with fallback.
+fn param_str(params: &std::collections::HashMap<String, String>, key: &str, default: &str) -> String {
+    params
+        .get(key)
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| default.to_string())
+}
+
+/// Whitelisted extension param: a crafted `target` can never escape the
+/// output folder or masquerade as another file type.
+fn ext_in(params: &std::collections::HashMap<String, String>, key: &str, default: &str, allowed: &[&str]) -> String {
+    let value = param_str(params, key, default);
+    if allowed.contains(&value.as_str()) {
+        value
+    } else {
+        default.to_string()
+    }
+}
+
+fn image_out_ext(params: &std::collections::HashMap<String, String>, input: &std::path::Path) -> String {
+    let target = param_str(params, "target", "original");
+    if ["jpg", "png", "webp"].contains(&target.as_str()) {
+        return target;
+    }
+    input
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .map(|e| if e == "jpeg" { "jpg".to_string() } else { e })
+        .filter(|e| ["jpg", "png", "webp", "bmp", "gif"].contains(&e.as_str()))
+        .unwrap_or_else(|| "png".to_string())
+}
+
 fn tool_args(request: &crate::models::ToolRequest, output: &std::path::Path) -> Result<Vec<String>, String> {
     let input = request.input.clone();
     let out = output.to_string_lossy().to_string();
+    let p = &request.params;
+    let mut args: Vec<String> = vec!["-y".to_string()];
     match request.tool.as_str() {
-        "audio_mp3" => Ok(vec![
-            "-y".to_string(),
-            "-i".to_string(),
-            input,
-            "-vn".to_string(),
-            "-codec:a".to_string(),
-            "libmp3lame".to_string(),
-            "-q:a".to_string(),
-            "2".to_string(),
-            out,
-        ]),
-        "gif" => {
-            let start = request.start_secs.unwrap_or(0.0).max(0.0);
-            let duration = request.duration.unwrap_or(5.0).clamp(0.2, 600.0);
-            let fps = request.fps.unwrap_or(10).clamp(1, 50);
-            let width = request.width.unwrap_or(480).clamp(64, 1920);
-            Ok(vec![
-                "-y".to_string(),
-                "-ss".to_string(),
-                format!("{start}"),
-                "-t".to_string(),
-                format!("{duration}"),
-                "-i".to_string(),
-                input,
-                "-vf".to_string(),
-                format!("fps={fps},scale={width}:-1:flags=lanczos"),
-                "-loop".to_string(),
-                "0".to_string(),
-                out,
-            ])
+        "audio_mp3" => {
+            args.extend(["-i".to_string(), input, "-vn".to_string(), "-codec:a".to_string(), "libmp3lame".to_string(), "-q:a".to_string(), "2".to_string()]);
+            args.push(out);
+            Ok(args)
         }
-        "trim" => {
-            let start = request.start_secs.unwrap_or(0.0).max(0.0);
-            let duration = request.duration.unwrap_or(10.0).clamp(0.1, 24.0 * 3600.0);
-            Ok(vec![
-                "-y".to_string(),
-                "-ss".to_string(),
-                format!("{start}"),
-                "-t".to_string(),
-                format!("{duration}"),
-                "-i".to_string(),
-                input,
-                "-c:v".to_string(),
-                "libx264".to_string(),
-                "-crf".to_string(),
-                "23".to_string(),
-                "-preset".to_string(),
-                "fast".to_string(),
-                "-c:a".to_string(),
-                "aac".to_string(),
-                "-b:a".to_string(),
-                "128k".to_string(),
-                "-movflags".to_string(),
-                "+faststart".to_string(),
-                out,
-            ])
+        "gif" => {
+            let start = param_num(p, "start", 0.0).max(0.0);
+            let duration = param_num(p, "duration", 5.0).clamp(0.2, 600.0);
+            let fps = param_num(p, "fps", 10.0).clamp(1.0, 50.0).round() as u32;
+            let width = param_num(p, "width", 480.0).clamp(64.0, 1920.0).round() as u32;
+            args.extend(["-ss".to_string(), format!("{start}"), "-t".to_string(), format!("{duration}"), "-i".to_string(), input, "-vf".to_string(), format!("fps={fps},scale={width}:-1:flags=lanczos"), "-loop".to_string(), "0".to_string()]);
+            args.push(out);
+            Ok(args)
         }
         "compress" => {
-            let crf = request.crf.unwrap_or(30).clamp(18, 45);
-            Ok(vec![
-                "-y".to_string(),
-                "-i".to_string(),
-                input,
-                "-c:v".to_string(),
-                "libx264".to_string(),
-                "-crf".to_string(),
-                crf.to_string(),
-                "-preset".to_string(),
-                "medium".to_string(),
-                "-c:a".to_string(),
-                "aac".to_string(),
-                "-b:a".to_string(),
-                "128k".to_string(),
-                out,
-            ])
+            let crf = param_num(p, "crf", 30.0).clamp(18.0, 45.0).round() as u32;
+            args.extend(["-i".to_string(), input, "-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), crf.to_string(), "-preset".to_string(), "medium".to_string(), "-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "128k".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "trim" => {
+            let start = param_num(p, "start", 0.0).max(0.0);
+            let duration = param_num(p, "duration", 10.0).clamp(0.1, 24.0 * 3600.0);
+            args.extend(["-ss".to_string(), format!("{start}"), "-t".to_string(), format!("{duration}"), "-i".to_string(), input, "-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string(), "-preset".to_string(), "fast".to_string(), "-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "128k".to_string(), "-movflags".to_string(), "+faststart".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "audio_convert" => {
+            let format = ext_in(p, "format", "mp3", &["mp3", "flac", "ogg", "opus", "m4a", "wav"]);
+            let bitrate = param_num(p, "bitrate", 192.0).clamp(32.0, 320.0).round() as u32;
+            args.extend(["-i".to_string(), input, "-vn".to_string()]);
+            match format.as_str() {
+                "mp3" => args.extend(["-codec:a".to_string(), "libmp3lame".to_string(), "-b:a".to_string(), format!("{bitrate}k")]),
+                "flac" => args.extend(["-codec:a".to_string(), "flac".to_string()]),
+                "ogg" => args.extend(["-codec:a".to_string(), "libvorbis".to_string(), "-q:a".to_string(), "4".to_string()]),
+                "opus" => args.extend(["-codec:a".to_string(), "libopus".to_string(), "-b:a".to_string(), format!("{bitrate}k")]),
+                "m4a" => args.extend(["-codec:a".to_string(), "aac".to_string(), "-b:a".to_string(), format!("{bitrate}k")]),
+                "wav" => args.extend(["-codec:a".to_string(), "pcm_s16le".to_string()]),
+                _ => return Err("Unsupported audio format.".to_string()),
+            }
+            args.push(out);
+            Ok(args)
+        }
+        "audio_lossless" => {
+            // Matroska audio: every codec fits, copy always works.
+            args.extend(["-i".to_string(), input, "-vn".to_string(), "-c:a".to_string(), "copy".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "audio_normalize" => {
+            args.extend(["-i".to_string(), input, "-vn".to_string(), "-af".to_string(), "loudnorm=I=-16:TP=-1.5:LRA=11".to_string(), "-codec:a".to_string(), "libmp3lame".to_string(), "-q:a".to_string(), "2".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "audio_speed" => {
+            let speed = param_num(p, "speed", 1.0).clamp(0.5, 4.0);
+            let mut remaining = speed;
+            let mut chain = String::new();
+            while remaining > 2.0 {
+                chain.push_str("atempo=2.0,");
+                remaining /= 2.0;
+            }
+            chain.push_str(&format!("atempo={remaining}"));
+            args.extend(["-i".to_string(), input, "-vn".to_string(), "-af".to_string(), chain, "-codec:a".to_string(), "libmp3lame".to_string(), "-q:a".to_string(), "2".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "video_convert" => {
+            let target = ext_in(p, "target", "mp4", &["mp4", "mkv", "webm", "mov"]);
+            let mode = param_str(p, "mode", "remux");
+            if mode != "encode" && target != "webm" {
+                // Stream copy: lossless, fast. WebM containers reject non-VP codecs.
+                args.extend(["-i".to_string(), input, "-c".to_string(), "copy".to_string()]);
+            } else if target == "webm" {
+                args.extend(["-i".to_string(), input, "-c:v".to_string(), "libvpx-vp9".to_string(), "-crf".to_string(), "32".to_string(), "-b:v".to_string(), "0".to_string(), "-c:a".to_string(), "libopus".to_string(), "-b:a".to_string(), "128k".to_string()]);
+            } else {
+                args.extend(["-i".to_string(), input, "-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string(), "-preset".to_string(), "fast".to_string(), "-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "128k".to_string(), "-movflags".to_string(), "+faststart".to_string()]);
+            }
+            args.push(out);
+            Ok(args)
+        }
+        "video_resize" => {
+            let mut height = param_num(p, "height", 720.0).clamp(144.0, 4320.0).round() as u32;
+            if height % 2 == 1 {
+                height += 1;
+            }
+            args.extend(["-i".to_string(), input, "-vf".to_string(), format!("scale=-2:{height}"), "-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string(), "-preset".to_string(), "fast".to_string(), "-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "128k".to_string(), "-movflags".to_string(), "+faststart".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "video_rotate" => {
+            let angle = param_num(p, "angle", 90.0) as u32;
+            let vf = match angle {
+                180 => "transpose=1,transpose=1",
+                270 => "transpose=2",
+                _ => "transpose=1",
+            };
+            args.extend(["-i".to_string(), input, "-vf".to_string(), vf.to_string(), "-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string(), "-preset".to_string(), "fast".to_string(), "-c:a".to_string(), "copy".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "mute_video" => {
+            args.extend(["-i".to_string(), input, "-c:v".to_string(), "copy".to_string(), "-an".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "extract_frame" => {
+            let time = param_num(p, "time", 0.0).max(0.0);
+            args.extend(["-ss".to_string(), format!("{time}"), "-i".to_string(), input, "-frames:v".to_string(), "1".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "subtitle_convert" => {
+            args.extend(["-i".to_string(), input]);
+            args.push(out);
+            Ok(args)
+        }
+        "image_resize" => {
+            let width = param_num(p, "width", 1280.0).clamp(16.0, 8192.0).round() as u32;
+            args.extend(["-i".to_string(), input, "-vf".to_string(), format!("scale={width}:-1")]);
+            args.push(out);
+            Ok(args)
+        }
+        "image_convert" => {
+            args.extend(["-i".to_string(), input]);
+            args.push(out);
+            Ok(args)
         }
         other => Err(format!("Unknown tool '{other}'.")),
     }
@@ -1157,10 +1250,23 @@ fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
     let input = std::path::Path::new(&request.input);
     let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("output").to_string();
     let parent = input.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
+    let p = &request.params;
     match request.tool.as_str() {
         "audio_mp3" => parent.join(format!("{stem}.mp3")),
         "gif" => parent.join(format!("{stem}.gif")),
         "trim" => parent.join(format!("{stem}-trimmed.mp4")),
+        "audio_convert" => parent.join(format!("{stem}.{}", ext_in(p, "format", "mp3", &["mp3", "flac", "ogg", "opus", "m4a", "wav"]))),
+        "audio_lossless" => parent.join(format!("{stem}.mka")),
+        "audio_normalize" => parent.join(format!("{stem}-normalized.mp3")),
+        "audio_speed" => parent.join(format!("{stem}-speed.mp3")),
+        "video_convert" => parent.join(format!("{stem}.{}", ext_in(p, "target", "mp4", &["mp4", "mkv", "webm", "mov"]))),
+        "video_resize" => parent.join(format!("{stem}-{}p.mp4", param_num(p, "height", 720.0).clamp(144.0, 4320.0).round() as u32)),
+        "video_rotate" => parent.join(format!("{stem}-rotated.mp4")),
+        "mute_video" => parent.join(format!("{stem}-mute.mp4")),
+        "extract_frame" => parent.join(format!("{stem}.{}", ext_in(p, "target", "jpg", &["jpg", "png", "webp"]))),
+        "subtitle_convert" => parent.join(format!("{stem}.{}", ext_in(p, "target", "vtt", &["srt", "vtt", "ass"]))),
+        "image_resize" => parent.join(format!("{stem}-resized.{}", image_out_ext(p, input))),
+        "image_convert" => parent.join(format!("{stem}.{}", image_out_ext(p, input))),
         _ => parent.join(format!("{stem}-compressed.mp4")),
     }
 }
@@ -1181,7 +1287,13 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
     if !input.is_file() {
         return Err("That file no longer exists.".to_string());
     }
-    if !matches!(request.tool.as_str(), "audio_mp3" | "gif" | "compress" | "trim") {
+    if !matches!(
+        request.tool.as_str(),
+        "audio_mp3" | "gif" | "trim" | "compress"
+            | "audio_convert" | "audio_lossless" | "audio_normalize" | "audio_speed"
+            | "video_convert" | "video_resize" | "video_rotate" | "mute_video"
+            | "extract_frame" | "subtitle_convert" | "image_resize" | "image_convert"
+    ) {
         return Err(format!("Unknown tool '{}'.", request.tool));
     }
     let settings = app

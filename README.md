@@ -76,7 +76,7 @@ Getta is an original implementation under the MIT license.
 | Feature | Description |
 |---------|-------------|
 | **Library** | Grid of your completed downloads; play media inline, filter by type, copy the source URL, remove entries |
-| **Tools** | Local workbench: Video to MP3, Video to GIF, Compress video (H.264), Trim video |
+| **Tools** | Local workbench: 16 tools for audio, video, images and subtitles, powered by FFmpeg |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
 | **Deep links** | `getta://<url>` opens Getta and queues the link |

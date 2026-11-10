@@ -3,6 +3,18 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.7.0
+
+Meja kerja bertumbuh dari 4 menjadi 16 alat, dikelompokkan per tipe.
+
+## Fitur baru
+
+- **Audio:** konversi ke MP3/FLAC/OGG/Opus/M4A/WAV, ekstrak aliran audio tanpa encode ulang, normalisasi volume ke -16 LUFS, percepat/perlambat pemutaran.
+- **Video:** konversi container (remux tanpa encode ulang, atau encode ulang ke H.264/VP9), ubah ukuran ke 480p-2160p, putar, hapus audio, simpan satu frame sebagai JPG/PNG/WebP.
+- **Gambar:** ubah ukuran ke lebar tetap, konversi ke JPG/PNG/WebP.
+- **Subtitle:** konversi antara SRT, WebVTT, dan ASS.
+- **Parameter alat bertipe.** Setiap alat punya parameter eksplisit; ekstensi file output masuk daftar putih.
+
 ## v0.6.1
 
 Nama baru untuk input beranda; tidak ada perubahan fungsi.

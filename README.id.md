@@ -76,7 +76,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Pustaka** | Grid unduhan selesai kamu; putar media inline, filter per tipe, salin URL sumber, hapus entri |
-| **Alat** | Meja kerja lokal: Video ke MP3, Video ke GIF, Kompres video (H.264), Potong video |
+| **Alat** | Meja kerja lokal: 16 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |
 | **Deep link** | `getta://<url>` membuka Getta dan mengantrekan tautannya |

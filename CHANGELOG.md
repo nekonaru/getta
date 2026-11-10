@@ -3,6 +3,18 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.7.0
+
+The workbench grows from 4 to 16 tools, grouped by type.
+
+## New features
+
+- **Audio:** convert to MP3/FLAC/OGG/Opus/M4A/WAV, extract the audio stream losslessly, normalize loudness to -16 LUFS, speed up or slow down playback.
+- **Video:** convert containers (remux without re-encoding, or re-encode to H.264/VP9), resize to 480p-2160p, rotate, remove the audio track, grab a frame as JPG/PNG/WebP.
+- **Image:** resize to a fixed width, convert to JPG/PNG/WebP.
+- **Subtitles:** convert between SRT, WebVTT and ASS.
+- **Typed tool params.** Every tool takes explicit parameters; output extensions are whitelisted.
+
 ## v0.6.1
 
 New name for the home input, no functional changes.

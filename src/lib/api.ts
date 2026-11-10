@@ -136,17 +136,29 @@ export interface StartOptions {
 	output_dir: string | null;
 }
 
-export type ToolName = "audio_mp3" | "gif" | "compress" | "trim";
+export type ToolName =
+	| "audio_mp3"
+	| "gif"
+	| "compress"
+	| "trim"
+	| "audio_convert"
+	| "audio_lossless"
+	| "audio_normalize"
+	| "audio_speed"
+	| "video_convert"
+	| "video_resize"
+	| "video_rotate"
+	| "mute_video"
+	| "extract_frame"
+	| "subtitle_convert"
+	| "image_resize"
+	| "image_convert";
 
 export interface ToolRequest {
 	tool: ToolName;
 	input: string;
 	output?: string | null;
-	start_secs?: number | null;
-	duration?: number | null;
-	width?: number | null;
-	fps?: number | null;
-	crf?: number | null;
+	params?: Record<string, string>;
 }
 
 export interface ToolProgressEvent {

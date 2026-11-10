@@ -12,36 +12,115 @@
 		output: string | null;
 		error: string | null;
 	};
+	type ParamSpec =
+		| { kind: "select"; key: string; labelKey: string; options: Array<{ value: string; label: string }>; defaultValue: string }
+		| { kind: "number"; key: string; labelKey: string; min: number; max: number; step: number; defaultValue: string };
+	type ToolGroup = "audio" | "video" | "image" | "subtitles";
+	type Icon = "audio" | "gif" | "compress" | "trim" | "convert" | "lossless" | "normalize" | "speed" | "video" | "resize" | "rotate" | "mute" | "frame" | "image" | "text";
+
+	const MEDIA = { name: "Media", extensions: ["mp4", "mkv", "webm", "mov", "avi", "m4a", "mp3", "wav", "flac", "ogg", "opus", "aac"] };
+	const VIDEO = { name: "Video", extensions: ["mp4", "mkv", "webm", "mov", "avi"] };
+	const IMAGE = { name: "Images", extensions: ["jpg", "jpeg", "png", "webp", "bmp", "gif", "avif"] };
+	const SUBTITLES = { name: "Subtitles", extensions: ["srt", "vtt", "ass", "ssa"] };
+
+	const TOOL_DEFS: Array<{
+		id: ToolName;
+		group: ToolGroup;
+		name: () => string;
+		desc: () => string;
+		params: ParamSpec[];
+		filters: { name: string; extensions: string[] };
+		icon: Icon;
+	}> = [
+		{ id: "audio_mp3", group: "audio", name: () => t("tools.audioMp3"), desc: () => t("tools.audioMp3Desc"), params: [], filters: MEDIA, icon: "audio" },
+		{ id: "audio_convert", group: "audio", name: () => t("tools.audioConvert"), desc: () => t("tools.audioConvertDesc"), params: [
+			{ kind: "select", key: "format", labelKey: "tools.format", defaultValue: "mp3", options: [{ value: "mp3", label: "MP3" }, { value: "flac", label: "FLAC" }, { value: "ogg", label: "OGG" }, { value: "opus", label: "Opus" }, { value: "m4a", label: "M4A (AAC)" }, { value: "wav", label: "WAV" }] },
+			{ kind: "number", key: "bitrate", labelKey: "tools.bitrate", min: 32, max: 320, step: 16, defaultValue: "192" },
+		], filters: MEDIA, icon: "convert" },
+		{ id: "audio_lossless", group: "audio", name: () => t("tools.audioLossless"), desc: () => t("tools.audioLosslessDesc"), params: [], filters: MEDIA, icon: "lossless" },
+		{ id: "audio_normalize", group: "audio", name: () => t("tools.audioNormalize"), desc: () => t("tools.audioNormalizeDesc"), params: [], filters: MEDIA, icon: "normalize" },
+		{ id: "audio_speed", group: "audio", name: () => t("tools.audioSpeed"), desc: () => t("tools.audioSpeedDesc"), params: [
+			{ kind: "number", key: "speed", labelKey: "tools.speed", min: 0.5, max: 4, step: 0.25, defaultValue: "1" },
+		], filters: MEDIA, icon: "speed" },
+
+		{ id: "trim", group: "video", name: () => t("tools.trim"), desc: () => t("tools.trimDesc"), params: [
+			{ kind: "number", key: "start", labelKey: "tools.startAt", min: 0, max: 86400, step: 0.5, defaultValue: "0" },
+			{ kind: "number", key: "duration", labelKey: "tools.duration", min: 0.5, max: 86400, step: 0.5, defaultValue: "10" },
+		], filters: VIDEO, icon: "trim" },
+		{ id: "gif", group: "video", name: () => t("tools.gif"), desc: () => t("tools.gifDesc"), params: [
+			{ kind: "number", key: "start", labelKey: "tools.startAt", min: 0, max: 86400, step: 0.5, defaultValue: "0" },
+			{ kind: "number", key: "duration", labelKey: "tools.duration", min: 0.2, max: 600, step: 0.5, defaultValue: "5" },
+			{ kind: "number", key: "width", labelKey: "tools.width", min: 64, max: 1920, step: 10, defaultValue: "480" },
+			{ kind: "number", key: "fps", labelKey: "tools.fps", min: 1, max: 50, step: 1, defaultValue: "10" },
+		], filters: VIDEO, icon: "gif" },
+		{ id: "compress", group: "video", name: () => t("tools.compress"), desc: () => t("tools.compressDesc"), params: [
+			{ kind: "select", key: "crf", labelKey: "tools.crf", defaultValue: "30", options: [{ value: "23", label: "23 (high quality)" }, { value: "28", label: "28" }, { value: "30", label: "30 (balanced)" }, { value: "35", label: "35" }, { value: "40", label: "40 (tiny)" }] },
+		], filters: VIDEO, icon: "compress" },
+		{ id: "video_convert", group: "video", name: () => t("tools.videoConvert"), desc: () => t("tools.videoConvertDesc"), params: [
+			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "mp4", options: [{ value: "mp4", label: "MP4 (H.264)" }, { value: "mkv", label: "MKV" }, { value: "webm", label: "WebM (VP9)" }, { value: "mov", label: "MOV" }] },
+			{ kind: "select", key: "mode", labelKey: "tools.mode", defaultValue: "remux", options: [{ value: "remux", label: t("tools.remux") }, { value: "encode", label: t("tools.encode") }] },
+		], filters: VIDEO, icon: "video" },
+		{ id: "video_resize", group: "video", name: () => t("tools.videoResize"), desc: () => t("tools.videoResizeDesc"), params: [
+			{ kind: "select", key: "height", labelKey: "tools.height", defaultValue: "720", options: [{ value: "480", label: "480p" }, { value: "720", label: "720p" }, { value: "1080", label: "1080p" }, { value: "1440", label: "1440p" }, { value: "2160", label: "2160p" }] },
+		], filters: VIDEO, icon: "resize" },
+		{ id: "video_rotate", group: "video", name: () => t("tools.videoRotate"), desc: () => t("tools.videoRotateDesc"), params: [
+			{ kind: "select", key: "angle", labelKey: "tools.angle", defaultValue: "90", options: [{ value: "90", label: "90°" }, { value: "180", label: "180°" }, { value: "270", label: "270°" }] },
+		], filters: VIDEO, icon: "rotate" },
+		{ id: "mute_video", group: "video", name: () => t("tools.muteVideo"), desc: () => t("tools.muteVideoDesc"), params: [], filters: VIDEO, icon: "mute" },
+		{ id: "extract_frame", group: "video", name: () => t("tools.frame"), desc: () => t("tools.frameDesc"), params: [
+			{ kind: "number", key: "time", labelKey: "tools.time", min: 0, max: 86400, step: 0.5, defaultValue: "0" },
+			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "jpg", options: [{ value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
+		], filters: VIDEO, icon: "frame" },
+
+		{ id: "image_resize", group: "image", name: () => t("tools.imageResize"), desc: () => t("tools.imageResizeDesc"), params: [
+			{ kind: "number", key: "width", labelKey: "tools.width", min: 16, max: 8192, step: 10, defaultValue: "1280" },
+			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "original", options: [{ value: "original", label: t("tools.original") }, { value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
+		], filters: IMAGE, icon: "image" },
+		{ id: "image_convert", group: "image", name: () => t("tools.imageConvert"), desc: () => t("tools.imageConvertDesc"), params: [
+			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "webp", options: [{ value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
+		], filters: IMAGE, icon: "image" },
+
+		{ id: "subtitle_convert", group: "subtitles", name: () => t("tools.subtitleConvert"), desc: () => t("tools.subtitleConvertDesc"), params: [
+			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "vtt", options: [{ value: "vtt", label: "WebVTT" }, { value: "srt", label: "SRT" }, { value: "ass", label: "ASS" }] },
+		], filters: SUBTITLES, icon: "text" },
+	];
+
+	const GROUPS: Array<{ id: ToolGroup; label: () => string }> = [
+		{ id: "audio", label: () => t("tools.groupAudio") },
+		{ id: "video", label: () => t("tools.groupVideo") },
+		{ id: "image", label: () => t("tools.groupImage") },
+		{ id: "subtitles", label: () => t("tools.groupSubtitles") },
+	];
+
+	const TOOL_BY_ID = Object.fromEntries(TOOL_DEFS.map((d) => [d.id, d])) as Record<ToolName, (typeof TOOL_DEFS)[number]>;
+
+	const freshState = (): ToolState => ({ input: "", running: false, progress: 0, output: null, error: null });
 
 	let ffmpegReady = $state<boolean | null>(null);
 	let expanded = $state<ToolName | null>("audio_mp3");
-	let gifStart = $state("0");
-	let gifDuration = $state("5");
-	let gifWidth = $state("480");
-	let gifFps = $state("10");
-	let trimStart = $state("0");
-	let trimDuration = $state("10");
-	let compressCrf = $state("30");
-
-	let toolsState = $state<Record<ToolName, ToolState>>({
-		audio_mp3: { input: "", running: false, progress: 0, output: null, error: null },
-		gif: { input: "", running: false, progress: 0, output: null, error: null },
-		compress: { input: "", running: false, progress: 0, output: null, error: null },
-		trim: { input: "", running: false, progress: 0, output: null, error: null }
-	});
+	let toolsState = $state<Record<ToolName, ToolState>>(
+		Object.fromEntries(TOOL_DEFS.map((d) => [d.id, freshState()])) as Record<ToolName, ToolState>
+	);
+	let paramValues = $state<Record<ToolName, Record<string, string>>>(
+		Object.fromEntries(
+			TOOL_DEFS.map((d) => [d.id, Object.fromEntries(d.params.map((p) => [p.key, p.defaultValue]))])
+		) as Record<ToolName, Record<string, string>>
+	);
 
 	onMount(() => {
 		void api.engineStatus().then((engine) => (ffmpegReady = engine.ffmpeg.found)).catch(() => (ffmpegReady = null));
 		const unlistenFinished = onToolFinished((event) => {
 			const tool = event.tool as ToolName;
-			toolsState[tool].running = false;
+			const state = toolsState[tool];
+			if (!state) return;
+			state.running = false;
 			if (event.success) {
-				toolsState[tool].output = event.output;
-				toolsState[tool].progress = 100;
+				state.output = event.output;
+				state.progress = 100;
 				toastStore.push(t("tools.done"));
 			} else {
-				toolsState[tool].error = event.message ?? t("tools.failed");
-				toastStore.push(toolsState[tool].error ?? t("tools.failed"), "error");
+				state.error = event.message ?? t("tools.failed");
+				toastStore.push(state.error ?? t("tools.failed"), "error");
 			}
 		});
 		const unlistenProgress = onToolProgress((event) => {
@@ -60,7 +139,7 @@
 
 	async function pickFile(tool: ToolName) {
 		try {
-			const picked = await open({ multiple: false, directory: false, filters: [{ name: "Media", extensions: ["mp4", "mkv", "webm", "mov", "avi", "m4a", "mp3", "wav", "flac", "ogg"] }] });
+			const picked = await open({ multiple: false, directory: false, filters: [TOOL_BY_ID[tool].filters] });
 			if (typeof picked === "string" && picked) {
 				toolsState[tool].input = picked;
 				toolsState[tool].output = null;
@@ -80,27 +159,7 @@
 		state.error = null;
 		state.progress = 0;
 		try {
-			const request =
-				tool === "gif"
-					? {
-							tool,
-							input: state.input,
-							start_secs: Number(gifStart) || 0,
-							duration: Number(gifDuration) || 5,
-							width: Number(gifWidth) || 480,
-							fps: Number(gifFps) || 10
-						}
-					: tool === "trim"
-						? {
-								tool,
-								input: state.input,
-								start_secs: Number(trimStart) || 0,
-								duration: Number(trimDuration) || 10
-							}
-						: tool === "compress"
-							? { tool, input: state.input, crf: Number(compressCrf) || 30 }
-							: { tool, input: state.input };
-			await api.runTool(request);
+			await api.runTool({ tool, input: state.input, params: { ...paramValues[tool] } });
 		} catch (e) {
 			state.running = false;
 			state.error = e instanceof Error ? e.message : String(e);
@@ -114,33 +173,6 @@
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
 	}
-
-	const TOOL_DEFS: Array<{
-		id: ToolName;
-		name: () => string;
-		desc: () => string;
-	}> = [
-		{
-			id: "audio_mp3",
-			name: () => t("tools.audioMp3"),
-			desc: () => t("tools.audioMp3Desc")
-		},
-		{
-			id: "gif",
-			name: () => t("tools.gif"),
-			desc: () => t("tools.gifDesc")
-		},
-		{
-			id: "trim",
-			name: () => t("tools.trim"),
-			desc: () => t("tools.trimDesc")
-		},
-		{
-			id: "compress",
-			name: () => t("tools.compress"),
-			desc: () => t("tools.compressDesc")
-		}
-	];
 </script>
 
 <div class="page">
@@ -161,81 +193,100 @@
 		{/if}
 
 		<div class="tool-list">
-			{#each TOOL_DEFS as def (def.id)}
-				{@const state = toolState(def.id)}
-				<section class="tool card" class:open={expanded === def.id}>
-					<button class="tool-head" aria-expanded={expanded === def.id} onclick={() => (expanded = expanded === def.id ? null : def.id)}>
-						<span class="tool-icon" aria-hidden="true">
-							{#if def.id === "audio_mp3"}
-								<svg viewBox="0 0 24 24"><path d="M9 6.5v11l9-5.5z"/><circle cx="6.5" cy="17.5" r="2.5"/></svg>
-							{:else if def.id === "gif"}
-								<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M8 12v.01M12 12v.01M16 12v.01"/></svg>
-							{:else if def.id === "compress"}
-								<svg viewBox="0 0 24 24"><path d="M4 12h6l-2-5 4 10 2-5h6"/></svg>
-							{:else}
-								<svg viewBox="0 0 24 24"><path d="M6 8V6m0 12v-2M18 8V6m0 12v-2M4 10h6M4 14h6M14 10h6M14 14h6"/></svg>
-							{/if}
-						</span>
-						<span class="tool-text">
-							<span class="tool-name">{def.name()}</span>
-							<span class="tool-desc muted">{def.desc()}</span>
-						</span>
-						<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-					</button>
+			{#each GROUPS as group (group.id)}
+				<p class="group-label">{group.label()}</p>
+				{#each TOOL_DEFS.filter((d) => d.group === group.id) as def (def.id)}
+					{@const state = toolState(def.id)}
+					<section class="tool card" class:open={expanded === def.id}>
+						<button class="tool-head" aria-expanded={expanded === def.id} onclick={() => (expanded = expanded === def.id ? null : def.id)}>
+							<span class="tool-icon" aria-hidden="true">
+								{#if def.icon === "audio"}
+									<svg viewBox="0 0 24 24"><path d="M9 6.5v11l9-5.5z"/><circle cx="6.5" cy="17.5" r="2.5"/></svg>
+								{:else if def.icon === "gif"}
+									<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M8 12v.01M12 12v.01M16 12v.01"/></svg>
+								{:else if def.icon === "compress"}
+									<svg viewBox="0 0 24 24"><path d="M4 12h6l-2-5 4 10 2-5h6"/></svg>
+								{:else if def.icon === "trim"}
+									<svg viewBox="0 0 24 24"><path d="M6 8V6m0 12v-2M18 8V6m0 12v-2M4 10h6M4 14h6M14 10h6M14 14h6"/></svg>
+								{:else if def.icon === "video"}
+									<svg viewBox="0 0 24 24"><path d="M4 6h12M4 12h12M4 18h12"/><path d="M19 8h3M19 16h3"/></svg>
+								{:else if def.icon === "resize"}
+									<svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>
+								{:else if def.icon === "rotate"}
+									<svg viewBox="0 0 24 24"><path d="M20 11A8 8 0 1 0 18 17"/><path d="M20 5v6h-6"/></svg>
+								{:else if def.icon === "mute"}
+									<svg viewBox="0 0 24 24"><path d="M11 6 5 10H3v4h2l6 4z"/><path d="m17 9 4 4m0-4-4 4"/></svg>
+								{:else if def.icon === "frame"}
+									<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="9" cy="10" r="1.4"/><path d="m5 18 6-6 4 4 3-3 6 6"/></svg>
+								{:else if def.icon === "convert"}
+									<svg viewBox="0 0 24 24"><path d="M7 8h11l-3-3M17 16H6l3 3"/></svg>
+								{:else if def.icon === "lossless"}
+									<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+								{:else if def.icon === "normalize"}
+									<svg viewBox="0 0 24 24"><path d="M4 12h2M9 8v8M13 6v12M17 9v6M21 12h-1"/></svg>
+								{:else if def.icon === "speed"}
+									<svg viewBox="0 0 24 24"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></svg>
+								{:else if def.icon === "image"}
+									<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.4"/><path d="m5 17 6-6 5 5 3-3 5 5"/></svg>
+								{:else}
+									<svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+								{/if}
+							</span>
+							<span class="tool-text">
+								<span class="tool-name">{def.name()}</span>
+								<span class="tool-desc muted">{def.desc()}</span>
+							</span>
+							<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+						</button>
 
-					{#if expanded === def.id}
-						<div class="tool-body">
-							<div class="file-row">
-								<button class="btn btn-sm" onclick={() => pickFile(def.id)} disabled={state.running}>{t("tools.pickFile")}</button>
-								<span class="file-name mono" title={state.input}>{state.input ? state.input.split(/[\\/]/).pop() : "-"}</span>
-							</div>
+						{#if expanded === def.id}
+							<div class="tool-body">
+								<div class="file-row">
+									<button class="btn btn-sm" onclick={() => pickFile(def.id)} disabled={state.running}>{t("tools.pickFile")}</button>
+									<span class="file-name mono" title={state.input}>{state.input ? state.input.split(/[\\/]/).pop() : "-"}</span>
+								</div>
 
-							{#if def.id === "gif"}
-								<div class="options-grid">
-									<label><span class="field-label">{t("tools.startAt")}</span><input class="input" type="number" min="0" step="0.5" bind:value={gifStart} disabled={state.running} /></label>
-									<label><span class="field-label">{t("tools.duration")}</span><input class="input" type="number" min="0.2" step="0.5" bind:value={gifDuration} disabled={state.running} /></label>
-									<label><span class="field-label">{t("tools.width")}</span><input class="input" type="number" min="64" max="1920" step="10" bind:value={gifWidth} disabled={state.running} /></label>
-									<label><span class="field-label">{t("tools.fps")}</span><input class="input" type="number" min="1" max="50" step="1" bind:value={gifFps} disabled={state.running} /></label>
-								</div>
-							{:else if def.id === "trim"}
-								<div class="options-grid">
-									<label><span class="field-label">{t("tools.startAt")}</span><input class="input" type="number" min="0" step="0.5" bind:value={trimStart} disabled={state.running} /></label>
-									<label><span class="field-label">{t("tools.duration")}</span><input class="input" type="number" min="0.5" step="0.5" bind:value={trimDuration} disabled={state.running} /></label>
-								</div>
-							{:else if def.id === "compress"}
-								<div class="options-grid">
-									<label><span class="field-label">{t("tools.crf")}</span>
-										<select class="input" bind:value={compressCrf} disabled={state.running}>
-											<option value="23">23 (high quality)</option>
-											<option value="28">28</option>
-											<option value="30">30 (balanced)</option>
-											<option value="35">35</option>
-											<option value="40">40 (tiny)</option>
-										</select>
-									</label>
-								</div>
-							{/if}
+								{#if def.params.length > 0}
+									<div class="options-grid">
+										{#each def.params as spec (spec.key)}
+											{#if spec.kind === "select"}
+												<label><span class="field-label">{t(spec.labelKey)}</span>
+													<select class="input" bind:value={paramValues[def.id][spec.key]} disabled={state.running}>
+														{#each spec.options as opt (opt.value)}
+															<option value={opt.value}>{opt.label}</option>
+														{/each}
+													</select>
+												</label>
+											{:else}
+												<label><span class="field-label">{t(spec.labelKey)}</span>
+													<input class="input" type="number" min={spec.min} max={spec.max} step={spec.step} bind:value={paramValues[def.id][spec.key]} disabled={state.running} />
+												</label>
+											{/if}
+										{/each}
+									</div>
+								{/if}
 
-							<div class="run-row">
-								<button class="btn btn-accent" disabled={!state.input || state.running || ffmpegReady === false} onclick={() => runTool(def.id)}>
-									{#if state.running}<span class="spinner"></span>{t("tools.running")}{:else}{t("tools.run")}{/if}
-								</button>
+								<div class="run-row">
+									<button class="btn btn-accent" disabled={!state.input || state.running || ffmpegReady === false} onclick={() => runTool(def.id)}>
+										{#if state.running}<span class="spinner"></span>{t("tools.running")}{:else}{t("tools.run")}{/if}
+									</button>
+									{#if state.output}
+										<button class="btn btn-sm btn-ghost" onclick={() => reveal(state.output ?? "")}>{t("tools.reveal")}</button>
+									{/if}
+								</div>
+								{#if state.running || state.progress > 0}
+									<div class="progress"><div class="progress-fill progress-sheen" style="width: {state.progress}%"></div></div>
+								{/if}
+								{#if state.error}
+									<p class="error-box">{state.error}</p>
+								{/if}
 								{#if state.output}
-									<button class="btn btn-sm btn-ghost" onclick={() => reveal(state.output ?? "")}>{t("tools.reveal")}</button>
+									<p class="output-line"><span class="field-label" style="margin:0">{t("tools.output")}</span><code class="mono output-path" title={state.output}>{state.output}</code></p>
 								{/if}
 							</div>
-							{#if state.running || state.progress > 0}
-								<div class="progress"><div class="progress-fill progress-sheen" style="width: {state.progress}%"></div></div>
-							{/if}
-							{#if state.error}
-								<p class="error-box">{state.error}</p>
-							{/if}
-							{#if state.output}
-								<p class="output-line"><span class="field-label" style="margin:0">{t("tools.output")}</span><code class="mono output-path" title={state.output}>{state.output}</code></p>
-							{/if}
-						</div>
-					{/if}
-				</section>
+						{/if}
+					</section>
+				{/each}
 			{/each}
 		</div>
 	</div>
@@ -266,6 +317,15 @@
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
+	}
+
+	.group-label {
+		font-size: 10.5px;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin: 8px 4px -4px;
 	}
 
 	.tool {

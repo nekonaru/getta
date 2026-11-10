@@ -176,11 +176,8 @@ pub struct ToolRequest {
     pub tool: String,
     pub input: String,
     pub output: Option<String>,
-    pub start_secs: Option<f64>,
-    pub duration: Option<f64>,
-    pub width: Option<u32>,
-    pub fps: Option<u32>,
-    pub crf: Option<u32>,
+    #[serde(default)]
+    pub params: std::collections::HashMap<String, String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
