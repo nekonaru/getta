@@ -119,6 +119,13 @@ pub struct QueueItemInfo {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ChapterMarker {
+    pub title: Option<String>,
+    pub start_seconds: f64,
+    pub end_seconds: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FollowChannel {
     pub id: String,
     pub url: String,

@@ -3,6 +3,22 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.10.0
+
+Getta updates itself now.
+
+## New features
+
+- **Auto-update.** About shows "Check for updates"; Getta downloads and installs the signed release and relaunches. On Linux it works for the AppImage.
+- **Cookie buckets.** Save and reuse cookies.txt files per site; rename them, check their integrity locally, or move them to trash with restore and permanent delete.
+- **Chapter markers** in the library player: jump to chapters parsed by ffprobe.
+- **Duplicate detector** in the library: SHA-256 content hashing, groups duplicates and removes all but the first copy.
+- **Engine self-check** at launch: Getta verifies yt-dlp and FFmpeg run and warns you when they do not.
+
+## Improvements
+
+- Dependency refresh: keepawake 0.6.1, sanitize-filename 0.6.0, dirs 7.
+
 ## v0.9.0
 
 Follow channels, download rules, fuzzy everything.

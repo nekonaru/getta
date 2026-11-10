@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { open } from "@tauri-apps/plugin-dialog";
 	import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
-	import { api, type EngineStatus, type DownloadRule } from "#lib/api";
+	import { api, type EngineStatus, type DownloadRule, type CookieBucket } from "#lib/api";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
@@ -99,6 +99,100 @@
 		try {
 			const picked = await open({ directory: true, multiple: false });
 			if (typeof picked === "string" && picked) patchRule(id, { dir: picked });
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function pickCookieBucket() {
+		try {
+			const picked = await open({
+				multiple: false,
+				directory: false,
+				filters: [{ name: "cookies.txt", extensions: ["txt"] }]
+			});
+			if (typeof picked !== "string" || !picked) return;
+			const stem = picked.split(/[\\/]/).pop()?.replace(/\.txt$/i, "") ?? "bucket";
+			const name = window.prompt(t("settings.bucketNamePrompt"), stem);
+			if (name === null) return;
+			const bucket = {
+				id: crypto.randomUUID(),
+				name: name.trim() || stem,
+				file: picked,
+				domain: "",
+				added_at: Math.floor(Date.now() / 1000)
+			};
+			await patch({ cookie_buckets: [...(settings?.cookie_buckets ?? []), bucket] });
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function useBucket(bucket: CookieBucket) {
+		await patch({ cookie_file: bucket.file });
+		toastStore.push(t("settings.cookieBucketUsed", { name: bucket.name }));
+	}
+
+	async function renameBucket(bucket: CookieBucket) {
+		const name = window.prompt(t("settings.renameBucketPrompt"), bucket.name);
+		if (name === null) return;
+		const trimmed = name.trim();
+		if (!trimmed) return;
+		await patch({
+			cookie_buckets: (settings?.cookie_buckets ?? []).map((b) =>
+				b.id === bucket.id ? { ...b, name: trimmed } : b
+			)
+		});
+	}
+
+	async function deleteBucket(bucket: CookieBucket) {
+		if (!window.confirm(t("settings.deleteBucketConfirm", { name: bucket.name }))) return;
+		await patch({
+			cookie_buckets: (settings?.cookie_buckets ?? []).filter((b) => b.id !== bucket.id),
+			cookie_trash: [...(settings?.cookie_trash ?? []), bucket],
+			...(settings?.cookie_file === bucket.file ? { cookie_file: "" } : {})
+		});
+	}
+
+	async function restoreBucket(bucket: CookieBucket) {
+		await patch({
+			cookie_trash: (settings?.cookie_trash ?? []).filter((b) => b.id !== bucket.id),
+			cookie_buckets: [...(settings?.cookie_buckets ?? []), bucket]
+		});
+	}
+
+	async function deleteForever(bucket: CookieBucket) {
+		if (!window.confirm(t("settings.deleteForeverConfirm", { name: bucket.name }))) return;
+		await patch({ cookie_trash: (settings?.cookie_trash ?? []).filter((b) => b.id !== bucket.id) });
+	}
+
+	async function emptyTrash() {
+		if (!window.confirm(t("settings.emptyTrashConfirm"))) return;
+		await patch({ cookie_trash: [] });
+	}
+
+	async function checkBucket(bucket: CookieBucket) {
+		try {
+			const report = await api.cookieBucketCheck(bucket.file);
+			if (report.ok) {
+				const parts = [`${report.total} cookies · ${report.sites.length} sites`];
+				if (report.soonest_expiry) {
+					parts.push(
+						t("settings.cookieSoonestExpiry", {
+							time: new Date(report.soonest_expiry * 1000).toISOString().slice(0, 10)
+						})
+					);
+				}
+				if (report.expired > 0) {
+					parts.push(t("settings.cookieExpired", { count: report.expired }));
+				}
+				toastStore.push(parts.join(" · "));
+			} else {
+				toastStore.push(
+					t("settings.cookieCheckBad", { error: report.error ?? t("settings.cookieInvalid") }),
+					"error"
+				);
+			}
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -313,6 +407,46 @@
 									{/if}
 								</div>
 								<p class="hint">{t("settings.cookieFileWarning")}</p>
+                                <div class="bucket-block">
+                                    <div class="bucket-head">
+                                        <span class="field-label" style="margin:0">{t("settings.cookieBuckets")}</span>
+                                        <button class="btn btn-sm" onclick={pickCookieBucket}>{t("settings.addBucket")}</button>
+                                    </div>
+                                    <p class="hint">{t("settings.cookieBucketsHint")}</p>
+                                    {#each settings.cookie_buckets as bucket (bucket.id)}
+                                        <div class="bucket-row" class:active={settings.cookie_file === bucket.file}>
+                                            <div class="bucket-row-text">
+                                                <span class="bucket-name">{bucket.name}{#if settings.cookie_file === bucket.file} <span class="bucket-active-chip mono">{t("settings.cookieActive")}</span>{/if}</span>
+                                                <span class="bucket-file mono" title={bucket.file}>{bucket.file}</span>
+                                            </div>
+                                            <div class="bucket-actions">
+                                                <button class="btn btn-sm" onclick={() => useBucket(bucket)}>{t("settings.cookieUse")}</button>
+                                                <button class="btn-icon" title={t("settings.cookieCheck")} aria-label={t("settings.cookieCheck")} onclick={() => checkBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg></button>
+                                                <button class="btn-icon" title={t("settings.renameBucket")} aria-label={t("settings.renameBucket")} onclick={() => renameBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /></svg></button>
+                                                <button class="btn-icon danger" title={t("settings.deleteBucket")} aria-label={t("settings.deleteBucket")} onclick={() => deleteBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
+                                            </div>
+                                        </div>
+                                    {:else}
+                                        <p class="hint">{t("settings.cookieBucketsEmpty")}</p>
+                                    {/each}
+                                    {#if settings.cookie_trash.length > 0}
+                                        <div class="trash-block">
+                                            <div class="trash-head">
+                                                <span class="field-label" style="margin:0">{t("settings.cookieTrash", { count: settings.cookie_trash.length })}</span>
+                                                <button class="btn btn-sm btn-ghost" onclick={emptyTrash}>{t("settings.clearTrash")}</button>
+                                            </div>
+                                            {#each settings.cookie_trash as bucket (bucket.id)}
+                                                <div class="trash-row">
+                                                    <span class="trash-name mono" title={bucket.file}>{bucket.name}</span>
+                                                    <div class="trash-actions">
+                                                        <button class="btn btn-sm btn-ghost" onclick={() => restoreBucket(bucket)}>{t("settings.restoreBucket")}</button>
+                                                        <button class="btn-icon danger" title={t("settings.deleteForever")} aria-label={t("settings.deleteForever")} onclick={() => deleteForever(bucket)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
+                                                    </div>
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    {/if}
+                                </div>
 							</div>
 						</div>
 					</section>
@@ -462,6 +596,108 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		color: var(--muted);
+	}
+
+	.bucket-block {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		border-top: 1px solid var(--border);
+		padding-top: 14px;
+		margin-top: 10px;
+	}
+
+	.bucket-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.bucket-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		justify-content: space-between;
+		border: 1px solid var(--border);
+		border-radius: var(--r-md);
+		padding: 8px 10px;
+	}
+
+	.bucket-row.active {
+		border-color: var(--accent);
+	}
+
+	.bucket-row-text {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.bucket-name {
+		font-size: 12px;
+		font-weight: 650;
+	}
+
+	.bucket-active-chip {
+		font-size: 9px;
+		color: var(--accent);
+	}
+
+	.bucket-file {
+		font-size: 9.5px;
+		color: var(--muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.bucket-actions {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex: none;
+	}
+
+	.trash-block {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		border: 1px dashed var(--border);
+		border-radius: var(--r-md);
+		padding: 10px;
+		margin-top: 6px;
+	}
+
+	.trash-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.trash-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.trash-name {
+		font-size: 11px;
+		color: var(--muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.trash-actions {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex: none;
 	}
 
 	.dep-name {

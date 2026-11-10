@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Getta",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "identifier": "com.getta.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -16,6 +16,12 @@
           "getta"
         ]
       }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYzRTY2RTQ1QkUyNUU4NjAKUldSZzZDVytSVzdtODI1a3Jja0NOdzltMkR2SnhPUzFOWGQ4aG1zNHI2RUdiUXAxRFRwRXFIZ3cK",
+      "endpoints": [
+        "https://github.com/nekonaru/getta/releases/latest/download/latest.json"
+      ]
     }
   },
   "app": {
@@ -56,6 +62,7 @@
     "targets": "all",
     "publisher": "Nicolas Dwi Dharma",
     "category": "Utility",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

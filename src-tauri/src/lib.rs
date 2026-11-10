@@ -4,6 +4,7 @@
 //! from any other downloader project.
 
 mod commands;
+mod cookies;
 mod follows;
 mod history;
 mod models;
@@ -24,6 +25,35 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub settings: Mutex<settings::AppSettings>,
     pub queue: queue::QueueManager,
+}
+
+/// Run both engines and report whether they work. Called once at launch;
+/// the UI shows a banner when something is broken.
+fn engine_ok(app: &tauri::AppHandle) -> bool {
+    let Some(state) = app.try_state::<AppState>() else {
+        return true;
+    };
+    let settings = state.settings.lock().map(|s| s.clone()).unwrap_or_default();
+    let data_dir = state.data_dir.clone();
+
+    let check = |path: &std::path::Path, arg: &str| -> bool {
+        let mut command = std::process::Command::new(path);
+        command
+            .arg(arg)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+        ytdlp::hide_console_std(&mut command);
+        command.status().map(|s| s.success()).unwrap_or(false)
+    };
+
+    let ytdlp_ok = ytdlp::locate_ytdlp(settings.ytdlp_path.as_deref(), &data_dir)
+        .map(|p| check(&p, "--version"))
+        .unwrap_or(false);
+    let ffmpeg_ok = ytdlp::locate_ffmpeg(settings.ffmpeg_path.as_deref(), &data_dir)
+        .map(|p| check(&p, "-version"))
+        .unwrap_or(false);
+    ytdlp_ok && ffmpeg_ok
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -71,6 +101,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .on_window_event(|window, event| {
             // Optional behavior: hide to tray instead of quitting on X.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -111,6 +143,18 @@ pub fn run() {
                 crate::follows::poll_auto(poll_app).await;
             });
 
+            // Verify the engines still run; tell the UI when they do not.
+            let check_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let ok = tokio::task::spawn_blocking(move || engine_ok(&check_app))
+                    .await
+                    .unwrap_or(true);
+                if !ok {
+                    use tauri::Emitter;
+                    let _ = check_app.emit("engine-broken", ());
+                }
+            });
+
             // Register the global fetch shortcut (CmdOrCtrl+Shift+D).
             {
                 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
@@ -147,6 +191,9 @@ pub fn run() {
             commands::follow_remove,
             commands::follow_set_auto,
             commands::follow_check_now,
+            commands::cookie_bucket_check,
+            commands::probe_chapters,
+            commands::find_duplicates,
             commands::history_list,
             commands::history_clear,
             commands::history_remove,

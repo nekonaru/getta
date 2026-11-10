@@ -78,7 +78,7 @@ Getta is an original implementation under the MIT license.
 | Feature | Description |
 |---------|-------------|
 | **Library** | Grid of your completed downloads; play media inline (0.5x-3x speed), filter by type, copy the source URL, remove entries |
-| **Tools** | Local workbench: 22 tools for audio, video, images and subtitles, powered by FFmpeg |
+| **Tools** | Local workbench: 23 tools for audio, video, images and subtitles, powered by FFmpeg |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
 | **Deep links** | `getta://<url>` opens Getta and queues the link |
@@ -98,6 +98,11 @@ Getta is an original implementation under the MIT license.
 | **Manual queue order** | Move queued items up and down; the scheduler spawns them in your order |
 | **No account, no telemetry** | Getta does not collect anything about what you download |
 | **Self-updating engine** | Optional verified install of yt-dlp and FFmpeg, with SHA-256 checking |
+| **Auto-update** | Check from About; Getta downloads and installs the signed release and relaunches. AppImage only on Linux |
+| **Cookie buckets** | Reusable per-site cookies.txt files with local integrity checks, rename and trash bin |
+| **Chapter markers** | Jump through chapters in the inline library player |
+| **Duplicate detector** | SHA-256 duplicate scan in the library; keeps the first copy |
+| **Engine self-check** | Getta verifies yt-dlp and FFmpeg run at launch and warns you when they do not |
 
 ---
 

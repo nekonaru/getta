@@ -1,6 +1,6 @@
 [package]
 name = "getta"
-version = "0.9.0"
+version = "0.10.0"
 description = "Getta: a free, open source app that fetches media from across the web into your own folders"
 authors = ["Nicolas Dwi Dharma"]
 edition = "2021"
@@ -19,6 +19,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
@@ -47,7 +49,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-dirs = "6"
+dirs = "7"
 sanitize-filename = "0.6"
 unicode-normalization = "0.1"
 url = "2"

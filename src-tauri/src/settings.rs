@@ -37,6 +37,28 @@ fn default_language() -> String {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
+pub struct CookieBucket {
+    pub id: String,
+    pub name: String,
+    pub file: String,
+    pub domain: String,
+    pub added_at: i64,
+}
+
+impl Default for CookieBucket {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: String::new(),
+            file: String::new(),
+            domain: String::new(),
+            added_at: 0,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct DownloadRule {
     pub id: String,
     pub pattern: String,
@@ -102,6 +124,8 @@ pub struct AppSettings {
     pub ytdlp_path: Option<String>,
     pub ffmpeg_path: Option<String>,
     pub download_rules: Vec<DownloadRule>,
+    pub cookie_buckets: Vec<CookieBucket>,
+    pub cookie_trash: Vec<CookieBucket>,
 }
 
 impl Default for AppSettings {
@@ -138,6 +162,8 @@ impl Default for AppSettings {
             ytdlp_path: None,
             ffmpeg_path: None,
             download_rules: Vec::new(),
+            cookie_buckets: Vec::new(),
+            cookie_trash: Vec::new(),
         }
     }
 }

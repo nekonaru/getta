@@ -78,7 +78,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Pustaka** | Grid unduhan selesai kamu; putar media inline (kecepatan 0.5x-3x), filter per tipe, salin URL sumber, hapus entri |
-| **Alat** | Meja kerja lokal: 22 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
+| **Alat** | Meja kerja lokal: 23 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |
 | **Deep link** | `getta://<url>` membuka Getta dan mengantrekan tautannya |
@@ -98,6 +98,11 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Urutan antrean manual** | Pindahkan item menunggu naik/turun; scheduler menjalankannya sesuai urutanmu |
 | **Tanpa akun, tanpa telemetri** | Getta tidak mengumpulkan apa pun soal apa yang kamu unduh |
 | **Mesin yang memasang dirinya** | Pemasangan yt-dlp dan FFmpeg terverifikasi dengan pengecekan SHA-256 |
+| **Auto-update** | Periksa dari About; Getta mengunduh dan memasang rilis bertanda tangan lalu restart. Di Linux hanya untuk AppImage |
+| **Bucket cookie** | File cookies.txt yang dipakai ulang per situs, dengan pemeriksaan integritas lokal, ganti nama, dan tempat sampah |
+| **Chapter markers** | Lompat ke bab di pemutar inline pustaka |
+| **Pindai duplikat** | Pindai duplikat SHA-256 di pustaka; menyimpan salinan pertama |
+| **Pemeriksaan mesin** | Getta memverifikasi yt-dlp dan FFmpeg bisa dijalankan saat aplikasi dibuka |
 
 ---
 

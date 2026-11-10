@@ -3,6 +3,22 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.10.0
+
+Getta sekarang bisa memperbarui dirinya sendiri.
+
+## Fitur baru
+
+- **Auto-update.** Halaman About menampilkan "Periksa pembaruan"; Getta mengunduh dan memasang rilis yang ditandatangani lalu restart. Di Linux berfungsi untuk AppImage.
+- **Bucket cookie.** Simpan dan pakai ulang file cookies.txt per situs; ganti nama, periksa integritasnya secara lokal, atau pindahkan ke sampah dengan opsi pulihkan dan hapus permanen.
+- **Chapter markers** di pemutar pustaka: lompat ke bab yang dibaca ffprobe.
+- **Pindai duplikat** di pustaka: hash konten SHA-256, mengelompokkan duplikat, dan menghapus semua kecuali salinan pertama.
+- **Pemeriksaan mesin** saat aplikasi dibuka: Getta memverifikasi yt-dlp dan FFmpeg bisa dijalankan dan memperingatkan kalau tidak.
+
+## Peningkatan
+
+- Dependensi diperbarui: keepawake 0.6.1, sanitize-filename 0.6.0, dirs 7.
+
 ## v0.9.0
 
 Ikuti channel, aturan unduhan, fuzzy di mana-mana.

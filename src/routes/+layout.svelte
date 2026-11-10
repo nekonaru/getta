@@ -77,6 +77,9 @@
 		const unlistenDeepLinkRequest = listen<string>("deep-link-request", (event) => {
 			void handleDeepUrl(event.payload);
 		});
+		const unlistenEngineBroken = listen("engine-broken", () => {
+			toastStore.push(t("layout.engineBroken"), "error");
+		});
 
 		// getta://<url> links land here from the OS.
 		void getCurrent().then((urls) => {
@@ -89,6 +92,7 @@
 		return () => {
 			void unlistenGlobalShortcut.then((fn) => fn?.()).catch(() => {});
 			void unlistenDeepLinkRequest.then((fn) => fn?.()).catch(() => {});
+			void unlistenEngineBroken.then((fn) => fn?.()).catch(() => {});
 			void unlisten.then((fn) => fn?.()).catch(() => {});
 		};
 	});

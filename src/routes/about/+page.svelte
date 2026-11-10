@@ -2,9 +2,49 @@
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { t } from "#lib/i18n.svelte";
 	import { openExternal } from "#lib/external";
+	import { check } from "@tauri-apps/plugin-updater";
+	import { relaunch } from "@tauri-apps/plugin-process";
 	import pkg from "../../../package.json";
 
 	const version = pkg.version;
+	type UpdateState = "idle" | "checking" | "uptodate" | "available" | "installing" | "error";
+	let updateState = $state<UpdateState>("idle");
+	let updateVersion = $state<string | null>(null);
+	let updateError = $state<string | null>(null);
+
+	async function checkForUpdates() {
+		updateState = "checking";
+		updateError = null;
+		try {
+			const update = await check();
+			if (update) {
+				updateVersion = update.version;
+				updateState = "available";
+			} else {
+				updateState = "uptodate";
+			}
+		} catch (e) {
+			updateError = e instanceof Error ? e.message : String(e);
+			updateState = "error";
+		}
+	}
+
+	async function installUpdate() {
+		updateState = "installing";
+		updateError = null;
+		try {
+			const update = await check();
+			if (!update) {
+				updateState = "uptodate";
+				return;
+			}
+			await update.downloadAndInstall();
+			await relaunch();
+		} catch (e) {
+			updateError = e instanceof Error ? e.message : String(e);
+			updateState = "error";
+		}
+	}
 </script>
 
 <div class="page">
@@ -31,6 +71,26 @@
 				<button class="text-link" onclick={() => openExternal("https://github.com/nekonaru/getta/issues/new")}>{t("about.report")}</button>
 				<a class="text-link" href="/support">{t("about.support")}</a>
 			</nav>
+			<div class="update-block">
+				<p class="update-title">{t("about.update")}</p>
+				{#if updateState === "idle"}
+					<button class="btn btn-sm" onclick={checkForUpdates}>{t("about.updateCheck")}</button>
+				{:else if updateState === "checking"}
+					<p class="muted">{t("about.updateChecking")}</p>
+				{:else if updateState === "uptodate"}
+					<p class="muted">{t("about.updateUpToDate")}</p>
+				{:else if updateState === "available"}
+					<div class="update-row">
+						<p class="muted">{t("about.updateAvailable", { version: updateVersion ?? "" })}</p>
+						<button class="btn btn-accent btn-sm" onclick={installUpdate}>{t("about.updateInstall")}</button>
+					</div>
+				{:else if updateState === "installing"}
+					<p class="muted"><span class="spinner"></span> {t("about.updateInstalling")}</p>
+				{:else if updateState === "error"}
+					<p class="error-box">{t("about.updateError", { error: updateError ?? "unknown" })}</p>
+					<button class="btn btn-sm" onclick={checkForUpdates}>{t("about.updateCheck")}</button>
+				{/if}
+			</div>
 			<p class="muted license-line">{t("about.license")}</p>
 		</div>
 	</div>
@@ -125,6 +185,31 @@
 
 	.about-links .text-link:hover {
 		text-decoration: underline;
+	}
+
+	.update-block {
+		border-top: 1px solid var(--border);
+		padding-top: 14px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.update-title {
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+		color: var(--muted);
+		margin: 0;
+	}
+
+	.update-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
 	}
 
 	.license-line {

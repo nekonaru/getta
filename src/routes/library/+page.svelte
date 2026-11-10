@@ -2,10 +2,10 @@
 	import { onMount } from "svelte";
 	import { convertFileSrc } from "@tauri-apps/api/core";
 	import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-	import { api, type HistoryEntry } from "#lib/api";
+	import { api, type ChapterMarker, type HistoryEntry } from "#lib/api";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
-	import { formatBytes, formatRelativeTime } from "#lib/format";
+	import { formatBytes, formatRelativeTime, formatDuration } from "#lib/format";
 
 	type Kind = "all" | "video" | "audio" | "image" | "file";
 	type MediaKind = Exclude<Kind, "all">;
@@ -17,6 +17,11 @@
 	let playError = $state(false);
 	let mediaEl = $state<HTMLMediaElement | null>(null);
 	let speed = $state(1);
+	let chapters = $state<ChapterMarker[]>([]);
+	let chapterSelection = $state("");
+	let dupGroups = $state<string[][]>([]);
+	const dupIds = $derived(new Set(dupGroups.flat()));
+	const dupTotal = $derived(dupGroups.reduce((sum, group) => sum + group.length - 1, 0));
 
 	onMount(async () => {
 		try {
@@ -87,9 +92,59 @@
 		}
 	}
 
-	function openEntry(entry: HistoryEntry) {
+	async function openEntry(entry: HistoryEntry) {
 		active = entry;
 		playError = false;
+		chapters = [];
+		chapterSelection = "";
+		const kind = kindOf(entry.file_path);
+		if (kind === "video" || kind === "audio") {
+			try {
+				chapters = await api.probeChapters(entry.file_path ?? "");
+			} catch {
+				chapters = [];
+			}
+		}
+	}
+
+	function seekChapter() {
+		const index = Number(chapterSelection);
+		const marker = chapters[index];
+		if (marker && mediaEl) mediaEl.currentTime = marker.start_seconds;
+	}
+
+	async function findDuplicates() {
+		try {
+			dupGroups = await api.findDuplicates();
+			if (dupGroups.length === 0) {
+				toastStore.push(t("library.noDuplicates"));
+			} else {
+				toastStore.push(t("library.duplicatesFound", { count: dupTotal }));
+			}
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function removeDuplicateCopies() {
+		const ids = dupGroups.flatMap((group) => group.slice(1));
+		if (ids.length === 0) return;
+		if (!window.confirm(t("library.removeDuplicatesConfirm", { count: ids.length }))) return;
+		try {
+			for (const id of ids) {
+				try {
+					await api.historyRemove(id);
+				} catch {
+					/* best effort, keep going */
+				}
+			}
+			entries = entries.filter((entry) => !ids.includes(entry.id));
+			dupGroups = [];
+			if (active && ids.includes(active.id)) active = null;
+			toastStore.push(t("library.duplicatesRemoved"));
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
 	}
 
 	const KIND_LABELS: Array<[Kind, () => string]> = [
@@ -121,6 +176,7 @@
 		{:else}
 			<div class="library-toolbar">
 				<input class="input search" type="search" bind:value={query} placeholder={t("library.search")} aria-label={t("library.search")} spellcheck="false" />
+				<button class="btn btn-sm btn-ghost" onclick={findDuplicates}>{t("library.findDuplicates")}</button>
 				<div class="filters" role="group">
 					{#each KIND_LABELS as [id, label] (id)}
 						<button class="pill pill-btn" class:active={filter === id} onclick={() => (filter = id)}>
@@ -130,12 +186,23 @@
 				</div>
 			</div>
 
+			{#if dupGroups.length > 0}
+				<div class="dup-banner" role="status">
+					<span class="dup-banner-text">{t("library.duplicatesBanner", { groups: dupGroups.length, count: dupTotal })}</span>
+					<div class="dup-banner-actions">
+						<button class="btn btn-accent btn-sm" onclick={removeDuplicateCopies}>{t("library.removeDuplicates")}</button>
+						<button class="btn btn-sm btn-ghost" onclick={() => (dupGroups = [])}>{t("library.dismiss")}</button>
+					</div>
+				</div>
+			{/if}
+
 			<ul class="library-grid">
 				{#each filtered as entry (entry.id)}
 					{@const kind = kindOf(entry.file_path)}
 					<li>
 						<button class="media-card" onclick={() => openEntry(entry)}>
 							<span class="media-thumb {entry.thumbnail_url ? 'skeleton' : ''}" aria-hidden="true">
+								{#if dupIds.has(entry.id)}<span class="dup-chip mono">{t("library.duplicate")}</span>{/if}
 								{#if entry.thumbnail_url}
 									<img src={entry.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" onload={(e) => (e.currentTarget as HTMLImageElement).classList.add('loaded')} onerror={(e) => (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'} />
 								{:else}
@@ -187,6 +254,15 @@
 							<option value={s}>{s}x</option>
 						{/each}
 					</select>
+					{#if chapters.length > 0}
+						<label class="speed-label field-label" for="chapters">{t("library.chapters")}</label>
+						<select id="chapters" class="input chapters-select" bind:value={chapterSelection} onchange={seekChapter}>
+							<option value="" disabled>{t("library.pickChapter")}</option>
+							{#each chapters as marker, i (i)}
+								<option value={String(i)}>{marker.title ?? t("library.chapter", { n: i + 1 })} · {formatDuration(marker.start_seconds)}</option>
+							{/each}
+						</select>
+					{/if}
 				</div>
 			{/if}
 			<div class="media-modal-foot">
@@ -254,6 +330,46 @@
 	.media-card:hover {
 		transform: translateY(-2px);
 		border-color: var(--border-strong);
+	}
+
+	.chapters-select {
+		width: auto;
+		min-width: 180px;
+		max-width: 260px;
+	}
+
+	.dup-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		background: var(--warn-soft);
+		border: 1px solid var(--warn);
+		color: var(--warn);
+		border-radius: var(--r-sm);
+		padding: 8px 12px;
+		font-size: 12.5px;
+		font-weight: 600;
+		margin-bottom: 14px;
+	}
+
+	.dup-banner-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex: none;
+	}
+
+	.dup-chip {
+		position: absolute;
+		top: 8px;
+		left: 8px;
+		z-index: 2;
+		background: var(--warn);
+		color: #fff;
+		border-radius: var(--r-sm);
+		padding: 2px 6px;
+		font-size: 8.5px;
 	}
 
 	.media-thumb {

@@ -91,6 +91,14 @@ export interface RecoveryEntry {
 	output_dir: string | null;
 }
 
+export interface CookieBucket {
+	id: string;
+	name: string;
+	file: string;
+	domain: string;
+	added_at: number;
+}
+
 export interface DownloadRule {
 	id: string;
 	pattern: string;
@@ -129,6 +137,23 @@ export interface AppSettings {
 	ytdlp_path: string | null;
 	ffmpeg_path: string | null;
 	download_rules: DownloadRule[];
+	cookie_buckets: CookieBucket[];
+	cookie_trash: CookieBucket[];
+}
+
+export interface CookieReport {
+	ok: boolean;
+	total: number;
+	expired: number;
+	sites: string[];
+	soonest_expiry: number | null;
+	error: string | null;
+}
+
+export interface ChapterMarker {
+	title: string | null;
+	start_seconds: number;
+	end_seconds: number;
 }
 
 export interface DependencyInfo {
@@ -244,6 +269,9 @@ export const api = {
 	historyRemove: (id: string) => call(() => invoke<boolean>("history_remove", { id })),
 	exportHistoryCsv: (path: string) => call(() => invoke<void>("export_history_csv", { path })),
 	exportHistoryJson: (path: string) => call(() => invoke<void>("export_history_json", { path })),
+	cookieBucketCheck: (path: string) => call(() => invoke<CookieReport>("cookie_bucket_check", { path })),
+	probeChapters: (path: string) => call(() => invoke<ChapterMarker[]>("probe_chapters", { path })),
+	findDuplicates: () => call(() => invoke<string[][]>("find_duplicates")),
 	settingsGet: () => call(() => invoke<AppSettings>("settings_get")),
 	settingsUpdate: (patch: Partial<AppSettings>) =>
 		call(() => invoke<AppSettings>("settings_update", { patch })),
