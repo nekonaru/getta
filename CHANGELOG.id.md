@@ -3,6 +3,14 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.10.1
+
+Perbaikan pipeline rilis; tidak ada perubahan aplikasi.
+
+## Perbaikan bug
+
+- **Pipeline penandatanganan diperbaiki.** Installer bertanda tangan dan manifest updater (`latest.json`) kini diproduksi dan dipublikasikan dalam satu tahap bersama rilisnya.
+
 ## v0.10.0
 
 Getta sekarang bisa memperbarui dirinya sendiri.

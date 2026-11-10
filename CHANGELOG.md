@@ -3,6 +3,14 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.10.1
+
+Release pipeline fix; no app changes.
+
+## Bug fixes
+
+- **Signing pipeline corrected.** The signed installers and the updater manifest (`latest.json`) are now produced and published in one pass together with the release.
+
 ## v0.10.0
 
 Getta updates itself now.
