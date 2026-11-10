@@ -57,7 +57,7 @@ hex = "0.4"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 which = "8"
 open = "5"
-keepawake = "0.5"
+keepawake = "0.6"
 
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2"
