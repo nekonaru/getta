@@ -90,15 +90,23 @@
 		}
 	}
 
-	async function exportHistory() {
+	async function exportHistory(format: "csv" | "json") {
 		try {
 			const { save } = await import("@tauri-apps/plugin-dialog");
 			const path = await save({
-				defaultPath: "getta-history.csv",
-				filters: [{ name: "CSV", extensions: ["csv"] }]
+				defaultPath: format === "csv" ? "getta-history.csv" : "getta-history.json",
+				filters: [
+					format === "csv"
+						? { name: "CSV", extensions: ["csv"] }
+						: { name: "JSON", extensions: ["json"] }
+				]
 			});
 			if (!path) return;
-			await api.exportHistoryCsv(path);
+			if (format === "csv") {
+				await api.exportHistoryCsv(path);
+			} else {
+				await api.exportHistoryJson(path);
+			}
 			toastStore.push(t("queue.exportCsvDone"));
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
@@ -182,7 +190,8 @@
 				{#if tab === "queue"}
 					<button class="btn btn-sm btn-ghost" onclick={clearFinished}>{t("queue.clearFinished")}</button>
 				{:else}
-					<button class="btn btn-sm btn-ghost" onclick={exportHistory}>{t("queue.exportCsv")}</button>
+					<button class="btn btn-sm btn-ghost" onclick={() => exportHistory("csv")}>{t("queue.exportCsv")}</button>
+					<button class="btn btn-sm btn-ghost" onclick={() => exportHistory("json")}>{t("queue.exportJson")}</button>
 					<button class="btn btn-sm btn-ghost" onclick={clearHistory}>{t("queue.clearHistory")}</button>
 				{/if}
 			</div>

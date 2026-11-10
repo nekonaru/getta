@@ -3,6 +3,18 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.9.0
+
+Follow channels, download rules, fuzzy everything.
+
+## New features
+
+- **Channel following.** Follow any public YouTube channel; Getta detects new uploads and queues them. Optional background check every 6 hours with auto-download. The existing backlog is baselined at follow time, so it never floods your queue.
+- **Download rules.** Route links to folders by pattern, e.g. "youtube.com -> D:\Media\YouTube". First match wins; an explicitly chosen folder always beats a rule.
+- **Fuzzy command palette.** Subsequence matching with word-boundary bonuses instead of plain substring search.
+- **Export history as JSON** next to the CSV option.
+- **Contact sheet** tool: spread 20 frames across the whole file into one image.
+
 ## v0.8.0
 
 Twenty-two tools in the workbench, subtitles-only downloads, player speed.

@@ -58,6 +58,8 @@ Getta is an original implementation under the MIT license.
 | **Playlist picker** | Playlists analyze with a checkbox list; download everything or only the entries you want |
 | **Modes** | Video + audio, audio only (m4a), video only, or subtitles only |
 | **Batch pastes** | Many links at once: Getta queues them all |
+| **Channel following** | Follow any public channel; Getta spots new uploads and queues them. Optional background auto-download |
+| **Download rules** | Route links to folders by pattern, first match wins |
 | **Filename template** | yt-dlp field template with live defaults, e.g. `%(title).200s [%(id)s].%(ext)s` |
 
 ### A queue that behaves
@@ -69,7 +71,7 @@ Getta is an original implementation under the MIT license.
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |
 | **Speed limit** | Cap the download rate globally (MB/s), changeable from the Queue screen |
 | **Live progress** | Speed sparkline, ETA countdown, transfer phases and an aggregate strip over the queue |
-| **History** | Finished downloads with size, actions to re-download, reveal, export to CSV or delete |
+| **History** | Finished downloads with size, actions to re-download, reveal, export to CSV/JSON or delete |
 
 ### Your files, one place
 

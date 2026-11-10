@@ -140,8 +140,38 @@ pub async fn history_list(state: State<'_, AppState>) -> Result<Vec<crate::model
 }
 
 #[tauri::command]
+pub async fn follow_list(state: State<'_, AppState>) -> Result<Vec<crate::models::FollowChannel>, String> {
+    Ok(crate::follows::list(&state.data_dir))
+}
+
+#[tauri::command]
+pub async fn follow_add(app: AppHandle, url: String) -> Result<crate::models::FollowChannel, String> {
+    crate::follows::follow_add(&app, &url).await
+}
+
+#[tauri::command]
+pub async fn follow_remove(state: State<'_, AppState>, id: String) -> Result<bool, String> {
+    crate::follows::remove(&state.data_dir, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn follow_set_auto(state: State<'_, AppState>, id: String, auto: bool) -> Result<bool, String> {
+    crate::follows::set_auto(&state.data_dir, &id, auto).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn follow_check_now(app: AppHandle, id: String) -> Result<usize, String> {
+    crate::follows::check_and_enqueue(&app, &id).await
+}
+
+#[tauri::command]
 pub async fn export_history_csv(state: State<'_, AppState>, path: String) -> Result<(), String> {
     history::export_csv(&state.data_dir, std::path::Path::new(&path)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn export_history_json(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    history::export_json(&state.data_dir, std::path::Path::new(&path)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

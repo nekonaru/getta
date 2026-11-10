@@ -70,6 +70,16 @@ export interface HistoryEntry {
 	download_mode: DownloadMode | null;
 }
 
+export interface FollowChannel {
+	id: string;
+	url: string;
+	title: string;
+	added_at: number;
+	last_checked_at: number | null;
+	auto_download: boolean;
+	seen_ids: string[];
+}
+
 export interface RecoveryEntry {
 	id: number;
 	url: string;
@@ -79,6 +89,12 @@ export interface RecoveryEntry {
 	format_id: string | null;
 	playlist_items: string | null;
 	output_dir: string | null;
+}
+
+export interface DownloadRule {
+	id: string;
+	pattern: string;
+	dir: string;
 }
 
 export interface AppSettings {
@@ -112,6 +128,7 @@ export interface AppSettings {
 	prevent_sleep: boolean;
 	ytdlp_path: string | null;
 	ffmpeg_path: string | null;
+	download_rules: DownloadRule[];
 }
 
 export interface DependencyInfo {
@@ -158,7 +175,8 @@ export type ToolName =
 	| "silence_trim"
 	| "square_crop"
 	| "mux"
-	| "mp3_cover";
+	| "mp3_cover"
+	| "contact_sheet";
 
 export interface ToolRequest {
 	tool: ToolName;
@@ -216,10 +234,16 @@ export const api = {
 	getRecoveryItems: () => call(() => invoke<RecoveryEntry[]>("get_recovery_items")),
 	restoreRecovery: () => call(() => invoke<number>("restore_recovery")),
 	dismissRecovery: () => call(() => invoke<void>("dismiss_recovery")),
+	followList: () => call(() => invoke<FollowChannel[]>("follow_list")),
+	followAdd: (url: string) => call(() => invoke<FollowChannel>("follow_add", { url })),
+	followRemove: (id: string) => call(() => invoke<boolean>("follow_remove", { id })),
+	followSetAuto: (id: string, auto: boolean) => call(() => invoke<boolean>("follow_set_auto", { id, auto })),
+	followCheckNow: (id: string) => call(() => invoke<number>("follow_check_now", { id })),
 	historyList: () => call(() => invoke<HistoryEntry[]>("history_list")),
 	historyClear: () => call(() => invoke<void>("history_clear")),
 	historyRemove: (id: string) => call(() => invoke<boolean>("history_remove", { id })),
 	exportHistoryCsv: (path: string) => call(() => invoke<void>("export_history_csv", { path })),
+	exportHistoryJson: (path: string) => call(() => invoke<void>("export_history_json", { path })),
 	settingsGet: () => call(() => invoke<AppSettings>("settings_get")),
 	settingsUpdate: (patch: Partial<AppSettings>) =>
 		call(() => invoke<AppSettings>("settings_update", { patch })),

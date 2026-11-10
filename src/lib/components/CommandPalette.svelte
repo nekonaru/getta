@@ -25,6 +25,7 @@
 	const actions: Action[] = [
 		{ id: "home", group: "nav", label: () => t("palette.goHome"), run: () => goto("/") },
 		{ id: "queue", group: "nav", label: () => t("palette.goQueue"), run: () => goto("/queue") },
+		{ id: "follows", group: "nav", label: () => t("palette.goFollows"), run: () => goto("/follows") },
 		{ id: "library", group: "nav", label: () => t("palette.goLibrary"), run: () => goto("/library") },
 		{ id: "tools", group: "nav", label: () => t("palette.goTools"), run: () => goto("/tools") },
 		{ id: "settings", group: "nav", label: () => t("palette.goSettings"), run: () => goto("/settings") },
@@ -73,10 +74,51 @@
 		}
 	];
 
+	/**
+	 * Fuzzy subsequence match with scoring: consecutive hits and
+	 * word-boundary hits score higher. Returns null when `needle`
+	 * is not a subsequence of `haystack`; the score ranks matches.
+	 */
+	function fuzzyScore(haystack: string, needle: string): number | null {
+		const h = haystack.toLowerCase();
+		const n = needle.toLowerCase();
+		if (!n) return 0;
+		let score = 0;
+		let hi = 0;
+		let streak = 0;
+		let prevMatch = -2;
+		for (let ni = 0; ni < n.length; ni++) {
+			const ch = n[ni];
+			let found = -1;
+			while (hi < h.length) {
+				if (h[hi] === ch) {
+					found = hi;
+					hi++;
+					break;
+				}
+				hi++;
+			}
+			if (found === -1) return null;
+			if (found === prevMatch + 1) {
+				streak += 1;
+			} else {
+				streak = 0;
+			}
+			const boundary = found === 0 || /[\s\-_/]/.test(h[found - 1] ?? " ");
+			score += 1 + streak * 2 + (boundary ? 3 : 0);
+			prevMatch = found;
+		}
+		return score;
+	}
+
 	const filtered = $derived.by(() => {
-		const needle = query.trim().toLowerCase();
+		const needle = query.trim();
 		if (!needle) return actions;
-		return actions.filter((a) => a.label().toLowerCase().includes(needle));
+		return actions
+			.map((a) => ({ action: a, score: fuzzyScore(a.label(), needle) }))
+			.filter((r): r is { action: Action; score: number } => r.score !== null)
+			.sort((a, b) => b.score - a.score)
+			.map((r) => r.action);
 	});
 
 	const navActions = $derived(filtered.filter((a) => a.group === "nav"));

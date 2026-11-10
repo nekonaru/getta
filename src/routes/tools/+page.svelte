@@ -80,6 +80,7 @@
 			{ kind: "number", key: "time", labelKey: "tools.time", min: 0, max: 86400, step: 0.5, defaultValue: "0" },
 			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "jpg", options: [{ value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
 		], filters: VIDEO, icon: "frame" },
+		{ id: "contact_sheet", group: "video", name: () => t("tools.contactSheet"), desc: () => t("tools.contactSheetDesc"), params: [], filters: VIDEO, icon: "frame" },
 		{ id: "square_crop", group: "video", name: () => t("tools.squareCrop"), desc: () => t("tools.squareCropDesc"), params: [], filters: VIDEO, icon: "resize" },
 		{ id: "mux", group: "video", name: () => t("tools.mux"), desc: () => t("tools.muxDesc"), params: [
 			{ kind: "file", key: "audio", labelKey: "tools.pickAudioTrack", extensions: ["mp3", "m4a", "wav", "flac", "ogg", "opus", "aac", "mka"], defaultValue: "" },

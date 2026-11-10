@@ -22,6 +22,12 @@ pub fn push(data_dir: &Path, entry: HistoryEntry) {
     let _ = storage::write_json_atomic(&history_path(data_dir), &entries);
 }
 
+/// Export the whole history as a JSON array.
+pub fn export_json(data_dir: &Path, dest: &Path) -> std::io::Result<()> {
+    let entries = list(data_dir);
+    storage::write_json_atomic(dest, &entries)
+}
+
 /// Export the whole history as CSV. Unix seconds become a UTC ISO-like
 /// stamp computed without a date library.
 pub fn export_csv(data_dir: &Path, dest: &Path) -> std::io::Result<()> {

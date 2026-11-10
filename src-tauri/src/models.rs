@@ -119,6 +119,30 @@ pub struct QueueItemInfo {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FollowChannel {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+    pub added_at: i64,
+    pub last_checked_at: Option<i64>,
+    pub auto_download: bool,
+    #[serde(default)]
+    pub seen_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ChannelEntry {
+    pub id: String,
+    pub title: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct FollowCheckResult {
+    pub enqueued: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RecoveryEntry {
     pub id: u64,
     pub url: String,

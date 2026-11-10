@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { open } from "@tauri-apps/plugin-dialog";
 	import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
-	import { api, type EngineStatus } from "#lib/api";
+	import { api, type EngineStatus, type DownloadRule } from "#lib/api";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
@@ -78,6 +78,32 @@
 		}
 	}
 
+	function patchRule(id: string, rulePatch: Partial<DownloadRule>) {
+		const rules = (settings?.download_rules ?? []).map((r) => (r.id === id ? { ...r, ...rulePatch } : r));
+		void patch({ download_rules: rules });
+	}
+
+	function addRule() {
+		const rules = [
+			...(settings?.download_rules ?? []),
+			{ id: crypto.randomUUID(), pattern: "", dir: "" }
+		];
+		void patch({ download_rules: rules });
+	}
+
+	function removeRule(id: string) {
+		void patch({ download_rules: (settings?.download_rules ?? []).filter((r) => r.id !== id) });
+	}
+
+	async function browseRuleDir(id: string) {
+		try {
+			const picked = await open({ directory: true, multiple: false });
+			if (typeof picked === "string" && picked) patchRule(id, { dir: picked });
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function installEngine(name: "ytdlp" | "ffmpeg") {
 		installBusy = name;
 		try {
@@ -145,6 +171,21 @@
 								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
 							</div>
 						{/each}
+					<div class="rules-block">
+						<div class="rules-head">
+							<span class="field-label" style="margin:0">{t("settings.downloadRules")}</span>
+							<button class="btn btn-sm" onclick={addRule}>{t("settings.addRule")}</button>
+						</div>
+						<p class="hint">{t("settings.downloadRulesHint")}</p>
+						{#each settings.download_rules as rule (rule.id)}
+							<div class="rule-row">
+								<input class="input mono rule-pattern" type="text" placeholder="youtube.com" aria-label="pattern" value={rule.pattern} onchange={(e) => patchRule(rule.id, { pattern: (e.currentTarget as HTMLInputElement).value })} />
+								<input class="input mono rule-dir" type="text" placeholder="D:\Media" aria-label="Output folder" value={rule.dir} onchange={(e) => patchRule(rule.id, { dir: (e.currentTarget as HTMLInputElement).value })} />
+								<button class="btn-icon" title={t("settings.browse")} aria-label={t("settings.browse")} onclick={() => browseRuleDir(rule.id)}><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg></button>
+								<button class="btn-icon danger" title={t("settings.removeRule")} aria-label={t("settings.removeRule")} onclick={() => removeRule(rule.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+							</div>
+						{/each}
+					</div>
 					</section>
 				{:else if category === "transfer"}
 					<section class="card group">
@@ -356,6 +397,38 @@
 	.switch-label {
 		font-size: 14px;
 		font-weight: 550;
+	}
+
+	.rules-block {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		border-top: 1px solid var(--border);
+		padding-top: 14px;
+		margin-top: 14px;
+	}
+
+	.rules-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.rule-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.rule-pattern {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.rule-dir {
+		flex: 1.6;
+		min-width: 0;
 	}
 
 	.grid-2 {

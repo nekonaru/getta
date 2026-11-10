@@ -32,9 +32,10 @@
 	const nav = [
 		{ href: "/", key: "home", index: "01" },
 		{ href: "/queue", key: "queue", index: "02" },
-		{ href: "/library", key: "library", index: "03" },
-		{ href: "/tools", key: "tools", index: "04" },
-		{ href: "/settings", key: "settings", index: "05" }
+		{ href: "/follows", key: "follows", index: "03" },
+		{ href: "/library", key: "library", index: "04" },
+		{ href: "/tools", key: "tools", index: "05" },
+		{ href: "/settings", key: "settings", index: "06" }
 	] as const;
 
 	const activeCount = $derived(downloadsStore.activeCount + downloadsStore.queuedCount);

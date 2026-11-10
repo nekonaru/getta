@@ -58,6 +58,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Pemilih daftar putar** | Playlist dianalisis dengan daftar ceklis; unduh semuanya atau hanya entri yang kamu mau |
 | **Mode** | Video + audio, audio saja (m4a), video saja, atau subtitle saja |
 | **Banyak tautan** | Tempel banyak link sekaligus: Getta mengantrekan semuanya |
+| **Ikuti channel** | Ikuti channel publik mana pun; Getta mendeteksi unggahan baru dan mengantrekannya. Opsional: auto-unduh latar |
+| **Aturan unduhan** | Rute link ke folder berdasarkan pola, yang pertama cocok menang |
 | **Pola nama file** | Template field yt-dlp dengan default yang aman, misalnya `%(title).200s [%(id)s].%(ext)s` |
 
 ### Antrean yang bisa diandalkan
@@ -69,7 +71,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |
 | **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Antrean |
 | **Progres live** | Sparkline kecepatan, hitung mundur ETA, fase transfer, dan strip agregat di atas antrean |
-| **Riwayat** | Unduhan selesai dengan ukuran, tombol unduh ulang, tampilkan, ekspor ke CSV, atau hapus |
+| **Riwayat** | Unduhan selesai dengan ukuran, tombol unduh ulang, tampilkan, ekspor ke CSV/JSON, atau hapus |
 
 ### File kamu, satu tempat
 

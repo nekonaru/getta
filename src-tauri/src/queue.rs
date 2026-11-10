@@ -693,11 +693,12 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
         let Some(item) = state.queue.inner.lock().expect("queue mutex").items.iter().find(|i| i.id == id).cloned() else {
             return;
         };
+        // Rules redirect the folder only when the user did not pick one for this item.
         let output_dir = item
             .output_dir
             .clone()
             .filter(|d| !d.trim().is_empty())
-            .unwrap_or_else(|| settings.output_dir.clone());
+            .unwrap_or_else(|| crate::settings::resolve_download_dir(&settings, &item.url, &settings.output_dir));
         let ytdlp_path = ytdlp::locate_ytdlp(settings.ytdlp_path.as_deref(), &state.data_dir);
         let args = build_args(&item.url, item.download_mode, &item.quality, item.format_id.as_deref(), item.playlist_items.as_deref(), &settings, &output_dir);
         (output_dir, args, ytdlp_path)
@@ -1276,6 +1277,13 @@ fn tool_args(request: &crate::models::ToolRequest, output: &std::path::Path) -> 
             args.push(out);
             Ok(args)
         }
+        "contact_sheet" => {
+            // 20 frames spread across the duration, tiled 5 x 4.
+            let fps = param_num(p, "fps", 1.0 / 3.0).max(0.01);
+            args.extend(["-i".to_string(), input, "-vf".to_string(), format!("fps={fps},scale=320:-1,tile=5x4"), "-frames:v".to_string(), "1".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
         "volume_boost" => {
             let factor = param_num(p, "factor", 1.5).clamp(0.1, 10.0);
             args.extend(["-i".to_string(), input, "-vn".to_string(), "-af".to_string(), format!("volume={factor}"), "-codec:a".to_string(), "libmp3lame".to_string(), "-q:a".to_string(), "2".to_string()]);
@@ -1330,6 +1338,7 @@ fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
         "image_resize" => parent.join(format!("{stem}-resized.{}", image_out_ext(p, input))),
         "image_convert" => parent.join(format!("{stem}.{}", image_out_ext(p, input))),
         "waveform_png" => parent.join(format!("{stem}-waveform.png")),
+        "contact_sheet" => parent.join(format!("{stem}-sheet.png")),
         "volume_boost" => parent.join(format!("{stem}-boosted.mp3")),
         "silence_trim" => parent.join(format!("{stem}-nosilence.mp3")),
         "square_crop" => parent.join(format!("{stem}-square.mp4")),
@@ -1350,7 +1359,7 @@ async fn probe_duration_secs(app_ffprobe: &std::path::Path, input: &std::path::P
     String::from_utf8_lossy(&output.stdout).trim().parse::<f64>().ok().filter(|d| *d > 0.0)
 }
 
-pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolRequest) -> Result<String, String> {
+pub async fn run_tool(app: &tauri::AppHandle, mut request: crate::models::ToolRequest) -> Result<String, String> {
     let input = std::path::PathBuf::from(&request.input);
     if !input.is_file() {
         return Err("That file no longer exists.".to_string());
@@ -1361,7 +1370,7 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
             | "audio_convert" | "audio_lossless" | "audio_normalize" | "audio_speed"
             | "video_convert" | "video_resize" | "video_rotate" | "mute_video"
             | "extract_frame" | "subtitle_convert" | "image_resize" | "image_convert"
-            | "waveform_png" | "volume_boost" | "silence_trim" | "square_crop" | "mux" | "mp3_cover"
+            | "waveform_png" | "volume_boost" | "silence_trim" | "square_crop" | "mux" | "mp3_cover" | "contact_sheet"
     ) {
         return Err(format!("Unknown tool '{}'.", request.tool));
     }
@@ -1389,6 +1398,15 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
         Some(probe) => probe_duration_secs(probe, &input).await,
         None => None,
     };
+
+    // Contact sheet: spread 20 frames evenly across the whole file.
+    if request.tool.as_str() == "contact_sheet" {
+        if let Some(d) = duration {
+            if d > 0.0 {
+                request.params.insert("fps".to_string(), (20.0 / d).to_string());
+            }
+        }
+    }
 
     let mut args = tool_args(&request, &output)?;
     // Machine-readable progress goes to stdout; we parse it line by line.

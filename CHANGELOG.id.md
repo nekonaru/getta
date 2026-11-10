@@ -3,6 +3,18 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.9.0
+
+Ikuti channel, aturan unduhan, fuzzy di mana-mana.
+
+## Fitur baru
+
+- **Ikuti channel.** Ikuti channel YouTube publik mana pun; Getta mendeteksi unggahan baru dan mengantrekannya. Opsional: cek latar tiap 6 jam dengan auto-unduh. Backlog yang sudah ada dilewati saat follow, jadi antrean tidak banjir.
+- **Aturan unduhan.** Rute link ke folder berdasarkan pola, misalnya "youtube.com -> D:\Media\YouTube". Yang pertama cocok menang; folder yang dipilih manual selalu menang.
+- **Command palette fuzzy.** Pencocokan subsequence dengan bonus batas kata, bukan sekadar substring.
+- **Ekspor riwayat ke JSON** di samping opsi CSV.
+- **Contact sheet**: sebarkan 20 frame sepanjang file ke dalam satu gambar.
+
 ## v0.8.0
 
 Dua puluh dua alat di meja kerja, unduh subtitle saja, kecepatan pemutar.

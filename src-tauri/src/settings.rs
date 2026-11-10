@@ -37,6 +37,39 @@ fn default_language() -> String {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
+pub struct DownloadRule {
+    pub id: String,
+    pub pattern: String,
+    pub dir: String,
+}
+
+impl Default for DownloadRule {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            pattern: String::new(),
+            dir: String::new(),
+        }
+    }
+}
+
+/// First matching rule wins; an explicitly chosen folder always beats a rule.
+pub fn resolve_download_dir(settings: &AppSettings, url: &str, fallback: &str) -> String {
+    let lower = url.to_ascii_lowercase();
+    for rule in &settings.download_rules {
+        let pattern = rule.pattern.trim().to_ascii_lowercase();
+        if pattern.is_empty() || rule.dir.trim().is_empty() {
+            continue;
+        }
+        if lower.contains(&pattern) {
+            return rule.dir.clone();
+        }
+    }
+    fallback.to_string()
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppSettings {
     pub output_dir: String,
     pub always_ask_path: bool,
@@ -68,6 +101,7 @@ pub struct AppSettings {
     pub prevent_sleep: bool,
     pub ytdlp_path: Option<String>,
     pub ffmpeg_path: Option<String>,
+    pub download_rules: Vec<DownloadRule>,
 }
 
 impl Default for AppSettings {
@@ -103,6 +137,7 @@ impl Default for AppSettings {
             prevent_sleep: true,
             ytdlp_path: None,
             ffmpeg_path: None,
+            download_rules: Vec::new(),
         }
     }
 }

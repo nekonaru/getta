@@ -4,6 +4,7 @@
 //! from any other downloader project.
 
 mod commands;
+mod follows;
 mod history;
 mod models;
 mod platform;
@@ -104,6 +105,12 @@ pub fn run() {
             let (show_label, quit_label) = tray::tray_labels(&language);
             tray::setup(app, &show_label, &quit_label)?;
 
+            // Poll followed channels with auto-download enabled in the background.
+            let poll_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                crate::follows::poll_auto(poll_app).await;
+            });
+
             // Register the global fetch shortcut (CmdOrCtrl+Shift+D).
             {
                 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
@@ -135,10 +142,16 @@ pub fn run() {
             commands::get_recovery_items,
             commands::restore_recovery,
             commands::dismiss_recovery,
+            commands::follow_list,
+            commands::follow_add,
+            commands::follow_remove,
+            commands::follow_set_auto,
+            commands::follow_check_now,
             commands::history_list,
             commands::history_clear,
             commands::history_remove,
             commands::export_history_csv,
+            commands::export_history_json,
             commands::settings_get,
             commands::settings_update,
             commands::settings_reset,
