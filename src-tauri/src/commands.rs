@@ -140,6 +140,11 @@ pub async fn history_list(state: State<'_, AppState>) -> Result<Vec<crate::model
 }
 
 #[tauri::command]
+pub async fn export_history_csv(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    history::export_csv(&state.data_dir, std::path::Path::new(&path)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn history_clear(state: State<'_, AppState>) -> Result<(), String> {
     history::clear(&state.data_dir).map_err(|e| e.to_string())
 }

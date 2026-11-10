@@ -3,6 +3,17 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.8.0
+
+Dua puluh dua alat di meja kerja, unduh subtitle saja, kecepatan pemutar.
+
+## Fitur baru
+
+- **Mode subtitle saja.** Unduh hanya aliran subtitle (SRT/VTT) tanpa media, dari pemilih mode di Beranda.
+- **Enam alat baru:** gambar waveform, perkuat volume, potong sunyi, potong jadi kotak, gabung video + audio (ganti audio), sisipkan cover ke MP3.
+- **Kecepatan putar** di pemutar inline: 0.5x sampai 3x.
+- **Ekspor riwayat ke CSV** dari tab Riwayat.
+
 ## v0.7.0
 
 Meja kerja bertumbuh dari 4 menjadi 16 alat, dikelompokkan per tipe.

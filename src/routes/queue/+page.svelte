@@ -90,6 +90,21 @@
 		}
 	}
 
+	async function exportHistory() {
+		try {
+			const { save } = await import("@tauri-apps/plugin-dialog");
+			const path = await save({
+				defaultPath: "getta-history.csv",
+				filters: [{ name: "CSV", extensions: ["csv"] }]
+			});
+			if (!path) return;
+			await api.exportHistoryCsv(path);
+			toastStore.push(t("queue.exportCsvDone"));
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function clearHistory() {
 		if (!window.confirm(t("queue.clearHistoryConfirm"))) return;
 		try {
@@ -167,6 +182,7 @@
 				{#if tab === "queue"}
 					<button class="btn btn-sm btn-ghost" onclick={clearFinished}>{t("queue.clearFinished")}</button>
 				{:else}
+					<button class="btn btn-sm btn-ghost" onclick={exportHistory}>{t("queue.exportCsv")}</button>
 					<button class="btn btn-sm btn-ghost" onclick={clearHistory}>{t("queue.clearHistory")}</button>
 				{/if}
 			</div>

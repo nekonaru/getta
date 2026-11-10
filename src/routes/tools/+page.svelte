@@ -14,9 +14,10 @@
 	};
 	type ParamSpec =
 		| { kind: "select"; key: string; labelKey: string; options: Array<{ value: string; label: string }>; defaultValue: string }
-		| { kind: "number"; key: string; labelKey: string; min: number; max: number; step: number; defaultValue: string };
+		| { kind: "number"; key: string; labelKey: string; min: number; max: number; step: number; defaultValue: string }
+		| { kind: "file"; key: string; labelKey: string; extensions: string[]; defaultValue: string };
 	type ToolGroup = "audio" | "video" | "image" | "subtitles";
-	type Icon = "audio" | "gif" | "compress" | "trim" | "convert" | "lossless" | "normalize" | "speed" | "video" | "resize" | "rotate" | "mute" | "frame" | "image" | "text";
+	type Icon = "audio" | "gif" | "compress" | "trim" | "convert" | "lossless" | "normalize" | "speed" | "video" | "resize" | "rotate" | "mute" | "frame" | "image" | "text" | "wave";
 
 	const MEDIA = { name: "Media", extensions: ["mp4", "mkv", "webm", "mov", "avi", "m4a", "mp3", "wav", "flac", "ogg", "opus", "aac"] };
 	const VIDEO = { name: "Video", extensions: ["mp4", "mkv", "webm", "mov", "avi"] };
@@ -42,6 +43,14 @@
 		{ id: "audio_speed", group: "audio", name: () => t("tools.audioSpeed"), desc: () => t("tools.audioSpeedDesc"), params: [
 			{ kind: "number", key: "speed", labelKey: "tools.speed", min: 0.5, max: 4, step: 0.25, defaultValue: "1" },
 		], filters: MEDIA, icon: "speed" },
+		{ id: "waveform_png", group: "audio", name: () => t("tools.waveform"), desc: () => t("tools.waveformDesc"), params: [], filters: MEDIA, icon: "wave" },
+		{ id: "volume_boost", group: "audio", name: () => t("tools.volumeBoost"), desc: () => t("tools.volumeBoostDesc"), params: [
+			{ kind: "select", key: "factor", labelKey: "tools.factor", defaultValue: "1.5", options: [{ value: "0.5", label: "50%" }, { value: "1", label: "100%" }, { value: "1.5", label: "150%" }, { value: "2", label: "200%" }, { value: "3", label: "300%" }] },
+		], filters: MEDIA, icon: "speed" },
+		{ id: "silence_trim", group: "audio", name: () => t("tools.silenceTrim"), desc: () => t("tools.silenceTrimDesc"), params: [], filters: MEDIA, icon: "trim" },
+		{ id: "mp3_cover", group: "audio", name: () => t("tools.mp3Cover"), desc: () => t("tools.mp3CoverDesc"), params: [
+			{ kind: "file", key: "cover", labelKey: "tools.pickCover", extensions: ["jpg", "jpeg", "png", "webp"], defaultValue: "" },
+		], filters: MEDIA, icon: "image" },
 
 		{ id: "trim", group: "video", name: () => t("tools.trim"), desc: () => t("tools.trimDesc"), params: [
 			{ kind: "number", key: "start", labelKey: "tools.startAt", min: 0, max: 86400, step: 0.5, defaultValue: "0" },
@@ -71,6 +80,10 @@
 			{ kind: "number", key: "time", labelKey: "tools.time", min: 0, max: 86400, step: 0.5, defaultValue: "0" },
 			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "jpg", options: [{ value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
 		], filters: VIDEO, icon: "frame" },
+		{ id: "square_crop", group: "video", name: () => t("tools.squareCrop"), desc: () => t("tools.squareCropDesc"), params: [], filters: VIDEO, icon: "resize" },
+		{ id: "mux", group: "video", name: () => t("tools.mux"), desc: () => t("tools.muxDesc"), params: [
+			{ kind: "file", key: "audio", labelKey: "tools.pickAudioTrack", extensions: ["mp3", "m4a", "wav", "flac", "ogg", "opus", "aac", "mka"], defaultValue: "" },
+		], filters: VIDEO, icon: "convert" },
 
 		{ id: "image_resize", group: "image", name: () => t("tools.imageResize"), desc: () => t("tools.imageResizeDesc"), params: [
 			{ kind: "number", key: "width", labelKey: "tools.width", min: 16, max: 8192, step: 10, defaultValue: "1280" },
@@ -145,6 +158,17 @@
 				toolsState[tool].output = null;
 				toolsState[tool].error = null;
 				toolsState[tool].progress = 0;
+			}
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function pickParamFile(tool: ToolName, key: string, extensions: string[]) {
+		try {
+			const picked = await open({ multiple: false, directory: false, filters: [{ name: key, extensions }] });
+			if (typeof picked === "string" && picked) {
+				paramValues[tool][key] = picked;
 			}
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
@@ -226,6 +250,8 @@
 									<svg viewBox="0 0 24 24"><path d="M4 12h2M9 8v8M13 6v12M17 9v6M21 12h-1"/></svg>
 								{:else if def.icon === "speed"}
 									<svg viewBox="0 0 24 24"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></svg>
+								{:else if def.icon === "wave"}
+									<svg viewBox="0 0 24 24"><path d="M3 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/></svg>
 								{:else if def.icon === "image"}
 									<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.4"/><path d="m5 17 6-6 5 5 3-3 5 5"/></svg>
 								{:else}
@@ -257,10 +283,18 @@
 														{/each}
 													</select>
 												</label>
-											{:else}
+											{:else if spec.kind === "number"}
 												<label><span class="field-label">{t(spec.labelKey)}</span>
 													<input class="input" type="number" min={spec.min} max={spec.max} step={spec.step} bind:value={paramValues[def.id][spec.key]} disabled={state.running} />
 												</label>
+											{:else}
+												<div class="file-param">
+													<span class="field-label">{t(spec.labelKey)}</span>
+													<div class="file-param-row">
+														<button class="btn btn-sm" onclick={() => pickParamFile(def.id, spec.key, spec.extensions)} disabled={state.running}>{t("tools.pickFile")}</button>
+														<span class="file-name mono" title={paramValues[def.id][spec.key]}>{paramValues[def.id][spec.key] ? paramValues[def.id][spec.key].split(/[\\/]/).pop() : t("tools.noFileChosen")}</span>
+													</div>
+												</div>
 											{/if}
 										{/each}
 									</div>
@@ -414,6 +448,19 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
+	}
+
+	.file-param {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.file-param-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
 	}
 
 	.file-name {

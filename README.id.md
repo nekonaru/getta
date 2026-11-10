@@ -56,7 +56,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Deteksi platform** | Mengenali YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud, dan lainnya, plus halaman web umum dan file langsung |
 | **Pratinjau media** | Judul, penulis, durasi, thumbnail, dan daftar kualitas sebelum mengunduh |
 | **Pemilih daftar putar** | Playlist dianalisis dengan daftar ceklis; unduh semuanya atau hanya entri yang kamu mau |
-| **Mode** | Video + audio, audio saja (m4a), atau video saja |
+| **Mode** | Video + audio, audio saja (m4a), video saja, atau subtitle saja |
 | **Banyak tautan** | Tempel banyak link sekaligus: Getta mengantrekan semuanya |
 | **Pola nama file** | Template field yt-dlp dengan default yang aman, misalnya `%(title).200s [%(id)s].%(ext)s` |
 
@@ -69,14 +69,14 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |
 | **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Antrean |
 | **Progres live** | Sparkline kecepatan, hitung mundur ETA, fase transfer, dan strip agregat di atas antrean |
-| **Riwayat** | Unduhan selesai dengan ukuran, tombol unduh ulang, tampilkan, atau hapus |
+| **Riwayat** | Unduhan selesai dengan ukuran, tombol unduh ulang, tampilkan, ekspor ke CSV, atau hapus |
 
 ### File kamu, satu tempat
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| **Pustaka** | Grid unduhan selesai kamu; putar media inline, filter per tipe, salin URL sumber, hapus entri |
-| **Alat** | Meja kerja lokal: 16 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
+| **Pustaka** | Grid unduhan selesai kamu; putar media inline (kecepatan 0.5x-3x), filter per tipe, salin URL sumber, hapus entri |
+| **Alat** | Meja kerja lokal: 22 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |
 | **Deep link** | `getta://<url>` membuka Getta dan mengantrekan tautannya |

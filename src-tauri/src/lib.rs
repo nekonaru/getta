@@ -138,6 +138,7 @@ pub fn run() {
             commands::history_list,
             commands::history_clear,
             commands::history_remove,
+            commands::export_history_csv,
             commands::settings_get,
             commands::settings_update,
             commands::settings_reset,

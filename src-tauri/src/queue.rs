@@ -597,6 +597,17 @@ fn build_args(
             args.push("--audio-format".to_string());
             args.push("m4a".to_string());
         }
+        DownloadMode::Subs => {
+            // Subtitles only: no media is fetched, just the SRT/VTT tracks.
+            args.push("--skip-download".to_string());
+            args.push("--write-subs".to_string());
+            if !settings.subtitle_lang.trim().is_empty() {
+                args.push("--sub-langs".to_string());
+                args.push(settings.subtitle_lang.clone());
+            } else {
+                args.push("--all-subs".to_string());
+            }
+        }
         DownloadMode::Auto | DownloadMode::Mute => {
             if let Some(fmt) = format_id.filter(|f| !f.trim().is_empty()) {
                 args.push("-f".to_string());
@@ -1094,6 +1105,24 @@ fn ext_in(params: &std::collections::HashMap<String, String>, key: &str, default
     }
 }
 
+fn param_file(params: &std::collections::HashMap<String, String>, key: &str, allowed_ext: &[&str], label: &str) -> Result<String, String> {
+    let raw = params
+        .get(key)
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| format!("Choose the {label} first."))?;
+    let path = std::path::PathBuf::from(&raw);
+    let ext_ok = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| allowed_ext.contains(&e.to_ascii_lowercase().as_str()))
+        .unwrap_or(false);
+    if !ext_ok || !path.is_file() {
+        return Err(format!("That {label} file does not exist or is not supported."));
+    }
+    Ok(raw)
+}
+
 fn image_out_ext(params: &std::collections::HashMap<String, String>, input: &std::path::Path) -> String {
     let target = param_str(params, "target", "original");
     if ["jpg", "png", "webp"].contains(&target.as_str()) {
@@ -1242,6 +1271,39 @@ fn tool_args(request: &crate::models::ToolRequest, output: &std::path::Path) -> 
             args.push(out);
             Ok(args)
         }
+        "waveform_png" => {
+            args.extend(["-i".to_string(), input, "-filter_complex".to_string(), "aformat=channel_layouts=mono,showwavespic=s=1280x360:colors=0x4F8CFF".to_string(), "-frames:v".to_string(), "1".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "volume_boost" => {
+            let factor = param_num(p, "factor", 1.5).clamp(0.1, 10.0);
+            args.extend(["-i".to_string(), input, "-vn".to_string(), "-af".to_string(), format!("volume={factor}"), "-codec:a".to_string(), "libmp3lame".to_string(), "-q:a".to_string(), "2".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "silence_trim" => {
+            args.extend(["-i".to_string(), input, "-vn".to_string(), "-af".to_string(), "silenceremove=start_periods=1:start_threshold=-50dB:stop_periods=1:stop_threshold=-50dB".to_string(), "-codec:a".to_string(), "libmp3lame".to_string(), "-q:a".to_string(), "2".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "square_crop" => {
+            args.extend(["-i".to_string(), input, "-vf".to_string(), "crop=ih:ih".to_string(), "-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string(), "-preset".to_string(), "fast".to_string(), "-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "128k".to_string(), "-movflags".to_string(), "+faststart".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "mux" => {
+            let audio = param_file(p, "audio", &["mp3", "m4a", "wav", "flac", "ogg", "opus", "aac", "mka"], "audio")?;
+            args.extend(["-i".to_string(), input, "-i".to_string(), audio, "-map".to_string(), "0:v?".to_string(), "-map".to_string(), "1:a?".to_string(), "-c:v".to_string(), "copy".to_string(), "-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "192k".to_string(), "-map_metadata".to_string(), "0".to_string(), "-movflags".to_string(), "+faststart".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
+        "mp3_cover" => {
+            let cover = param_file(p, "cover", &["jpg", "jpeg", "png", "webp"], "cover image")?;
+            args.extend(["-i".to_string(), input, "-i".to_string(), cover, "-map".to_string(), "0:a".to_string(), "-map".to_string(), "1:0".to_string(), "-c:a".to_string(), "copy".to_string(), "-c:v".to_string(), "mjpeg".to_string(), "-id3v2_version".to_string(), "3".to_string(), "-metadata:s:v".to_string(), "title=Album cover".to_string(), "-metadata:s:v".to_string(), "comment=Cover (front)".to_string()]);
+            args.push(out);
+            Ok(args)
+        }
         other => Err(format!("Unknown tool '{other}'.")),
     }
 }
@@ -1267,6 +1329,12 @@ fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
         "subtitle_convert" => parent.join(format!("{stem}.{}", ext_in(p, "target", "vtt", &["srt", "vtt", "ass"]))),
         "image_resize" => parent.join(format!("{stem}-resized.{}", image_out_ext(p, input))),
         "image_convert" => parent.join(format!("{stem}.{}", image_out_ext(p, input))),
+        "waveform_png" => parent.join(format!("{stem}-waveform.png")),
+        "volume_boost" => parent.join(format!("{stem}-boosted.mp3")),
+        "silence_trim" => parent.join(format!("{stem}-nosilence.mp3")),
+        "square_crop" => parent.join(format!("{stem}-square.mp4")),
+        "mux" => parent.join(format!("{stem}-merged.mp4")),
+        "mp3_cover" => parent.join(format!("{stem}-cover.mp3")),
         _ => parent.join(format!("{stem}-compressed.mp4")),
     }
 }
@@ -1293,6 +1361,7 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
             | "audio_convert" | "audio_lossless" | "audio_normalize" | "audio_speed"
             | "video_convert" | "video_resize" | "video_rotate" | "mute_video"
             | "extract_frame" | "subtitle_convert" | "image_resize" | "image_convert"
+            | "waveform_png" | "volume_boost" | "silence_trim" | "square_crop" | "mux" | "mp3_cover"
     ) {
         return Err(format!("Unknown tool '{}'.", request.tool));
     }

@@ -16,7 +16,7 @@
 	let engine = $state<EngineStatus | null>(null);
 	let engineInstalling = $state(false);
 	let quality = $state("best");
-	let mode = $state<"auto" | "audio" | "mute">("auto");
+	let mode = $state<"auto" | "audio" | "mute" | "subs">("auto");
 	let playlistSelected = $state<Set<number>>(new Set());
 	let analyzeTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -284,6 +284,7 @@
 									<button aria-pressed={mode === "auto"} onclick={() => (mode = "auto")}>{t("home.modeAuto")}</button>
 									<button aria-pressed={mode === "audio"} onclick={() => (mode = "audio")}>{t("home.modeAudio")}</button>
 									<button aria-pressed={mode === "mute"} onclick={() => (mode = "mute")}>{t("home.modeMute")}</button>
+									<button aria-pressed={mode === "subs"} onclick={() => (mode = "subs")}>{t("home.modeSubs")}</button>
 								</div>
 								<button class="btn btn-accent" onclick={startPlaylistDownload} disabled={playlistSelected.size === 0}>
 									{t("home.playlistDownload", { count: playlistSelected.size })}
@@ -302,6 +303,7 @@
 								<button aria-pressed={mode === "auto"} onclick={() => (mode = "auto")}>{t("home.modeAuto")}</button>
 								<button aria-pressed={mode === "audio"} onclick={() => (mode = "audio")}>{t("home.modeAudio")}</button>
 								<button aria-pressed={mode === "mute"} onclick={() => (mode = "mute")}>{t("home.modeMute")}</button>
+								<button aria-pressed={mode === "subs"} onclick={() => (mode = "subs")}>{t("home.modeSubs")}</button>
 							</div>
 							<button class="btn btn-accent" onclick={() => startDownload()}>{t("home.download")}</button>
 						</div>

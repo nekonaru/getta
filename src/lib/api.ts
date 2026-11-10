@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-export type DownloadMode = "auto" | "audio" | "mute";
+export type DownloadMode = "auto" | "audio" | "mute" | "subs";
 export type QueueStatusName = "queued" | "active" | "paused" | "done" | "error";
 
 export interface VideoQuality {
@@ -152,7 +152,13 @@ export type ToolName =
 	| "extract_frame"
 	| "subtitle_convert"
 	| "image_resize"
-	| "image_convert";
+	| "image_convert"
+	| "waveform_png"
+	| "volume_boost"
+	| "silence_trim"
+	| "square_crop"
+	| "mux"
+	| "mp3_cover";
 
 export interface ToolRequest {
 	tool: ToolName;
@@ -213,6 +219,7 @@ export const api = {
 	historyList: () => call(() => invoke<HistoryEntry[]>("history_list")),
 	historyClear: () => call(() => invoke<void>("history_clear")),
 	historyRemove: (id: string) => call(() => invoke<boolean>("history_remove", { id })),
+	exportHistoryCsv: (path: string) => call(() => invoke<void>("export_history_csv", { path })),
 	settingsGet: () => call(() => invoke<AppSettings>("settings_get")),
 	settingsUpdate: (patch: Partial<AppSettings>) =>
 		call(() => invoke<AppSettings>("settings_update", { patch })),

@@ -56,7 +56,7 @@ Getta is an original implementation under the MIT license.
 | **Platform detection** | Recognizes YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud and more, plus generic web pages and direct files |
 | **Media preview** | Title, author, duration, thumbnail and an on-demand quality list before you download |
 | **Playlist picker** | Playlists analyze with a checkbox list; download everything or only the entries you want |
-| **Modes** | Video + audio, audio only (m4a), or video only |
+| **Modes** | Video + audio, audio only (m4a), video only, or subtitles only |
 | **Batch pastes** | Many links at once: Getta queues them all |
 | **Filename template** | yt-dlp field template with live defaults, e.g. `%(title).200s [%(id)s].%(ext)s` |
 
@@ -69,14 +69,14 @@ Getta is an original implementation under the MIT license.
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |
 | **Speed limit** | Cap the download rate globally (MB/s), changeable from the Queue screen |
 | **Live progress** | Speed sparkline, ETA countdown, transfer phases and an aggregate strip over the queue |
-| **History** | Finished downloads with size, actions to re-download, reveal or delete |
+| **History** | Finished downloads with size, actions to re-download, reveal, export to CSV or delete |
 
 ### Your files, one place
 
 | Feature | Description |
 |---------|-------------|
-| **Library** | Grid of your completed downloads; play media inline, filter by type, copy the source URL, remove entries |
-| **Tools** | Local workbench: 16 tools for audio, video, images and subtitles, powered by FFmpeg |
+| **Library** | Grid of your completed downloads; play media inline (0.5x-3x speed), filter by type, copy the source URL, remove entries |
+| **Tools** | Local workbench: 22 tools for audio, video, images and subtitles, powered by FFmpeg |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
 | **Deep links** | `getta://<url>` opens Getta and queues the link |

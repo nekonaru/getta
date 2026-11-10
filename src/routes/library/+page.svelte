@@ -15,6 +15,8 @@
 	let filter = $state<Kind>("all");
 	let active = $state<HistoryEntry | null>(null);
 	let playError = $state(false);
+	let mediaEl = $state<HTMLMediaElement | null>(null);
+	let speed = $state(1);
 
 	onMount(async () => {
 		try {
@@ -166,13 +168,26 @@
 				<p class="muted">{t("library.cannotPlay")}</p>
 			{:else if kindOf(active.file_path) === "video"}
 				<!-- svelte-ignore a11y_media_has_caption -->
-				<video class="media-player" src={convertFileSrc(active.file_path ?? "")} controls autoplay onerror={() => (playError = true)}></video>
+				<video class="media-player" bind:this={mediaEl} src={convertFileSrc(active.file_path ?? "")} controls autoplay onloadedmetadata={() => (mediaEl && (mediaEl.playbackRate = speed))} onerror={() => (playError = true)}></video>
 			{:else if kindOf(active.file_path) === "audio"}
-				<audio class="media-audio" src={convertFileSrc(active.file_path ?? "")} controls autoplay onerror={() => (playError = true)}></audio>
+				<audio class="media-audio" bind:this={mediaEl} src={convertFileSrc(active.file_path ?? "")} controls autoplay onloadedmetadata={() => (mediaEl && (mediaEl.playbackRate = speed))} onerror={() => (playError = true)}></audio>
 			{:else if kindOf(active.file_path) === "image"}
 				<img class="media-image" src={convertFileSrc(active.file_path ?? "")} alt={active.title} onerror={() => (playError = true)} />
 			{:else}
 				<p class="muted">{t("library.cannotPlay")}</p>
+			{/if}
+			{#if kindOf(active.file_path) === "video" || kindOf(active.file_path) === "audio"}
+				<div class="speed-row">
+					<label class="speed-label field-label" for="playback-speed">{t("library.speed")}</label>
+					<select id="playback-speed" class="input speed-select" value={speed} onchange={(e) => {
+						speed = Number(e.currentTarget.value);
+						if (mediaEl) mediaEl.playbackRate = speed;
+					}}>
+						{#each [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3] as s (s)}
+							<option value={s}>{s}x</option>
+						{/each}
+					</select>
+				</div>
 			{/if}
 			<div class="media-modal-foot">
 				<span class="mono media-path">{active.file_path}</span>
@@ -355,6 +370,22 @@
 		margin: 0 auto;
 		border-radius: var(--r-sm);
 		background: var(--card-2);
+	}
+
+	.speed-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-top: 12px;
+	}
+
+	.speed-label {
+		margin: 0;
+	}
+
+	.speed-select {
+		width: auto;
+		min-width: 88px;
 	}
 
 	.media-modal-foot {

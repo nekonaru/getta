@@ -374,6 +374,11 @@ pub fn parse_line(line: &str) -> LineEvent {
     if let Some(rest) = line.strip_prefix("[ExtractAudio] Destination:") {
         return LineEvent::Destination(rest.trim().to_string());
     }
+    if let Some(rest) = line.strip_prefix("[info] Writing video subtitles to") {
+        // yt-dlp prints "...to: /path" on some versions, "...to /path" on others.
+        let dest = rest.trim().trim_start_matches(':').trim().to_string();
+        return LineEvent::Destination(dest);
+    }
     if let Some(rest) = line.strip_prefix("[Merger] Merging formats into") {
         return LineEvent::PostProcess(format!("merging {}", rest.trim_matches(['"', ' '])));
     }

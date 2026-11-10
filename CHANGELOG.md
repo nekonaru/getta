@@ -3,6 +3,17 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.8.0
+
+Twenty-two tools in the workbench, subtitles-only downloads, player speed.
+
+## New features
+
+- **Subtitles-only mode.** Download just the subtitle track (SRT/VTT) without any media, selected from the mode picker on Home.
+- **Six new tools:** waveform image, boost volume, trim silence, crop to square, merge video + audio (swap the audio track), embed album art in an MP3.
+- **Playback speed** in the inline library player: 0.5x to 3x.
+- **Export history to CSV** from the History tab.
+
 ## v0.7.0
 
 The workbench grows from 4 to 16 tools, grouped by type.

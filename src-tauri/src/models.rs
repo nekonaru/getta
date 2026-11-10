@@ -41,6 +41,7 @@ pub enum DownloadMode {
     Auto,
     Audio,
     Mute,
+    Subs,
 }
 
 impl Default for DownloadMode {
@@ -54,6 +55,7 @@ impl DownloadMode {
         match value.to_ascii_lowercase().as_str() {
             "audio" => Self::Audio,
             "mute" => Self::Mute,
+            "subs" => Self::Subs,
             _ => Self::Auto,
         }
     }
@@ -63,6 +65,7 @@ impl DownloadMode {
             Self::Auto => "auto",
             Self::Audio => "audio",
             Self::Mute => "mute",
+            Self::Subs => "subs",
         }
     }
 }
