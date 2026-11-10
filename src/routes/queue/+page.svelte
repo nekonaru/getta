@@ -11,7 +11,15 @@
 	type Tab = "queue" | "history";
 	let tab = $state<Tab>("queue");
 
-	const transit = $derived(downloadsStore.sorted(["active", "paused"]));
+	const transit = $derived(
+		[...downloadsStore.items]
+			.filter((i) => i.status === "active" || i.status === "paused")
+			.sort((a, b) => {
+				const rank = (s: QueueItemInfo["status"]) => (s === "active" ? 0 : 1);
+				const diff = rank(a.status) - rank(b.status);
+				return diff !== 0 ? diff : b.id - a.id;
+			})
+	);
 	const queued = $derived(
 		[...downloadsStore.items].filter((i) => i.status === "queued").sort((a, b) => a.id - b.id)
 	);
@@ -223,7 +231,7 @@
 													{#if item.status === "active" && item.speed_bps > 0}<span class="mono">· {formatSpeed(item.speed_bps)}</span>{/if}
 													{#if item.status === "active" && item.eta_seconds != null}<span>· {t("queue.eta", { time: formatEta(item.eta_seconds) })}</span>{/if}
 													{#if item.status === "paused"}<span>· {formatBytes(item.downloaded_bytes)}</span>{/if}
-									{#if item.status === "active" && item.phase && item.phase !== "downloading"}<span class="phase-chip mono">{item.phase}</span>{/if}
+									{#if (item.status === "active" || item.status === "queued") && item.phase && item.phase !== "downloading"}<span class="phase-chip mono">{item.phase}</span>{/if}
 												</div>
 												{#if item.error_message}
 													<div class="error-box">{item.error_message}</div>

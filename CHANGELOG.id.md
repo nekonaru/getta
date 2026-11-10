@@ -15,6 +15,13 @@ Meja kerja bertumbuh dari 4 menjadi 16 alat, dikelompokkan per tipe.
 - **Subtitle:** konversi antara SRT, WebVTT, dan ASS.
 - **Parameter alat bertipe.** Setiap alat punya parameter eksplisit; ekstensi file output masuk daftar putih.
 
+## Perbaikan bug
+
+- **In transit dan Antrean terpisah.** Item antre tidak lagi tampil di bagian In transit.
+- **Antrean pulih sendiri.** Item antre atau yang menunggu retry langsung mulai begitu slot konkurensi kosong, tanpa menunggu pemicu eksternal.
+- **Hitung mundur relay terlihat.** Baris antre menampilkan fase retry/backoff secara inline.
+- **Progress di mana-mana.** Persen, byte terunduh / total, kecepatan, dan ETA tampil di baris aktif, plus strip agregat untuk seluruh antrean.
+
 ## v0.6.1
 
 Nama baru untuk input beranda; tidak ada perubahan fungsi.

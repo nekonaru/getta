@@ -893,11 +893,11 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
         .unwrap_or(3);
 
     let (category, retryable) = ytdlp::classify_error(message);
-    let (retry_count, big_enough) = {
+    let retry_count = {
         let Some(state) = app.try_state::<AppState>() else { return };
         let inner = state.queue.inner.lock().expect("queue mutex");
         match inner.items.iter().find(|i| i.id == id) {
-            Some(item) => (item.retry_count, item.downloaded_bytes > 5 * 1024 * 1024),
+            Some(item) => item.retry_count,
             None => return,
         }
     };

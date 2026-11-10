@@ -127,7 +127,10 @@ pub async fn dismiss_recovery(state: State<'_, AppState>) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub async fn queue_snapshot(state: State<'_, AppState>) -> Result<Vec<crate::models::QueueItemInfo>, String> {
+pub async fn queue_snapshot(state: State<'_, AppState>, app: AppHandle) -> Result<Vec<crate::models::QueueItemInfo>, String> {
+    // Heal the queue: if an item is queued but capacity is free, spawn it.
+    // Idempotent and safe to call on every snapshot.
+    state.queue.try_start_next(&app);
     Ok(state.queue.snapshot())
 }
 

@@ -15,6 +15,13 @@ The workbench grows from 4 to 16 tools, grouped by type.
 - **Subtitles:** convert between SRT, WebVTT and ASS.
 - **Typed tool params.** Every tool takes explicit parameters; output extensions are whitelisted.
 
+## Bug fixes
+
+- **In transit and Queued are disjoint.** Queued items no longer appear in the In transit section.
+- **Self-healing queue.** A queued or retrying item starts as soon as a concurrency slot is free; it no longer waits for an external trigger.
+- **Retry countdown visible.** Queued rows show the retry/backoff phase inline.
+- **Progress everywhere.** Percent, bytes moved / total, speed and ETA are shown on the active row, plus the aggregate strip over the whole queue.
+
 ## v0.6.1
 
 New name for the home input, no functional changes.

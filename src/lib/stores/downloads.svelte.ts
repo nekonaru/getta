@@ -64,16 +64,6 @@ class DownloadsStore {
 		return this.items.reduce((sum, i) => sum + (i.status === "active" ? i.speed_bps : 0), 0);
 	}
 
-	sorted(statusOrder: QueueStatusName[]): QueueItemInfo[] {
-		const order = new Map(statusOrder.map((s, i) => [s, i]));
-		return [...this.items].sort((a, b) => {
-			const oa = order.get(a.status) ?? 99;
-			const ob = order.get(b.status) ?? 99;
-			if (oa !== ob) return oa - ob;
-			return b.id - a.id;
-		});
-	}
-
 	async start(): Promise<void> {
 		if (this.started) return;
 		this.started = true;
