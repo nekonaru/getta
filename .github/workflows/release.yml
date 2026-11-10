@@ -73,7 +73,7 @@ jobs:
           pattern: bundle-*
           path: artifacts
       - name: Build the updater manifest
-        run: node .github/scripts/build-latest-json.js artifacts
+        run: node .github/scripts/build-latest-json.cjs artifacts
       - name: Build release notes from the changelog
         shell: bash
         run: |
