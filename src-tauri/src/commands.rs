@@ -233,7 +233,14 @@ pub async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<Strin
         use sha2::Digest;
         let mut file = std::fs::File::open(path).ok()?;
         let mut hasher = sha2::Sha256::new();
-        std::io::copy(&mut file, &mut hasher).ok()?;
+        let mut buffer = vec![0u8; 1024 * 1024];
+        loop {
+            match std::io::Read::read(&mut file, &mut buffer) {
+                Ok(0) => break,
+                Ok(n) => hasher.update(&buffer[..n]),
+                Err(_) => return None,
+            }
+        }
         Some(hex::encode(hasher.finalize()))
     }
 

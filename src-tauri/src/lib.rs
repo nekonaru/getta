@@ -146,7 +146,8 @@ pub fn run() {
             // Verify the engines still run; tell the UI when they do not.
             let check_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let ok = tokio::task::spawn_blocking(move || engine_ok(&check_app))
+                let check_app_for_task = check_app.clone();
+                let ok = tokio::task::spawn_blocking(move || engine_ok(&check_app_for_task))
                     .await
                     .unwrap_or(true);
                 if !ok {
