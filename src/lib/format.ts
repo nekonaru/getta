@@ -1,5 +1,5 @@
 export function formatBytes(bytes: number | null | undefined): string {
-	if (bytes == null || Number.isNaN(bytes)) return "—";
+	if (bytes == null || Number.isNaN(bytes)) return "-";
 	if (bytes < 1024) return `${bytes} B`;
 	const units = ["KB", "MB", "GB", "TB"];
 	let value = bytes;
@@ -13,12 +13,12 @@ export function formatBytes(bytes: number | null | undefined): string {
 }
 
 export function formatSpeed(bytesPerSecond: number): string {
-	if (!bytesPerSecond) return "—";
+	if (!bytesPerSecond) return "-";
 	return `${formatBytes(bytesPerSecond)}/s`;
 }
 
 export function formatEta(seconds: number | null | undefined): string {
-	if (seconds == null || !Number.isFinite(seconds)) return "—";
+	if (seconds == null || !Number.isFinite(seconds)) return "-";
 	const s = Math.max(0, Math.round(seconds));
 	if (s < 60) return `${s}s`;
 	const m = Math.floor(s / 60);
@@ -28,7 +28,7 @@ export function formatEta(seconds: number | null | undefined): string {
 }
 
 export function formatDuration(seconds: number | null | undefined): string {
-	if (seconds == null || !Number.isFinite(seconds)) return "—";
+	if (seconds == null || !Number.isFinite(seconds)) return "-";
 	const s = Math.max(0, Math.floor(seconds));
 	const h = Math.floor(s / 3600);
 	const m = Math.floor((s % 3600) / 60);

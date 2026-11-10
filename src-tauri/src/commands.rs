@@ -142,6 +142,11 @@ pub async fn history_clear(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn history_remove(state: State<'_, AppState>, id: String) -> Result<bool, String> {
+    history::remove(&state.data_dir, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn settings_get(state: State<'_, AppState>) -> Result<AppSettings, String> {
     Ok(state.settings.lock().map_err(|_| "settings locked".to_string())?.clone())
 }

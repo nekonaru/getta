@@ -52,7 +52,7 @@ Getta is an original implementation under the MIT license.
 
 | Feature | Description |
 |---------|-------------|
-| **Omnibox** | One input for single links, multiple pasted links and direct file URLs |
+| **Omnibox** | One input for links, multiple pasted links, direct file URLs and plain YouTube search |
 | **Platform detection** | Recognizes YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud and more, plus generic web pages and direct files |
 | **Media preview** | Title, author, duration, thumbnail and an on-demand quality list before you download |
 | **Playlist picker** | Playlists analyze with a checkbox list; download everything or only the entries you want |
@@ -75,8 +75,8 @@ Getta is an original implementation under the MIT license.
 
 | Feature | Description |
 |---------|-------------|
-| **Library** | Grid of your completed downloads; play videos, audio and images inline, filter by type |
-| **Tools** | Local workbench: Video to MP3, Video to GIF, Compress video (H.264), powered by FFmpeg |
+| **Library** | Grid of your completed downloads; play media inline, filter by type, copy the source URL, remove entries |
+| **Tools** | Local workbench: Video to MP3, Video to GIF, Compress video (H.264), Trim video |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
 | **Deep links** | `getta://<url>` opens Getta and queues the link |

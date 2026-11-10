@@ -25,3 +25,13 @@ pub fn push(data_dir: &Path, entry: HistoryEntry) {
 pub fn clear(data_dir: &Path) -> std::io::Result<()> {
     storage::write_json_atomic(&history_path(data_dir), &Vec::<HistoryEntry>::new())
 }
+
+/// Remove one entry by id. Returns true when an entry was removed.
+pub fn remove(data_dir: &Path, id: &str) -> std::io::Result<bool> {
+    let entries = list(data_dir);
+    let before = entries.len();
+    let kept: Vec<HistoryEntry> = entries.into_iter().filter(|e| e.id != id).collect();
+    let removed = kept.len() != before;
+    storage::write_json_atomic(&history_path(data_dir), &kept)?;
+    Ok(removed)
+}

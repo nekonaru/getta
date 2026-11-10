@@ -3,6 +3,16 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.6.0
+
+Type a search, trim your clips, and manage the library.
+
+## New features
+
+- **YouTube search in the omnibox.** Type a plain search instead of a link; Getta shows the top results and lets you pick which ones to fetch.
+- **Video Trim.** New Tools entry: cut a clip (start + length in seconds) from any video or audio file.
+- **Library cleanup.** Each library entry can copy its source URL or be removed from the library; the file stays on disk.
+
 ## v0.5.0
 
 Interrupted downloads come back, and the queue can be re-arranged.

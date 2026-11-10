@@ -111,6 +111,11 @@ pub(crate) fn validate_url(url: &str) -> Result<String, String> {
         return Ok(trimmed.to_string());
     }
     let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("ytsearch") {
+        // App-constructed YouTube search (e.g. "ytsearch5:query"). Passed to
+        // yt-dlp as a single argument; it is never run through a shell.
+        return Ok(trimmed.to_string());
+    }
     if trimmed.starts_with("magnet:") || lower.ends_with(".torrent") {
         return Err("Torrents and magnet links arrive in a later release.".to_string());
     }
@@ -131,15 +136,22 @@ impl QueueManager {
 
     pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {
         let trimmed = validate_url(url)?;
-        let platform_info = platform::detect(&trimmed);
-        if !platform_info.supported {
-            return Err(format!("{} links are not supported yet.", platform_info.display_name));
-        }
+        let trimmed_lc = trimmed.to_ascii_lowercase();
+        let is_search = trimmed_lc.starts_with("ytsearch");
+        let platform_name = if is_search {
+            "YouTube Search".to_string()
+        } else {
+            let platform_info = platform::detect(&trimmed);
+            if !platform_info.supported {
+                return Err(format!("{} links are not supported yet.", platform_info.display_name));
+            }
+            platform_info.display_name
+        };
 
         let item = QueueItem {
             id: next_id(),
             url: trimmed.to_string(),
-            platform: platform_info.display_name.clone(),
+            platform: platform_name,
             title: title_from_url(&trimmed),
             download_mode: DownloadMode::parse(&options.download_mode),
             quality: if options.quality.trim().is_empty() { "best".to_string() } else { options.quality.trim().to_string() },
@@ -517,6 +529,12 @@ fn emit_queue(app: &tauri::AppHandle) {
 }
 
 fn title_from_url(url: &str) -> String {
+    let lower = url.to_ascii_lowercase();
+    if lower.starts_with("ytsearch") {
+        let query = url.splitn(2, ':').nth(1).unwrap_or("search").trim();
+        let query = if query.is_empty() { "search" } else { query };
+        return sanitize_filename::sanitize(query.chars().take(80).collect::<String>());
+    }
     if let Ok(parsed) = url::Url::parse(url) {
         let host = parsed.host_str().unwrap_or("download").to_string();
         let tail = parsed
@@ -1086,6 +1104,32 @@ fn tool_args(request: &crate::models::ToolRequest, output: &std::path::Path) -> 
                 out,
             ])
         }
+        "trim" => {
+            let start = request.start_secs.unwrap_or(0.0).max(0.0);
+            let duration = request.duration.unwrap_or(10.0).clamp(0.1, 24.0 * 3600.0);
+            Ok(vec![
+                "-y".to_string(),
+                "-ss".to_string(),
+                format!("{start}"),
+                "-t".to_string(),
+                format!("{duration}"),
+                "-i".to_string(),
+                input,
+                "-c:v".to_string(),
+                "libx264".to_string(),
+                "-crf".to_string(),
+                "23".to_string(),
+                "-preset".to_string(),
+                "fast".to_string(),
+                "-c:a".to_string(),
+                "aac".to_string(),
+                "-b:a".to_string(),
+                "128k".to_string(),
+                "-movflags".to_string(),
+                "+faststart".to_string(),
+                out,
+            ])
+        }
         "compress" => {
             let crf = request.crf.unwrap_or(30).clamp(18, 45);
             Ok(vec![
@@ -1116,6 +1160,7 @@ fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
     match request.tool.as_str() {
         "audio_mp3" => parent.join(format!("{stem}.mp3")),
         "gif" => parent.join(format!("{stem}.gif")),
+        "trim" => parent.join(format!("{stem}-trimmed.mp4")),
         _ => parent.join(format!("{stem}-compressed.mp4")),
     }
 }
@@ -1136,7 +1181,7 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
     if !input.is_file() {
         return Err("That file no longer exists.".to_string());
     }
-    if !matches!(request.tool.as_str(), "audio_mp3" | "gif" | "compress") {
+    if !matches!(request.tool.as_str(), "audio_mp3" | "gif" | "compress" | "trim") {
         return Err(format!("Unknown tool '{}'.", request.tool));
     }
     let settings = app
@@ -1261,21 +1306,29 @@ pub async fn run_tool(app: &tauri::AppHandle, request: crate::models::ToolReques
 
 pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, String> {
     let trimmed = validate_url(url)?;
-    let platform_info = platform::detect(&trimmed);
-    if !platform_info.supported {
-        return Ok(Analysis {
-            platform: platform_info.display_name,
-            supported: false,
-            title: None,
-            author: None,
-            thumbnail_url: None,
-            duration_seconds: None,
-            media_kind: None,
-            is_playlist: false,
-            entry_count: None,
-            qualities: Vec::new(),
-            playlist_entries: Vec::new(),
-        });
+    let is_search = trimmed.to_ascii_lowercase().starts_with("ytsearch");
+    let platform_name = if is_search {
+        "YouTube Search".to_string()
+    } else {
+        platform::detect(&trimmed).display_name
+    };
+    if !is_search {
+        let platform_info = platform::detect(&trimmed);
+        if !platform_info.supported {
+            return Ok(Analysis {
+                platform: platform_info.display_name,
+                supported: false,
+                title: None,
+                author: None,
+                thumbnail_url: None,
+                duration_seconds: None,
+                media_kind: None,
+                is_playlist: false,
+                entry_count: None,
+                qualities: Vec::new(),
+                playlist_entries: Vec::new(),
+            });
+        }
     }
 
     let settings = app
@@ -1321,7 +1374,7 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
     let value: serde_json::Value = serde_json::from_slice(&output.stdout)
         .map_err(|e| format!("Could not parse the engine response: {e}"))?;
 
-    Ok(analysis_from_json(&value, &platform_info.display_name))
+    Ok(analysis_from_json(&value, &platform_name))
 }
 
 fn analysis_from_json(value: &serde_json::Value, platform_name: &str) -> Analysis {

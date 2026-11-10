@@ -22,6 +22,15 @@
 
 	const links = $derived(parseLinks(url));
 	const singleLink = $derived(links.length === 1 ? links[0] : null);
+	const searchQuery = $derived(
+		url
+			.trim()
+			.split(/\s+/)
+			.filter(Boolean)
+			.join(" ")
+	);
+	const isSearch = $derived(!looksLikeUrl(url) && searchQuery.length >= 3);
+	const downloadTarget = $derived(singleLink ?? (isSearch ? `ytsearch5:${searchQuery}` : null));
 
 	const recentItems = $derived(
 		[...downloadsStore.items].sort((a, b) => b.id - a.id).slice(0, 4)
@@ -52,7 +61,7 @@
 	function onInput() {
 		clearTimeout(analyzeTimer);
 		analysis = null;
-		if (!looksLikeUrl(url)) {
+		if (!looksLikeUrl(url) && !isSearch) {
 			busy = "idle";
 			errorMessage = "";
 			return;
@@ -63,7 +72,7 @@
 	}
 
 	async function analyze() {
-		const target = singleLink;
+		const target = downloadTarget;
 		if (!target) return;
 		try {
 			const result = await api.analyzeUrl(target);
@@ -78,7 +87,8 @@
 	}
 
 	async function startDownload(playlistItems?: string) {
-		if (!singleLink) return;
+		const target = downloadTarget;
+		if (!target) return;
 		busy = "starting";
 		try {
 			const alwaysAsk = settingsStore.value?.always_ask_path;
@@ -93,7 +103,7 @@
 				dir = picked;
 			}
 			await api.startDownload({
-				url: singleLink,
+				url: target,
 				download_mode: mode,
 				quality,
 				format_id: null,
@@ -210,7 +220,7 @@
 				{#if busy === "analyzing"}
 					<div class="spinner" role="status" aria-label={t("home.analyzing")}></div>
 				{/if}
-				<button class="btn btn-accent fetch-btn" onclick={() => startDownload()} disabled={busy === "analyzing" || busy === "starting" || !singleLink}>
+				<button class="btn btn-accent fetch-btn" onclick={() => startDownload()} disabled={busy === "analyzing" || busy === "starting" || !downloadTarget}>
 					{busy === "starting" ? t("home.fetching") : t("home.button")}
 				</button>
 			</div>
@@ -228,14 +238,14 @@
 				</div>
 			{/if}
 
-			{#if analysis && busy === "ready" && analysis.supported && singleLink}
+			{#if analysis && busy === "ready" && analysis.supported && downloadTarget}
 				<div class="card panel">
 					<div class="preview">
 						{#if analysis.thumbnail_url}
 							<img class="preview-thumb" src={analysis.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.visibility = "hidden")} />
 						{/if}
 						<div class="preview-meta">
-							<p class="preview-title">{analysis.title ?? singleLink}</p>
+							<p class="preview-title">{analysis.title ?? downloadTarget}</p>
 							<div class="preview-sub muted">
 								<span class="mono">{analysis.platform}</span>
 								{#if analysis.duration_seconds}<span>· {formatDuration(analysis.duration_seconds)}</span>{/if}
@@ -247,7 +257,7 @@
 					{#if isPlaylist}
 						<div class="playlist-block">
 							<div class="playlist-head">
-								<span class="field-label" style="margin:0">{t("home.playlistNote")}</span>
+								<span class="field-label" style="margin:0">{isSearch ? t("home.searchNote") : t("home.playlistNote")}</span>
 								<span class="playlist-actions">
 									<button class="btn btn-sm btn-ghost" onclick={() => (playlistSelected = new Set(analysis?.playlist_entries.map((e) => e.index) ?? []))}>{t("home.playlistSelectAll")}</button>
 									<button class="btn btn-sm btn-ghost" onclick={() => (playlistSelected = new Set())}>{t("home.playlistSelectNone")}</button>

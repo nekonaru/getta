@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { convertFileSrc } from "@tauri-apps/api/core";
+	import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 	import { api, type HistoryEntry } from "#lib/api";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
@@ -58,6 +59,27 @@
 		if (!entry.file_path) return;
 		try {
 			await api.revealInFolder(entry.file_path);
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function copyUrl(entry: HistoryEntry) {
+		try {
+			await writeText(entry.url);
+			toastStore.push(t("library.copied"));
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function removeEntry(entry: HistoryEntry) {
+		if (!window.confirm(t("library.removeConfirm", { title: entry.title }))) return;
+		try {
+			await api.historyRemove(entry.id);
+			entries = entries.filter((e) => e.id !== entry.id);
+			if (active?.id === entry.id) active = null;
+			toastStore.push(t("library.removed"));
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -154,7 +176,11 @@
 			{/if}
 			<div class="media-modal-foot">
 				<span class="mono media-path">{active.file_path}</span>
-				<button class="btn btn-sm" onclick={() => active && reveal(active)}>{t("library.reveal")}</button>
+				<div class="media-modal-actions">
+					<button class="btn btn-sm btn-ghost" onclick={() => copyUrl(active!)}>{t("library.copyUrl")}</button>
+					<button class="btn btn-sm btn-ghost danger-text" onclick={() => removeEntry(active!)}>{t("library.remove")}</button>
+					<button class="btn btn-sm" onclick={() => active && reveal(active)}>{t("library.reveal")}</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -339,6 +365,18 @@
 		margin-top: 12px;
 		border-top: 1px solid var(--border);
 		padding-top: 12px;
+		flex-wrap: wrap;
+	}
+
+	.media-modal-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-shrink: 0;
+	}
+
+	.danger-text {
+		color: var(--bad);
 	}
 
 	.media-path {

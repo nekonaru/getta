@@ -19,12 +19,15 @@
 	let gifDuration = $state("5");
 	let gifWidth = $state("480");
 	let gifFps = $state("10");
+	let trimStart = $state("0");
+	let trimDuration = $state("10");
 	let compressCrf = $state("30");
 
 	let toolsState = $state<Record<ToolName, ToolState>>({
 		audio_mp3: { input: "", running: false, progress: 0, output: null, error: null },
 		gif: { input: "", running: false, progress: 0, output: null, error: null },
-		compress: { input: "", running: false, progress: 0, output: null, error: null }
+		compress: { input: "", running: false, progress: 0, output: null, error: null },
+		trim: { input: "", running: false, progress: 0, output: null, error: null }
 	});
 
 	onMount(() => {
@@ -87,9 +90,16 @@
 							width: Number(gifWidth) || 480,
 							fps: Number(gifFps) || 10
 						}
-					: tool === "compress"
-						? { tool, input: state.input, crf: Number(compressCrf) || 30 }
-						: { tool, input: state.input };
+					: tool === "trim"
+						? {
+								tool,
+								input: state.input,
+								start_secs: Number(trimStart) || 0,
+								duration: Number(trimDuration) || 10
+							}
+						: tool === "compress"
+							? { tool, input: state.input, crf: Number(compressCrf) || 30 }
+							: { tool, input: state.input };
 			await api.runTool(request);
 		} catch (e) {
 			state.running = false;
@@ -119,6 +129,11 @@
 			id: "gif",
 			name: () => t("tools.gif"),
 			desc: () => t("tools.gifDesc")
+		},
+		{
+			id: "trim",
+			name: () => t("tools.trim"),
+			desc: () => t("tools.trimDesc")
 		},
 		{
 			id: "compress",
@@ -155,8 +170,10 @@
 								<svg viewBox="0 0 24 24"><path d="M9 6.5v11l9-5.5z"/><circle cx="6.5" cy="17.5" r="2.5"/></svg>
 							{:else if def.id === "gif"}
 								<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M8 12v.01M12 12v.01M16 12v.01"/></svg>
-							{:else}
+							{:else if def.id === "compress"}
 								<svg viewBox="0 0 24 24"><path d="M4 12h6l-2-5 4 10 2-5h6"/></svg>
+							{:else}
+								<svg viewBox="0 0 24 24"><path d="M6 8V6m0 12v-2M18 8V6m0 12v-2M4 10h6M4 14h6M14 10h6M14 14h6"/></svg>
 							{/if}
 						</span>
 						<span class="tool-text">
@@ -170,7 +187,7 @@
 						<div class="tool-body">
 							<div class="file-row">
 								<button class="btn btn-sm" onclick={() => pickFile(def.id)} disabled={state.running}>{t("tools.pickFile")}</button>
-								<span class="file-name mono" title={state.input}>{state.input ? state.input.split(/[\\/]/).pop() : "—"}</span>
+								<span class="file-name mono" title={state.input}>{state.input ? state.input.split(/[\\/]/).pop() : "-"}</span>
 							</div>
 
 							{#if def.id === "gif"}
@@ -179,6 +196,11 @@
 									<label><span class="field-label">{t("tools.duration")}</span><input class="input" type="number" min="0.2" step="0.5" bind:value={gifDuration} disabled={state.running} /></label>
 									<label><span class="field-label">{t("tools.width")}</span><input class="input" type="number" min="64" max="1920" step="10" bind:value={gifWidth} disabled={state.running} /></label>
 									<label><span class="field-label">{t("tools.fps")}</span><input class="input" type="number" min="1" max="50" step="1" bind:value={gifFps} disabled={state.running} /></label>
+								</div>
+							{:else if def.id === "trim"}
+								<div class="options-grid">
+									<label><span class="field-label">{t("tools.startAt")}</span><input class="input" type="number" min="0" step="0.5" bind:value={trimStart} disabled={state.running} /></label>
+									<label><span class="field-label">{t("tools.duration")}</span><input class="input" type="number" min="0.5" step="0.5" bind:value={trimDuration} disabled={state.running} /></label>
 								</div>
 							{:else if def.id === "compress"}
 								<div class="options-grid">

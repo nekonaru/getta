@@ -3,6 +3,16 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.6.0
+
+Ketik pencarian, potong klip, dan rapikan pustaka.
+
+## Fitur baru
+
+- **Pencarian YouTube di omnibox.** Ketik pencarian biasa, bukan tautan; Getta menampilkan hasil teratas dan kamu pilih entri yang ingin diambil.
+- **Potong video.** Menu Alat baru: potong klip (mulai + durasi dalam detik) dari file video atau audio apa pun.
+- **Rapikan pustaka.** Setiap entri pustaka bisa menyalin URL sumbernya atau dihapus dari pustaka; file tetap di disk.
+
 ## v0.5.0
 
 Unduhan yang terputus kembali, dan antrean bisa diatur ulang.

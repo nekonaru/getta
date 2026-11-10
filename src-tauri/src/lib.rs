@@ -137,6 +137,7 @@ pub fn run() {
             commands::dismiss_recovery,
             commands::history_list,
             commands::history_clear,
+            commands::history_remove,
             commands::settings_get,
             commands::settings_update,
             commands::settings_reset,

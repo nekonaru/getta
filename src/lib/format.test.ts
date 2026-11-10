@@ -12,8 +12,8 @@ describe("formatBytes", () => {
 		expect(formatBytes(2.5 * 1024 * 1024 * 1024)).toBe("2.5 GB");
 	});
 	it("handles null", () => {
-		expect(formatBytes(null)).toBe("—");
-		expect(formatBytes(undefined)).toBe("—");
+		expect(formatBytes(null)).toBe("-");
+		expect(formatBytes(undefined)).toBe("-");
 	});
 });
 
@@ -22,7 +22,7 @@ describe("formatSpeed", () => {
 		expect(formatSpeed(3 * 1024 * 1024)).toBe("3.0 MB/s");
 	});
 	it("handles zero", () => {
-		expect(formatSpeed(0)).toBe("—");
+		expect(formatSpeed(0)).toBe("-");
 	});
 });
 
@@ -37,7 +37,7 @@ describe("formatEta", () => {
 		expect(formatEta(3725)).toBe("1h 2m");
 	});
 	it("handles null", () => {
-		expect(formatEta(null)).toBe("—");
+		expect(formatEta(null)).toBe("-");
 	});
 });
 
@@ -49,6 +49,6 @@ describe("formatDuration", () => {
 		expect(formatDuration(3725)).toBe("1:02:05");
 	});
 	it("handles null", () => {
-		expect(formatDuration(null)).toBe("—");
+		expect(formatDuration(null)).toBe("-");
 	});
 });

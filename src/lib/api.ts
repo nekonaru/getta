@@ -136,7 +136,7 @@ export interface StartOptions {
 	output_dir: string | null;
 }
 
-export type ToolName = "audio_mp3" | "gif" | "compress";
+export type ToolName = "audio_mp3" | "gif" | "compress" | "trim";
 
 export interface ToolRequest {
 	tool: ToolName;
@@ -200,6 +200,7 @@ export const api = {
 	dismissRecovery: () => call(() => invoke<void>("dismiss_recovery")),
 	historyList: () => call(() => invoke<HistoryEntry[]>("history_list")),
 	historyClear: () => call(() => invoke<void>("history_clear")),
+	historyRemove: (id: string) => call(() => invoke<boolean>("history_remove", { id })),
 	settingsGet: () => call(() => invoke<AppSettings>("settings_get")),
 	settingsUpdate: (patch: Partial<AppSettings>) =>
 		call(() => invoke<AppSettings>("settings_update", { patch })),

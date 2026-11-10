@@ -265,7 +265,7 @@
 								<p class="hint">{t("settings.cookiesHint")}</p>
 								<label class="field-label" for="cookie-file" style="margin-top:12px">{t("settings.cookieFile")}</label>
 								<div class="cookie-file-row">
-									<code class="cookie-file-value">{settings.cookie_file || "—"}</code>
+									<code class="cookie-file-value">{settings.cookie_file || "-"}</code>
 									<button class="btn btn-sm" onclick={pickCookieFile}>{t("settings.cookieFilePick")}</button>
 									{#if settings.cookie_file}
 										<button class="btn btn-sm btn-ghost" onclick={() => patch({ cookie_file: "" })}>{t("settings.cookieFileClear")}</button>

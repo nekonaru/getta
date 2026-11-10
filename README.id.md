@@ -52,7 +52,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| **Omnibox** | Satu input untuk tautan tunggal, banyak tautan sekaligus, dan URL file langsung |
+| **Omnibox** | Satu input untuk tautan, banyak tautan sekaligus, URL file langsung, dan pencarian YouTube biasa |
 | **Deteksi platform** | Mengenali YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud, dan lainnya, plus halaman web umum dan file langsung |
 | **Pratinjau media** | Judul, penulis, durasi, thumbnail, dan daftar kualitas sebelum mengunduh |
 | **Pemilih daftar putar** | Playlist dianalisis dengan daftar ceklis; unduh semuanya atau hanya entri yang kamu mau |
@@ -75,8 +75,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| **Pustaka** | Grid unduhan selesai kamu; putar video, audio, dan gambar langsung di aplikasi, filter per tipe |
-| **Alat** | Meja kerja lokal: Video ke MP3, Video ke GIF, Kompres video (H.264), ditenagai FFmpeg |
+| **Pustaka** | Grid unduhan selesai kamu; putar media inline, filter per tipe, salin URL sumber, hapus entri |
+| **Alat** | Meja kerja lokal: Video ke MP3, Video ke GIF, Kompres video (H.264), Potong video |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |
 | **Deep link** | `getta://<url>` membuka Getta dan mengantrekan tautannya |
