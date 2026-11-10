@@ -52,7 +52,7 @@ Getta is an original implementation under the MIT license.
 
 | Feature | Description |
 |---------|-------------|
-| **Omnibox** | One input for links, multiple pasted links, direct file URLs and plain YouTube search |
+| **Getup** | One input for links, multiple pasted links, direct file URLs and plain YouTube search |
 | **Platform detection** | Recognizes YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud and more, plus generic web pages and direct files |
 | **Media preview** | Title, author, duration, thumbnail and an on-demand quality list before you download |
 | **Playlist picker** | Playlists analyze with a checkbox list; download everything or only the entries you want |

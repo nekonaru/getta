@@ -3,13 +3,21 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.6.1
+
+Nama baru untuk input beranda; tidak ada perubahan fungsi.
+
+## Peningkatan
+
+- **Getup.** Input di beranda kini bernama Getup di seluruh UI, dokumentasi, dan catatan rilis.
+
 ## v0.6.0
 
 Ketik pencarian, potong klip, dan rapikan pustaka.
 
 ## Fitur baru
 
-- **Pencarian YouTube di omnibox.** Ketik pencarian biasa, bukan tautan; Getta menampilkan hasil teratas dan kamu pilih entri yang ingin diambil.
+- **Pencarian YouTube di Getup.** Ketik pencarian biasa, bukan tautan; Getta menampilkan hasil teratas dan kamu pilih entri yang ingin diambil.
 - **Potong video.** Menu Alat baru: potong klip (mulai + durasi dalam detik) dari file video atau audio apa pun.
 - **Rapikan pustaka.** Setiap entri pustaka bisa menyalin URL sumbernya atau dihapus dari pustaka; file tetap di disk.
 
@@ -141,7 +149,7 @@ Rilis publik pertama. Tempel tautan, ambil filenya.
 
 ## Fitur baru
 
-- **Omnibox di Beranda.** Satu kolom input menangani tautan tunggal, banyak tautan sekaligus, dan URL file langsung, dengan deteksi platform, pratinjau media, pemilih kualitas, serta mode audio/video saja.
+- **Getup di Beranda.** Satu kolom input menangani tautan tunggal, banyak tautan sekaligus, dan URL file langsung, dengan deteksi platform, pratinjau media, pemilih kualitas, serta mode audio/video saja.
 - **Mesin unduhan.** Unduhan lokal berjalan lewat yt-dlp dan FFmpeg. Getta bisa memasang dan memverifikasi keduanya sendiri di Windows dan macOS; di Linux memakai paket dari distro.
 - **Antrean dengan resume.** Antrean persisten dengan jeda, lanjutkan, batal, coba ulang dengan backoff, kecepatan live, ETA, dan label platform per situs. Jumlah unduhan bersamaan, jumlah koneksi, dan coba ulang bisa diatur.
 - **Riwayat dan tampilkan.** Unduhan selesai terdaftar, bisa diunduh ulang, ditampilkan di file manager, atau dihapus.

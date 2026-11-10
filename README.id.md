@@ -52,7 +52,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| **Omnibox** | Satu input untuk tautan, banyak tautan sekaligus, URL file langsung, dan pencarian YouTube biasa |
+| **Getup** | Satu input untuk tautan, banyak tautan sekaligus, URL file langsung, dan pencarian YouTube biasa |
 | **Deteksi platform** | Mengenali YouTube, Instagram, TikTok, X, Reddit, Twitch, Vimeo, Bilibili, SoundCloud, dan lainnya, plus halaman web umum dan file langsung |
 | **Pratinjau media** | Judul, penulis, durasi, thumbnail, dan daftar kualitas sebelum mengunduh |
 | **Pemilih daftar putar** | Playlist dianalisis dengan daftar ceklis; unduh semuanya atau hanya entri yang kamu mau |

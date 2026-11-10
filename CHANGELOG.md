@@ -3,13 +3,21 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.6.1
+
+New name for the home input, no functional changes.
+
+## Improvements
+
+- **Getup.** The home input is named Getup everywhere: UI, docs and release notes.
+
 ## v0.6.0
 
 Type a search, trim your clips, and manage the library.
 
 ## New features
 
-- **YouTube search in the omnibox.** Type a plain search instead of a link; Getta shows the top results and lets you pick which ones to fetch.
+- **YouTube search in Getup.** Type a plain search instead of a link; Getta shows the top results and lets you pick which ones to fetch.
 - **Video Trim.** New Tools entry: cut a clip (start + length in seconds) from any video or audio file.
 - **Library cleanup.** Each library entry can copy its source URL or be removed from the library; the file stays on disk.
 
@@ -141,7 +149,7 @@ First public release. Paste a link, get the file.
 
 ## New features
 
-- **Home omnibox.** One input handles single links, pasted batches and direct file URLs, with platform detection, a media preview, quality picker and audio/video-only modes.
+- **Getup.** One input handles single links, pasted batches and direct file URLs, with platform detection, a media preview, quality picker and audio/video-only modes.
 - **Download engine.** Local downloads run through yt-dlp and FFmpeg. Getta can install and verify both itself on Windows and macOS; on Linux it uses your distro package.
 - **Queue with resume.** A persistent queue with pause, resume, cancel, retry with backoff, live speed, ETA and per-site platform labels. Concurrency, connection count and retries are configurable.
 - **History and reveal.** Finished downloads are listed, can be re-downloaded, revealed in the file manager or deleted.

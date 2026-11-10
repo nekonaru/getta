@@ -204,10 +204,10 @@
 				</div>
 			{/if}
 
-			<div class="omnibox card">
+			<div class="getup card">
 				<LogoMark size={30} />
 				<input
-					class="omnibox-input"
+					class="getup-input"
 					type="text"
 					bind:value={url}
 					oninput={onInput}
@@ -419,7 +419,7 @@
 		justify-content: space-between;
 	}
 
-	.omnibox {
+	.getup {
 		display: flex;
 		align-items: center;
 		gap: 12px;
@@ -427,12 +427,12 @@
 		border-radius: var(--r-sm);
 	}
 
-	.omnibox :global(svg) {
+	.getup :global(svg) {
 		color: var(--accent);
 		flex: none;
 	}
 
-	.omnibox-input {
+	.getup-input {
 		flex: 1;
 		border: none;
 		background: transparent;
@@ -444,7 +444,7 @@
 		font-family: var(--font-body);
 	}
 
-	.omnibox-input::placeholder {
+	.getup-input::placeholder {
 		color: var(--muted);
 	}
 
