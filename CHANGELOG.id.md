@@ -3,6 +3,20 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.11.0
+
+## Perbaikan bug
+
+- **Crash tidak lagi membekukan antrean.** Mutex yang teracuni kini dipulihkan, bukan memicu panic di semua operasi berikutnya, jadi satu momen buruk tidak bisa menyetop semua unduhan.
+- **Penulisan pengaturan yang berbarengan tidak lagi bertabrakan** pada file temp yang sama; setiap penulisan atomik memakai nama temp yang unik.
+- **Parsing progress yt-dlp memakai ulang regex yang sudah terkompilasi**, tidak mengompilasi ulang per baris, menghemat CPU saat unduhan.
+
+## Fitur baru
+
+- **Menu tray "Unduh dari clipboard".** Tray mengantrekan link dari clipboard, menangani sama seperti hotkey global, lalu memunculkan jendela Getta.
+
+## v0.10.2
+
 ## v0.10.2
 
 Auto-update sekarang berfungsi benar di macOS.

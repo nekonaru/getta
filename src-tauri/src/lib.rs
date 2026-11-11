@@ -134,8 +134,8 @@ pub fn run() {
                 .try_state::<AppState>()
                 .and_then(|state| state.settings.lock().ok().map(|s| s.language.clone()))
                 .unwrap_or_else(|| "en".to_string());
-            let (show_label, quit_label) = tray::tray_labels(&language);
-            tray::setup(app, &show_label, &quit_label)?;
+            let (show_label, clipboard_label, quit_label) = tray::tray_labels(&language);
+            tray::setup(app, &show_label, &clipboard_label, &quit_label)?;
 
             // Poll followed channels with auto-download enabled in the background.
             let poll_app = app.handle().clone();

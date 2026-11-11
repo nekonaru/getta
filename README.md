@@ -81,6 +81,7 @@ Getta is an original implementation under the MIT license.
 | **Tools** | Local workbench: 23 tools for audio, video, images and subtitles, powered by FFmpeg |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
+| **Tray download** | Right-click the tray icon to download from the clipboard without opening the window |
 | **Deep links** | `getta://<url>` opens Getta and queues the link |
 | **Onboarding** | First-run wizard: language, theme, engine install, download folder |
 

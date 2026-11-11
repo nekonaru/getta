@@ -81,6 +81,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Alat** | Meja kerja lokal: 23 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |
+| **Unduh dari tray** | Klik kanan ikon tray untuk mengunduh dari clipboard tanpa membuka jendela |
 | **Deep link** | `getta://<url>` membuka Getta dan mengantrekan tautannya |
 | **Onboarding** | Wizard peluncuran pertama: bahasa, tema, pasang mesin, pilih folder tujuan |
 

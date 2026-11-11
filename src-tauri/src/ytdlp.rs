@@ -362,6 +362,14 @@ pub enum LineEvent {
 
 const DOWNLOAD_RE: &str = r"^\[download\]\s+([0-9]+(?:\.[0-9]+)?)%";
 
+const SPEED_RE: &str = r"at\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)/s";
+const ETA_RE: &str = r"ETA\s+([0-9:]+)";
+
+static DOWNLOAD_RE_STATIC: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+static UNIT_OF_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+static UNIT_AT_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+static ETA_RE_STATIC: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+
 pub fn parse_line(line: &str) -> LineEvent {
     let line = line.trim();
     if line.is_empty() {
@@ -392,15 +400,17 @@ pub fn parse_line(line: &str) -> LineEvent {
         return LineEvent::PostProcess("already exists".to_string());
     }
 
-    let percent = regex::Regex::new(DOWNLOAD_RE)
-        .ok()
-        .and_then(|re| re.captures(line))
+    let percent = DOWNLOAD_RE_STATIC
+        .get_or_init(|| regex::Regex::new(DOWNLOAD_RE).expect("DOWNLOAD_RE is valid"))
+        .captures(line)
         .and_then(|caps| caps.get(1))
         .and_then(|m| m.as_str().parse::<f64>().ok());
 
     if let Some(percent) = percent {
-        let total_bytes = capture_unit(line, r"of\s+(?:~\s*)?([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)");
-        let speed_bps = capture_unit(line, r"at\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)/s");
+        let total_bytes = capture_unit(UNIT_OF_RE
+            .get_or_init(|| regex::Regex::new(r"of\s+(?:~\s*)?([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)").expect("OF_RE is valid")), line);
+        let speed_bps = capture_unit(UNIT_AT_RE
+            .get_or_init(|| regex::Regex::new(r"at\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)/s").expect("AT_RE is valid")), line);
         let eta_seconds = capture_eta(line);
         return LineEvent::Progress {
             percent,
@@ -414,8 +424,7 @@ pub fn parse_line(line: &str) -> LineEvent {
     LineEvent::Ignored
 }
 
-fn capture_unit(line: &str, pattern: &str) -> Option<u64> {
-    let re = regex::Regex::new(pattern).ok()?;
+fn capture_unit(re: &regex::Regex, line: &str) -> Option<u64> {
     let caps = re.captures(line)?;
     let value: f64 = caps.get(1)?.as_str().parse().ok()?;
     let unit = caps.get(2)?.as_str().to_ascii_lowercase();
@@ -431,7 +440,7 @@ fn capture_unit(line: &str, pattern: &str) -> Option<u64> {
 }
 
 fn capture_eta(line: &str) -> Option<u64> {
-    let re = regex::Regex::new(r"ETA\s+([0-9:]+)").ok()?;
+    let re = ETA_RE_STATIC.get_or_init(|| regex::Regex::new(ETA_RE).expect("ETA_RE is valid"));
     let value = re.captures(line)?.get(1)?.as_str();
     let parts: Vec<&str> = value.split(':').collect();
     match parts.as_slice() {
@@ -536,8 +545,9 @@ mod tests {
     fn eta_and_units() {
         assert_eq!(capture_eta("x ETA 01:02:03 y"), Some(3723));
         assert_eq!(capture_eta("x ETA 07:30 y"), Some(450));
+        let re = regex::Regex::new(r"of\s+(?:~\s*)?([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)").unwrap();
         assert_eq!(
-            capture_unit("of 1.5GiB", r"of\s+(?:~\s*)?([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)"),
+            capture_unit(&re, "of 1.5GiB"),
             Some((1.5 * 1024.0 * 1024.0 * 1024.0) as u64)
         );
     }

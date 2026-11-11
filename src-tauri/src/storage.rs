@@ -24,11 +24,19 @@ pub fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> io::Result<T> {
 }
 
 /// Write `value` to `path` atomically via a sibling temp file and rename.
+/// The temp file name is unique per call so concurrent writers never clobber
+/// each other.
 pub fn write_json_atomic<T: serde::Serialize>(path: &Path, value: &T) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let tmp = path.with_extension("tmp");
+    static TMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let suffix = TMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = path.with_extension(format!("tmp-{}-{nanos}-{suffix}", std::process::id()));
     let text = serde_json::to_string_pretty(value)
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
     fs::write(&tmp, text)?;

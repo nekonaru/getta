@@ -5,18 +5,19 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
-pub fn tray_labels(language: &str) -> (&'static str, &'static str) {
+pub fn tray_labels(language: &str) -> (&'static str, &'static str, &'static str) {
     if language == "id" {
-        ("Tampilkan Getta", "Keluar Getta")
+        ("Tampilkan Getta", "Unduh dari clipboard", "Keluar Getta")
     } else {
-        ("Show Getta", "Quit Getta")
+        ("Show Getta", "Download from clipboard", "Quit Getta")
     }
 }
 
-pub fn setup(app: &tauri::App, show_label: &str, quit_label: &str) -> tauri::Result<()> {
+pub fn setup(app: &tauri::App, show_label: &str, clipboard_label: &str, quit_label: &str) -> tauri::Result<()> {
     let show = MenuItemBuilder::with_id("show", show_label).build(app)?;
+    let clipboard = MenuItemBuilder::with_id("clipboard", clipboard_label).build(app)?;
     let quit = MenuItemBuilder::with_id("quit", quit_label).build(app)?;
-    let menu = MenuBuilder::new(app).item(&show).item(&quit).build()?;
+    let menu = MenuBuilder::new(app).item(&show).item(&clipboard).item(&quit).build()?;
 
     let icon = match app.default_window_icon().cloned() {
         Some(icon) => icon,
@@ -33,6 +34,16 @@ pub fn setup(app: &tauri::App, show_label: &str, quit_label: &str) -> tauri::Res
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => show_window(app),
+            "clipboard" => {
+                // Same handler as the global shortcut: enqueue from clipboard.
+                use tauri::Emitter;
+                let _ = app.emit("global-download-requested", ());
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
             "quit" => app.exit(0),
             _ => {}
         })

@@ -131,7 +131,7 @@ impl QueueManager {
     }
 
     pub fn snapshot(&self) -> Vec<QueueItemInfo> {
-        self.inner.lock().expect("queue mutex").items.iter().map(QueueItem::info).collect()
+        self.inner.lock().unwrap_or_else(|e| e.into_inner()).items.iter().map(QueueItem::info).collect()
     }
 
     pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {
@@ -184,7 +184,7 @@ impl QueueManager {
         let item_title = item.title.clone();
         let id = item.id;
         {
-            self.inner.lock().expect("queue mutex").items.push(item);
+            self.inner.lock().unwrap_or_else(|e| e.into_inner()).items.push(item);
         }
         // Remember it: if the process dies mid-download, launch can offer it back.
         let recovery_entry = RecoveryEntry {
@@ -211,7 +211,7 @@ impl QueueManager {
             .max(1);
         let mut to_spawn = Vec::new();
         {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let running = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
             let free = max_concurrent.saturating_sub(running);
             let mut queued: Vec<u64> = inner
@@ -238,7 +238,7 @@ impl QueueManager {
 
     pub fn pause(&self, app: &tauri::AppHandle, id: u64) -> Result<(), String> {
         let pid = {
-            let inner = self.inner.lock().expect("queue mutex");
+            let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let item = inner.items.iter().find(|i| i.id == id).ok_or("item not found")?;
             if item.status != QueueStatus::Active {
                 return Err("Only running downloads can be paused.".to_string());
@@ -249,7 +249,7 @@ impl QueueManager {
             suspend_process(pid, true).map_err(|e| format!("Could not pause the download: {e}"))?;
         }
         {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                 item.status = QueueStatus::Paused;
                 item.speed_bps = 0;
@@ -264,7 +264,7 @@ impl QueueManager {
 
     pub fn resume(&self, app: &tauri::AppHandle, id: u64) -> Result<(), String> {
         let (pid, active_now, max_concurrent) = {
-            let inner = self.inner.lock().expect("queue mutex");
+            let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let item = inner.items.iter().find(|i| i.id == id).ok_or("item not found")?;
             if item.status != QueueStatus::Paused {
                 return Err("Only paused downloads can be resumed.".to_string());
@@ -286,7 +286,7 @@ impl QueueManager {
                 suspend_process(pid, false).map_err(|e| format!("Could not resume the download: {e}"))?;
             }
             {
-                let mut inner = self.inner.lock().expect("queue mutex");
+                let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
                 if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                     item.status = QueueStatus::Active;
                     item.phase = Some("downloading".to_string());
@@ -299,7 +299,7 @@ impl QueueManager {
                 kill_process(pid);
             }
             {
-                let mut inner = self.inner.lock().expect("queue mutex");
+                let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
                 if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                     // yt-dlp picks up from the .part file in the output dir.
                     item.pid = None;
@@ -316,7 +316,7 @@ impl QueueManager {
 
     pub fn cancel(&self, app: &tauri::AppHandle, id: u64) {
         let pid = {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let Some(index) = inner.items.iter().position(|i| i.id == id) else {
                 return;
             };
@@ -334,7 +334,7 @@ impl QueueManager {
 
     pub fn retry(&self, app: &tauri::AppHandle, id: u64) {
         {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                 if item.status != QueueStatus::Error {
                     return;
@@ -359,7 +359,7 @@ impl QueueManager {
 
     pub fn remove(&self, app: &tauri::AppHandle, id: u64, delete_file: bool) {
         let (pid, file_path) = {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let Some(index) = inner.items.iter().position(|i| i.id == id) else {
                 return;
             };
@@ -380,7 +380,7 @@ impl QueueManager {
 
     pub fn move_item(&self, app: &tauri::AppHandle, id: u64, delta: i32) -> Result<(), String> {
         {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let len = inner.items.len();
             let index = inner.items.iter().position(|i| i.id == id).ok_or("item not found")?;
             if inner.items[index].status != QueueStatus::Queued {
@@ -412,7 +412,7 @@ impl QueueManager {
 
     pub fn clear_finished(&self, app: &tauri::AppHandle) {
         {
-            let mut inner = self.inner.lock().expect("queue mutex");
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             inner.items.retain(|i| !matches!(i.status, QueueStatus::Done | QueueStatus::Error));
         }
         emit_queue(app);
@@ -689,8 +689,8 @@ fn spawn_job(app: tauri::AppHandle, id: u64) {
 async fn run_job(app: tauri::AppHandle, id: u64) {
     let (output_dir, args, ytdlp_path) = {
         let Some(state) = app.try_state::<AppState>() else { return };
-        let settings = state.settings.lock().expect("settings mutex").clone();
-        let Some(item) = state.queue.inner.lock().expect("queue mutex").items.iter().find(|i| i.id == id).cloned() else {
+        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        let Some(item) = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner()).items.iter().find(|i| i.id == id).cloned() else {
             return;
         };
         // Rules redirect the folder only when the user did not pick one for this item.
@@ -735,7 +735,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
 
     {
         if let Some(state) = app.try_state::<AppState>() {
-            let mut inner = state.queue.inner.lock().expect("queue mutex");
+            let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                 item.pid = child.id();
                 item.phase = Some("fetching info".to_string());
@@ -766,7 +766,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
             match ytdlp::parse_line(&line) {
                 ytdlp::LineEvent::Progress { percent, total_bytes, speed_bps, eta_seconds, .. } => {
                     if let Some(state) = app.try_state::<AppState>() {
-                        let mut inner = state.queue.inner.lock().expect("queue mutex");
+                        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                             if item.cancelled {
                                 continue;
@@ -785,7 +785,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                 }
                 ytdlp::LineEvent::Destination(path) => {
                     if let Some(state) = app.try_state::<AppState>() {
-                        let mut inner = state.queue.inner.lock().expect("queue mutex");
+                        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                             item.file_path = Some(path);
                             item.file_count = Some(item.file_count.unwrap_or(0) + 1);
@@ -796,7 +796,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                 }
                 ytdlp::LineEvent::PostProcess(phase) => {
                     if let Some(state) = app.try_state::<AppState>() {
-                        let mut inner = state.queue.inner.lock().expect("queue mutex");
+                        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                             item.phase = Some(phase);
                         }
@@ -805,7 +805,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                 }
                 ytdlp::LineEvent::PlaylistItem(index) => {
                     if let Some(state) = app.try_state::<AppState>() {
-                        let mut inner = state.queue.inner.lock().expect("queue mutex");
+                        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                             item.phase = Some(format!("item {index}"));
                         }
@@ -838,7 +838,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
         Ok(status) if status.success() => {
             let (title, url, file_path, file_size, platform, thumbnail_url, quality, mode) = {
                 let Some(state) = app.try_state::<AppState>() else { return };
-                let mut inner = state.queue.inner.lock().expect("queue mutex");
+                let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                 let Some(item) = inner.items.iter_mut().find(|i| i.id == id) else { return };
                 item.status = QueueStatus::Done;
                 item.percent = 100.0;
@@ -907,7 +907,7 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
     let (category, retryable) = ytdlp::classify_error(message);
     let retry_count = {
         let Some(state) = app.try_state::<AppState>() else { return };
-        let inner = state.queue.inner.lock().expect("queue mutex");
+        let inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
         match inner.items.iter().find(|i| i.id == id) {
             Some(item) => item.retry_count,
             None => return,
@@ -920,7 +920,7 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
     if can_retry {
         let delay_secs = 2u64.pow(retry_count.saturating_add(1).min(6)).min(30);
         if let Some(state) = app.try_state::<AppState>() {
-            let mut inner = state.queue.inner.lock().expect("queue mutex");
+            let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                 item.status = QueueStatus::Queued;
                 item.retry_count += 1;
@@ -947,7 +947,7 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
 fn finalize_error(app: &tauri::AppHandle, id: u64, message: &str, retryable: bool) {
     let (url, title, platform, quality, mode) = {
         let Some(state) = app.try_state::<AppState>() else { return };
-        let mut inner = state.queue.inner.lock().expect("queue mutex");
+        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
         let Some(item) = inner.items.iter_mut().find(|i| i.id == id) else { return };
         item.status = QueueStatus::Error;
         item.error_message = Some(message.to_string());

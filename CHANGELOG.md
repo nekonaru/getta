@@ -3,6 +3,18 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.11.0
+
+## Bug fixes
+
+- **A crash no longer freezes the queue.** A poisoned mutex is now recovered instead of panicking every later operation, so one bad moment cannot stall all downloads.
+- **Concurrent settings writes no longer collide** on a shared temp file; every atomic write uses a unique temp name.
+- **yt-dlp progress parsing reuses compiled regexes** instead of recompiling per output line, trimming CPU during downloads.
+
+## New features
+
+- **Tray menu "Download from clipboard".** The tray now enqueues a link from the clipboard, same handler as the global hotkey, and brings Getta to the front.
+
 ## v0.10.2
 
 Auto-update now works correctly on macOS.
