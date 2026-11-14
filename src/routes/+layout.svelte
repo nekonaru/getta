@@ -69,7 +69,7 @@
 				const text = await readText();
 				await enqueueFromClipboardText(text ?? "");
 			} catch {
-				toastStore.push(t("home.invalidUrl"), "error");
+				toastStore.push(t("enqueue.emptyClipboard"), "error");
 			}
 		});
 

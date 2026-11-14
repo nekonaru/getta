@@ -1,6 +1,6 @@
 [package]
 name = "getta"
-version = "0.11.0"
+version = "0.11.1"
 description = "Getta: a free, open source app that fetches media from across the web into your own folders"
 authors = ["Nicolas Dwi Dharma"]
 edition = "2021"

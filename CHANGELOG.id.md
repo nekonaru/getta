@@ -3,6 +3,15 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.11.1
+
+Ctrl+Shift+D berfungsi lagi; toggle kurangi animasi benar-benar berfungsi.
+
+## Perbaikan bug
+
+- **Ctrl+Shift+D kembali mengantrekan dari clipboard.** Deteksi link kini menemukan URL di mana pun di clipboard: link Markdown, tanda kutip, tanda baca di akhir, karakter tak terlihat, dan host tanpa skema seperti `youtube.com/...` atau `youtu.be/...`. Clipboard yang tidak bisa dibaca dan "tidak ada link ditemukan" kini menghasilkan error yang berbeda.
+- **Kurangi animasi sekarang bekerja.** Pengaturan mengatur atribut yang tidak dibaca CSS; animasi kini dimatikan saat aktif.
+
 ## v0.11.0
 
 ## Perbaikan bug

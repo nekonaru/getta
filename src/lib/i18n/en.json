@@ -366,6 +366,9 @@
 		"restore": "Resume",
 		"dismiss": "Dismiss"
 	},
+	"enqueue": {
+		"emptyClipboard": "Clipboard is empty or unreadable."
+	},
 	"follows": {
 		"kicker": "Channel watch",
 		"title": "Follows",

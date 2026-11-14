@@ -366,6 +366,9 @@
 		"restore": "Lanjutkan",
 		"dismiss": "Tutup"
 	},
+	"enqueue": {
+		"emptyClipboard": "Clipboard kosong atau tidak bisa dibaca."
+	},
 	"follows": {
 		"kicker": "Pantau channel",
 		"title": "Ikutan",

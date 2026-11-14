@@ -3,6 +3,15 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.11.1
+
+Ctrl+Shift+D works now; the reduce-motion toggle actually reduces.
+
+## Bug fixes
+
+- **Ctrl+Shift+D enqueues from the clipboard again.** Link detection now finds a URL anywhere in the clipboard: Markdown links, quotes, trailing punctuation, invisible marks, and schemeless hosts like `youtube.com/...` or `youtu.be/...`. An unreadable clipboard and "no link found" now produce different errors.
+- **Reduce motion does what it says.** The setting set an attribute no CSS read; animations are now disabled when it is on.
+
 ## v0.11.0
 
 ## Bug fixes

@@ -3,19 +3,15 @@ import { settingsStore } from "#lib/stores/settings.svelte";
 import { toastStore } from "#lib/stores/toast.svelte";
 import { t } from "#lib/i18n.svelte";
 import { open } from "@tauri-apps/plugin-dialog";
+import { extractLink } from "#lib/url";
 
 export interface EnqueueResult {
 	queued: boolean;
 	url: string;
 }
 
-function firstUrl(text: string): string | null {
-	const found = text
-		.trim()
-		.split(/\s+/)
-		.find((token) => /^(https?:\/\/|magnet:|p2p:)/.test(token));
-	return found ?? null;
-}
+/** Why an enqueue attempt did not happen. */
+export type EnqueueFailure = "empty-clipboard" | "no-link";
 
 export async function enqueueUrl(url: string, forceFolder?: boolean): Promise<EnqueueResult> {
 	const settings = settingsStore.value;
@@ -45,13 +41,28 @@ export async function enqueueUrl(url: string, forceFolder?: boolean): Promise<En
 	}
 }
 
+export async function enqueueText(
+	text: string,
+	forceFolder?: boolean
+): Promise<{ queued: boolean; reason: EnqueueFailure | null }> {
+	const match = extractLink(text);
+	if (!match) {
+		return { queued: false, reason: text.trim() ? "no-link" : "empty-clipboard" };
+	}
+	const result = await enqueueUrl(match.url, forceFolder);
+	return { queued: result.queued, reason: null };
+}
+
 export async function enqueueFromClipboardText(text: string, forceFolder?: boolean): Promise<boolean> {
-	const url = firstUrl(text ?? "");
-	if (!url) {
-		toastStore.push(t("home.invalidUrl"), "error");
+	const result = await enqueueText(text, forceFolder);
+	if (result.queued) {
+		toastStore.push(t("common.queued"), "info");
+		return true;
+	}
+	if (result.reason === "empty-clipboard") {
+		toastStore.push(t("enqueue.emptyClipboard"), "error");
 		return false;
 	}
-	const result = await enqueueUrl(url, forceFolder);
-	if (result.queued) toastStore.push(t("common.queued"), "info");
-	return result.queued;
+	toastStore.push(t("home.invalidUrl"), "error");
+	return false;
 }
