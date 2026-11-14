@@ -4,6 +4,7 @@
 use std::process::Command;
 
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::history;
 use crate::models::{Analysis, DependencyInfo, EngineStatus, StartOptions};
@@ -162,6 +163,20 @@ pub async fn follow_set_auto(state: State<'_, AppState>, id: String, auto: bool)
 #[tauri::command]
 pub async fn follow_check_now(app: AppHandle, id: String) -> Result<usize, String> {
     crate::follows::check_and_enqueue(&app, &id).await
+}
+
+#[tauri::command]
+pub async fn get_clipboard_text(app: AppHandle) -> Result<String, String> {
+    app.clipboard()
+        .read_text()
+        .map_err(|e| format!("clipboard unreadable: {e}"))
+}
+
+#[tauri::command]
+pub async fn set_clipboard_text(app: AppHandle, text: String) -> Result<(), String> {
+    app.clipboard()
+        .write_text(text)
+        .map_err(|e| format!("clipboard unreadable: {e}"))
 }
 
 #[tauri::command]

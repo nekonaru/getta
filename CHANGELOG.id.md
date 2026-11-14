@@ -3,6 +3,14 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.11.2
+
+Ctrl+Shift+D membaca clipboard secara native sekarang.
+
+## Perbaikan bug
+
+- **Ctrl+Shift+D mengantrekan dari clipboard.** Clipboard kini dibaca oleh backend Rust, bukan plugin frontend, jadi hotkey, tray, dan command palette membaca teks yang sama dengan error yang jelas kalau OS menolak.
+
 ## v0.11.1
 
 Ctrl+Shift+D berfungsi lagi; toggle kurangi animasi benar-benar berfungsi.

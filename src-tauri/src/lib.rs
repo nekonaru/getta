@@ -192,6 +192,8 @@ pub fn run() {
             commands::follow_remove,
             commands::follow_set_auto,
             commands::follow_check_now,
+            commands::get_clipboard_text,
+            commands::set_clipboard_text,
             commands::cookie_bucket_check,
             commands::probe_chapters,
             commands::find_duplicates,

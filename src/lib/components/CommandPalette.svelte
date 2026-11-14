@@ -6,7 +6,6 @@
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { enqueueFromClipboardText } from "#lib/enqueue";
 	import { t } from "#lib/i18n.svelte";
-	import { readText } from "@tauri-apps/plugin-clipboard-manager";
 
 	type ActionGroup = "nav" | "actions";
 	interface Action {
@@ -37,8 +36,8 @@
 			hint: "Ctrl+Shift+D",
 			run: async () => {
 				try {
-					const text = await readText();
-					await enqueueFromClipboardText(text ?? "");
+					const text = await api.getClipboardText();
+					await enqueueFromClipboardText(text);
 				} catch {
 					/* clipboard unavailable */
 				}

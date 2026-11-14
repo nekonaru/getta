@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { convertFileSrc } from "@tauri-apps/api/core";
-	import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 	import { api, type ChapterMarker, type HistoryEntry } from "#lib/api";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
@@ -73,7 +72,7 @@
 
 	async function copyUrl(entry: HistoryEntry) {
 		try {
-			await writeText(entry.url);
+			await api.setClipboardText(entry.url);
 			toastStore.push(t("library.copied"));
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");

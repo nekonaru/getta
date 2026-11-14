@@ -3,6 +3,14 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.11.2
+
+Ctrl+Shift+D reads the clipboard natively now.
+
+## Bug fixes
+
+- **Ctrl+Shift+D enqueues from the clipboard.** The clipboard is now read by the Rust backend, not by the frontend plugin, so the hotkey and the tray and the command palette read the same text with a clear error when the OS refuses.
+
 ## v0.11.1
 
 Ctrl+Shift+D works now; the reduce-motion toggle actually reduces.

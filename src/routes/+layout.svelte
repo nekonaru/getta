@@ -21,7 +21,6 @@
 	import { enqueueFromClipboardText } from "#lib/enqueue";
 	import { t } from "#lib/i18n.svelte";
 	import { api } from "#lib/api";
-	import { readText } from "@tauri-apps/plugin-clipboard-manager";
 	import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
 	import pkg from "../../package.json";
 
@@ -66,10 +65,11 @@
 		// CmdOrCtrl+Shift+D is registered on the Rust side and arrives as an event.
 		const unlistenGlobalShortcut = listen("global-download-requested", async () => {
 			try {
-				const text = await readText();
-				await enqueueFromClipboardText(text ?? "");
-			} catch {
-				toastStore.push(t("enqueue.emptyClipboard"), "error");
+				const text = await api.getClipboardText();
+				await enqueueFromClipboardText(text);
+			} catch (e) {
+				const detail = e instanceof Error ? e.message : String(e);
+				toastStore.push(detail || t("enqueue.emptyClipboard"), "error");
 			}
 		});
 
