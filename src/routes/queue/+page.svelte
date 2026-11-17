@@ -297,7 +297,7 @@
 							<div class="manifest card">
 								{#each section.list as item (item.id)}
 									{@const dragIndex = section.list.indexOf(item)}
-									<div class="manifest-entry" class:is-active={item.status === "active"} class:is-drop-target={section.id === "queued" && dropIndex === dragIndex}
+									<div class="manifest-entry" class:is-active={item.status === "active"} class:is-drop-target={section.id === "queued" && dropIndex === dragIndex} role="listitem"
 										ondragover={(e) => { if (section.id === "queued" && reorderAllowed) { e.preventDefault(); dropIndex = dragIndex; } }}
 										ondragleave={() => { if (section.id === "queued") dropIndex = null; }}
 										ondrop={(e) => { if (section.id === "queued" && reorderAllowed) { e.preventDefault(); void onDrop(dragIndex); } }}
