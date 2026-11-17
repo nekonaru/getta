@@ -38,6 +38,7 @@
 	] as const;
 
 	const activeCount = $derived(downloadsStore.activeCount + downloadsStore.queuedCount);
+	const hasFailed = $derived(downloadsStore.failedCount > 0);
 
 	onMount(() => {
 		void settingsStore.load();
@@ -114,7 +115,7 @@
 					<span class="nav-index">{item.index}</span>
 					<span class="nav-label">{t(`nav.${item.key}`)}</span>
 					{#if item.key === "queue" && activeCount > 0}
-						<span class="nav-count">{activeCount > 99 ? "99+" : activeCount}</span>
+						<span class="nav-count" class:failed={hasFailed}>{activeCount > 99 ? "99+" : activeCount}</span>
 					{/if}
 				</a>
 			{/each}
@@ -142,7 +143,7 @@
 			<a class="nav-item" href={item.href} aria-current={page.url.pathname === item.href ? "page" : undefined} aria-label={t(`nav.${item.key}`)}>
 				<span class="nav-label">{t(`nav.${item.key}`)}</span>
 				{#if item.key === "queue" && activeCount > 0}
-					<span class="nav-count">{activeCount > 99 ? "99+" : activeCount}</span>
+					<span class="nav-count" class:failed={hasFailed}>{activeCount > 99 ? "99+" : activeCount}</span>
 				{/if}
 			</a>
 		{/each}

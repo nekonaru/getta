@@ -107,17 +107,21 @@ class DownloadsStore {
 				writeStats(stats);
 
 				if (settingsStore.value?.notifications) {
-					void (async () => {
-						try {
-							let granted = await isPermissionGranted();
-							if (!granted) granted = (await requestPermission()) === "granted";
-							if (granted) {
-								sendNotification({ title: t("queue.statusDone"), body: item.title });
+					// Skip when the window is focused; the toast already confirms it.
+					const focused = typeof document !== "undefined" && document.hasFocus?.();
+					if (!focused) {
+						void (async () => {
+							try {
+								let granted = await isPermissionGranted();
+								if (!granted) granted = (await requestPermission()) === "granted";
+								if (granted) {
+									sendNotification({ title: t("queue.statusDone"), body: item.title });
+								}
+							} catch {
+								/* notifications unavailable */
 							}
-						} catch {
-							/* notifications unavailable */
-						}
-					})();
+						})();
+					}
 				}
 				toastStore.push(`${t("queue.statusDone")}: ${item.title}`);
 			}

@@ -410,6 +410,39 @@ impl QueueManager {
         Ok(())
     }
 
+    pub fn move_item_to(&self, app: &tauri::AppHandle, id: u64, target_index: u32) -> Result<(), String> {
+        {
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+            let queued: Vec<QueueItem> = inner
+                .items
+                .iter()
+                .filter(|i| i.status == QueueStatus::Queued)
+                .cloned()
+                .collect();
+            let from = queued
+                .iter()
+                .position(|i| i.id == id)
+                .ok_or("item not found or not queued")?;
+            if queued.is_empty() {
+                return Ok(());
+            }
+            let target = (target_index as usize).min(queued.len() - 1);
+            if from == target {
+                return Ok(());
+            }
+            let mut reordered = queued;
+            let item = reordered.remove(from);
+            reordered.insert(target, item);
+            let mut slot = 0;
+            for entry in inner.items.iter_mut().filter(|i| i.status == QueueStatus::Queued) {
+                *entry = reordered[slot].clone();
+                slot += 1;
+            }
+        }
+        emit_queue(app);
+        Ok(())
+    }
+
     pub fn clear_finished(&self, app: &tauri::AppHandle) {
         {
             let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { convertFileSrc } from "@tauri-apps/api/core";
+	import { goto } from "$app/navigation";
 	import { api, type ChapterMarker, type HistoryEntry } from "#lib/api";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
@@ -96,6 +97,24 @@
 		try {
 			await api.setClipboardText(entry.url);
 			toastStore.push(t("library.copied"));
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function reDownload(entry: HistoryEntry) {
+		try {
+			await api.startDownload({
+				url: entry.url,
+				download_mode: (entry.download_mode as "auto" | "audio" | "mute" | "subs" | null) ?? "auto",
+				quality: entry.quality ?? "best",
+				format_id: null,
+				playlist_items: null,
+				output_dir: null
+			});
+			toastStore.push(t("common.queued"), "info");
+			active = null;
+			await goto("/queue");
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -367,8 +386,15 @@
 				</div>
 			{/if}
 			<div class="media-modal-foot">
-				<span class="mono media-path">{active.file_path}</span>
+				<div class="media-foot-left">
+					<span class="mono media-path">{active.file_path}</span>
+					<div class="media-facts">
+						{#if active.file_size_bytes}<span class="pill mono">{formatBytes(active.file_size_bytes)}</span>{/if}
+						<span class="pill mono" title={new Date(active.completed_at * 1000).toISOString()}>{formatRelativeTime(active.completed_at)}</span>
+					</div>
+				</div>
 				<div class="media-modal-actions">
+					<button class="btn btn-sm btn-ghost" onclick={() => reDownload(active!)}>{t("queue.redownload")}</button>
 					<button class="btn btn-sm btn-ghost" onclick={() => copyUrl(active!)}>{t("library.copyUrl")}</button>
 					<button class="btn btn-sm btn-ghost danger-text" onclick={() => removeEntry(active!)}>{t("library.remove")}</button>
 					<button class="btn btn-sm" onclick={() => active && reveal(active)}>{t("library.reveal")}</button>
@@ -660,6 +686,18 @@
 	.speed-select {
 		width: auto;
 		min-width: 88px;
+	}
+
+	.media-foot-left {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 0;
+	}
+
+	.media-facts {
+		display: flex;
+		gap: 6px;
 	}
 
 	.media-modal-foot {

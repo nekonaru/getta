@@ -11,6 +11,34 @@
 	type Tab = "queue" | "history";
 	let tab = $state<Tab>("queue");
 	let query = $state("");
+	let dragId = $state<number | null>(null);
+	let dropIndex = $state<number | null>(null);
+	const reorderAllowed = $derived(query.trim().length === 0);
+
+	function onDragStart(event: DragEvent, id: number) {
+		dragId = id;
+		if (event.dataTransfer) {
+			event.dataTransfer.setData("text/plain", String(id));
+			event.dataTransfer.effectAllowed = "move";
+		}
+	}
+
+	function onDragEnd() {
+		dragId = null;
+		dropIndex = null;
+	}
+
+	async function onDrop(index: number) {
+		const id = dragId;
+		if (id == null) return;
+		try {
+			await api.moveItemTo(id, index);
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+		dragId = null;
+		dropIndex = null;
+	}
 
 	const matchesQuery = (item: QueueItemInfo) => {
 		const needle = query.trim().toLowerCase();
@@ -43,7 +71,7 @@
 	);
 
 	const aggregate = $derived.by(() => {
-		const activeItems = transit.filter((i) => i.status === "active");
+		const activeItems = [...downloadsStore.items].filter((i) => i.status === "active");
 		if (activeItems.length === 0) return null;
 		const speed = activeItems.reduce((sum, i) => sum + i.speed_bps, 0);
 		const etas = activeItems.map((i) => i.eta_seconds).filter((v): v is number => v != null);
@@ -268,8 +296,26 @@
 							</div>
 							<div class="manifest card">
 								{#each section.list as item (item.id)}
-									<div class="manifest-entry" class:is-active={item.status === "active"}>
+									{@const dragIndex = section.list.indexOf(item)}
+									<div class="manifest-entry" class:is-active={item.status === "active"} class:is-drop-target={section.id === "queued" && dropIndex === dragIndex}
+										ondragover={(e) => { if (section.id === "queued" && reorderAllowed) { e.preventDefault(); dropIndex = dragIndex; } }}
+										ondragleave={() => { if (section.id === "queued") dropIndex = null; }}
+										ondrop={(e) => { if (section.id === "queued" && reorderAllowed) { e.preventDefault(); void onDrop(dragIndex); } }}
+									>
 										<div class="row-main">
+											{#if section.id === "queued" && reorderAllowed}
+												<span
+													class="drag-handle"
+													role="button"
+													tabindex="0"
+													aria-label={t("queue.reorder")}
+													title={t("queue.reorder")}
+													draggable="true"
+													ondragstart={(e) => onDragStart(e, item.id)}
+													ondragend={onDragEnd}
+													onkeydown={(e) => { e.preventDefault(); if (e.key === "ArrowUp" && dragIndex > 0) void api.moveItemTo(item.id, dragIndex - 1); else if (e.key === "ArrowDown") void api.moveItemTo(item.id, Math.min(dragIndex + 1, section.list.length - 1)); }}
+												><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h6M9 12h6M9 19h6" /></svg></span>
+											{/if}
 											<div class="thumb" aria-hidden="true">
 												{#if item.thumbnail_url}
 													<img src={item.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" />
@@ -484,9 +530,46 @@
 		box-shadow: inset 2px 0 0 var(--accent);
 	}
 
+	.manifest-entry.is-drop-target {
+		outline: 2px dashed var(--accent);
+		outline-offset: -4px;
+	}
+
+	.drag-handle {
+		display: grid;
+		place-items: center;
+		align-self: center;
+		width: 20px;
+		color: var(--muted);
+		cursor: grab;
+		user-select: none;
+		border: none;
+		background: transparent;
+		padding: 4px 0;
+		border-radius: var(--r-sm);
+	}
+
+	.drag-handle:hover {
+		color: var(--accent);
+		background: var(--card-2);
+	}
+
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+
+	.drag-handle svg {
+		width: 14px;
+		height: 14px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+	}
+
 	.row-main {
 		display: grid;
-		grid-template-columns: 84px minmax(0, 1fr) auto auto;
+		grid-template-columns: auto 84px minmax(0, 1fr) auto auto;
 		gap: 12px;
 		align-items: center;
 	}
@@ -620,6 +703,10 @@
 			grid-template-areas:
 				"thumb body"
 				"side actions";
+		}
+
+		.drag-handle {
+			display: none;
 		}
 
 		.thumb {

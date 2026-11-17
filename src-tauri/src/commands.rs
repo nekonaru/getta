@@ -97,6 +97,11 @@ pub async fn move_item(state: State<'_, AppState>, app: AppHandle, id: u64, delt
 }
 
 #[tauri::command]
+pub async fn move_item_to(state: State<'_, AppState>, app: AppHandle, id: u64, target_index: u32) -> Result<(), String> {
+    state.queue.move_item_to(&app, id, target_index)
+}
+
+#[tauri::command]
 pub async fn get_recovery_items(state: State<'_, AppState>) -> Result<Vec<crate::models::RecoveryEntry>, String> {
     Ok(crate::recovery::list(&state.data_dir))
 }

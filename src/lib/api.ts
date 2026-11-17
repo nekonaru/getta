@@ -256,6 +256,8 @@ export const api = {
 	resumeAll: () => call(() => invoke<void>("resume_all")),
 	queueSnapshot: () => call(() => invoke<QueueItemInfo[]>("queue_snapshot")),
 	moveItem: (id: number, delta: number) => call(() => invoke<void>("move_item", { id, delta })),
+	moveItemTo: (id: number, targetIndex: number) =>
+		call(() => invoke<void>("move_item_to", { id, targetIndex })),
 	getRecoveryItems: () => call(() => invoke<RecoveryEntry[]>("get_recovery_items")),
 	restoreRecovery: () => call(() => invoke<number>("restore_recovery")),
 	dismissRecovery: () => call(() => invoke<void>("dismiss_recovery")),

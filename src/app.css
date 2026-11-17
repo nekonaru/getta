@@ -321,9 +321,19 @@ button {
 	color: var(--muted);
 }
 
+.nav-count.failed {
+	background: var(--bad-soft);
+	color: var(--bad);
+}
+
 .nav-item[aria-current="page"] .nav-count {
 	background: var(--accent);
 	color: var(--on-accent);
+}
+
+.nav-item[aria-current="page"] .nav-count.failed {
+	background: var(--bad);
+	color: #fff;
 }
 
 .sidebar-foot {

@@ -3,6 +3,17 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.13.0
+
+Atur urutan manifest sekarang.
+
+## Fitur baru
+
+- **Seret untuk menyusun antrean.** Item menunggu punya grip handle; seret untuk memindah posisinya. Bisa juga lewat keyboard: Tab ke grip, lalu tombol arah untuk memindah. Penyusunan ulang hanya berlaku untuk item menunggu.
+- **Unduh lagi.** Pemutar pustaka kini menampilkan ukuran file dan tanggal, plus tombol "Unduh lagi" yang memasukkan item ke antrean dengan mode dan kualitas semula.
+- **Item gagal ditandai merah.** Lencana antrean jadi merah saat ada item gagal.
+- **Notifikasi lebih tenang.** Notifikasi selesai hanya terkirim saat jendela tidak fokus; toast di dalam aplikasi sudah konfirmasi.
+
 ## v0.12.0
 
 Bekerja lebih cerdas: cari di antrean, pilih banyak item, urutkan pustaka.

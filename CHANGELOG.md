@@ -3,6 +3,17 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.13.0
+
+Drag the manifest into the order you want.
+
+## New features
+
+- **Drag to reorder the queue.** Queued items carry a grip handle; drag to insert the item at that position. Also keyboard-accessible: Tab to the grip, then arrow keys to move it. Reordering respects queued items only.
+- **Download again.** The library viewer now shows file size and date, and has a "Download again" button that re-queues the item with its original mode and quality.
+- **Failed items show up red.** The queue badge turns red when any item has failed.
+- **Quieter notifications.** The completion notification is only sent when the window is not focused; the in-app toast already confirms it.
+
 ## v0.12.0
 
 Work smarter: search the queue, pick multiple items, sort the library.

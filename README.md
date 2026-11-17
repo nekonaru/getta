@@ -97,7 +97,7 @@ Getta is an original implementation under the MIT license.
 | **Autostart** | Optional start with the system in Settings |
 | **Close to tray** | Optional: close hides to tray instead of quitting; bring it back via the tray icon |
 | **Interrupted recovery** | Crash or kill mid-download? Launch offers to resume from the `.part` files |
-| **Manual queue order** | Move queued items up and down; the scheduler spawns them in your order |
+| **Manual queue order** | Move queued items up and down with buttons or by dragging a grip; the scheduler spawns them in your order |
 | **No account, no telemetry** | Getta does not collect anything about what you download |
 | **Self-updating engine** | Optional verified install of yt-dlp and FFmpeg, with SHA-256 checking |
 | **Auto-update** | Check from About; Getta downloads and installs the signed release and relaunches. AppImage only on Linux |
