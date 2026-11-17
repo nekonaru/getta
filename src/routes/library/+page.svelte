@@ -9,9 +9,13 @@
 	type Kind = "all" | "video" | "audio" | "image" | "file";
 	type MediaKind = Exclude<Kind, "all">;
 
+	type SortKey = "newest" | "oldest" | "name" | "size";
 	let entries = $state<HistoryEntry[]>([]);
 	let query = $state("");
 	let filter = $state<Kind>("all");
+	let sort = $state<SortKey>("newest");
+	let selectionMode = $state(false);
+	let selected = $state<Set<string>>(new Set());
 	let active = $state<HistoryEntry | null>(null);
 	let playError = $state(false);
 	let mediaEl = $state<HTMLMediaElement | null>(null);
@@ -52,6 +56,24 @@
 			return true;
 		})
 	);
+
+	const sorted = $derived.by(() => {
+		const list = [...filtered];
+		switch (sort) {
+			case "oldest":
+				list.sort((a, b) => a.completed_at - b.completed_at);
+				break;
+			case "name":
+				list.sort((a, b) => a.title.localeCompare(b.title));
+				break;
+			case "size":
+				list.sort((a, b) => (b.file_size_bytes ?? 0) - (a.file_size_bytes ?? 0));
+				break;
+			default:
+				list.sort((a, b) => b.completed_at - a.completed_at);
+		}
+		return list;
+	});
 
 	const counts = $derived({
 		all: entries.length,
@@ -146,6 +168,65 @@
 		}
 	}
 
+	function toggleSelect(id: string) {
+		const next = new Set(selected);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selected = next;
+	}
+
+	function enterSelectionMode() {
+		selectionMode = true;
+		selected = new Set();
+	}
+
+	function cancelSelection() {
+		selectionMode = false;
+		selected = new Set();
+	}
+
+	async function removeSelected() {
+		const ids = [...selected];
+		if (ids.length === 0) return;
+		if (!window.confirm(t("library.removeSelectedConfirm", { count: ids.length }))) return;
+		for (const id of ids) {
+			try {
+				await api.historyRemove(id);
+			} catch {
+				/* best effort, keep going */
+			}
+		}
+		entries = entries.filter((entry) => !selected.has(entry.id));
+		if (active && selected.has(active.id)) active = null;
+		toastStore.push(t("library.removedSelection", { count: ids.length }));
+		cancelSelection();
+	}
+
+	async function deleteDuplicateFiles() {
+		const ids = dupGroups.flatMap((group) => group.slice(1));
+		const paths = ids
+			.map((id) => entries.find((entry) => entry.id === id)?.file_path)
+			.filter((path): path is string => !!path);
+		if (paths.length === 0) return;
+		if (!window.confirm(t("library.deleteDuplicatesConfirm", { count: paths.length }))) return;
+		try {
+			const removed = await api.deleteFiles(paths);
+			for (const id of ids) {
+				try {
+					await api.historyRemove(id);
+				} catch {
+					/* best effort */
+				}
+			}
+			entries = entries.filter((entry) => !ids.includes(entry.id));
+			if (active && ids.includes(active.id)) active = null;
+			dupGroups = [];
+			toastStore.push(t("library.duplicatesDeleted", { count: removed }));
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	const KIND_LABELS: Array<[Kind, () => string]> = [
 		["all", () => t("library.filterAll")],
 		["video", () => t("library.filterVideo")],
@@ -175,7 +256,15 @@
 		{:else}
 			<div class="library-toolbar">
 				<input class="input search" type="search" bind:value={query} placeholder={t("library.search")} aria-label={t("library.search")} spellcheck="false" />
+				<label class="sort-label" for="sort">{t("library.sort")}</label>
+				<select id="sort" class="input sort-select" bind:value={sort} aria-label={t("library.sort")}>
+					<option value="newest">{t("library.sortNewest")}</option>
+					<option value="oldest">{t("library.sortOldest")}</option>
+					<option value="name">{t("library.sortName")}</option>
+					<option value="size">{t("library.sortSize")}</option>
+				</select>
 				<button class="btn btn-sm btn-ghost" onclick={findDuplicates}>{t("library.findDuplicates")}</button>
+				<button class="btn btn-sm btn-ghost" onclick={enterSelectionMode}>{t("library.select")}</button>
 				<div class="filters" role="group">
 					{#each KIND_LABELS as [id, label] (id)}
 						<button class="pill pill-btn" class:active={filter === id} onclick={() => (filter = id)}>
@@ -185,23 +274,36 @@
 				</div>
 			</div>
 
+			{#if selectionMode}
+				<div class="selection-bar" role="status">
+					<span class="selection-count mono">{selected.size} {t("library.selected")}</span>
+					<div class="selection-actions">
+						<button class="btn btn-accent btn-sm" onclick={removeSelected}>{t("library.removeSelected", { count: selected.size })}</button>
+						<button class="btn btn-sm btn-ghost" onclick={cancelSelection}>{t("library.cancel")}</button>
+					</div>
+				</div>
+			{/if}
+
 			{#if dupGroups.length > 0}
 				<div class="dup-banner" role="status">
 					<span class="dup-banner-text">{t("library.duplicatesBanner", { groups: dupGroups.length, count: dupTotal })}</span>
 					<div class="dup-banner-actions">
-						<button class="btn btn-accent btn-sm" onclick={removeDuplicateCopies}>{t("library.removeDuplicates")}</button>
+						<button class="btn btn-sm" onclick={removeDuplicateCopies}>{t("library.removeDuplicates")}</button>
+						<button class="btn btn-sm" onclick={deleteDuplicateFiles}>{t("library.deleteDuplicates")}</button>
 						<button class="btn btn-sm btn-ghost" onclick={() => (dupGroups = [])}>{t("library.dismiss")}</button>
 					</div>
 				</div>
 			{/if}
 
 			<ul class="library-grid">
-				{#each filtered as entry (entry.id)}
+				{#each sorted as entry (entry.id)}
 					{@const kind = kindOf(entry.file_path)}
+					{@const isSelected = selected.has(entry.id)}
 					<li>
-						<button class="media-card" onclick={() => openEntry(entry)}>
+						<button class="media-card" class:selected={isSelected} onclick={() => selectionMode ? toggleSelect(entry.id) : openEntry(entry)}>
 							<span class="media-thumb {entry.thumbnail_url ? 'skeleton' : ''}" aria-hidden="true">
 								{#if dupIds.has(entry.id)}<span class="dup-chip mono">{t("library.duplicate")}</span>{/if}
+								{#if selectionMode}<span class="select-check mono" aria-hidden="true">{isSelected ? "✓" : ""}</span>{/if}
 								{#if entry.thumbnail_url}
 									<img src={entry.thumbnail_url} alt="" referrerpolicy="no-referrer" loading="lazy" onload={(e) => (e.currentTarget as HTMLImageElement).classList.add('loaded')} onerror={(e) => (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'} />
 								{:else}
@@ -357,6 +459,63 @@
 		align-items: center;
 		gap: 8px;
 		flex: none;
+	}
+
+	.sort-label {
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.sort-select {
+		width: auto;
+		min-width: 140px;
+	}
+
+	.selection-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		background: var(--accent-soft);
+		border: 1px solid var(--accent);
+		border-radius: var(--r-sm);
+		padding: 8px 12px;
+		margin-bottom: 12px;
+	}
+
+	.selection-count {
+		font-size: 12px;
+		font-weight: 700;
+	}
+
+	.selection-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.media-card.selected {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 2px var(--accent) inset;
+	}
+
+	.select-check {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		z-index: 2;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: var(--accent);
+		color: var(--on-accent);
+		display: grid;
+		place-items: center;
+		font-size: 12px;
+		font-weight: 800;
 	}
 
 	.dup-chip {

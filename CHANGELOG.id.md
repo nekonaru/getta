@@ -3,6 +3,23 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.12.0
+
+Bekerja lebih cerdas: cari di antrean, pilih banyak item, urutkan pustaka.
+
+## Fitur baru
+
+- **Cari di antrean.** Filter sedang berjalan, menunggu, selesai, dan gagal berdasarkan judul, link, atau situs.
+- **Urutkan pustaka.** Terbaru, terlama, nama, atau ukuran.
+- **Pilih banyak.** Pilih entri di pustaka dan hapus sekaligus.
+- **Hapus file duplikat.** Setelah memindai duplikat, hapus salinan berlebih dari disk (salinan pertama disimpan).
+- **Periksa semua ikutan sekaligus** dari halaman Ikutan.
+
+## Performa
+
+- **Pekerjaan berat dipindah dari async runtime.** Pindai duplikat, cek integritas cookie, dan ffprobe chapters kini berjalan di blocking worker, jadi UI tetap gesit saat proses panjang.
+- **Pengecekan ikutan diserialisasi.** Klik "periksa sekarang" berulang kali atau poll latar tidak bisa menambahkan unggahan yang sama dua kali.
+
 ## v0.11.2
 
 Ctrl+Shift+D membaca clipboard secara native sekarang.

@@ -166,6 +166,23 @@ pub async fn follow_check_now(app: AppHandle, id: String) -> Result<usize, Strin
 }
 
 #[tauri::command]
+pub async fn follow_check_all(app: AppHandle) -> Result<usize, String> {
+    let data_dir = app
+        .try_state::<AppState>()
+        .map(|state| state.data_dir.clone())
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let follows = crate::follows::list(&data_dir);
+    let mut total = 0usize;
+    for follow in follows {
+        match crate::follows::check_and_enqueue(&app, &follow.id).await {
+            Ok(count) => total += count,
+            Err(e) => tracing::warn!("follow check failed for {}: {e}", follow.title),
+        }
+    }
+    Ok(total)
+}
+
+#[tauri::command]
 pub async fn get_clipboard_text(app: AppHandle) -> Result<String, String> {
     app.clipboard()
         .read_text()
@@ -191,101 +208,133 @@ pub async fn export_history_json(state: State<'_, AppState>, path: String) -> Re
 
 #[tauri::command]
 pub async fn cookie_bucket_check(path: String) -> Result<crate::cookies::CookieReport, String> {
-    Ok(crate::cookies::check_path(&path))
+    tokio::task::spawn_blocking(move || crate::cookies::check_path(&path))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn probe_chapters(state: State<'_, AppState>, path: String) -> Result<Vec<crate::models::ChapterMarker>, String> {
-    let input = std::path::PathBuf::from(&path);
-    if !input.is_file() {
-        return Err("That file no longer exists.".to_string());
-    }
     let settings = state.settings.lock().map_err(|_| "settings locked".to_string())?.clone();
-    let Some(ffprobe) = ytdlp::locate_ffprobe(settings.ffmpeg_path.as_deref(), &state.data_dir) else {
-        return Err("ffprobe is not installed. Install FFmpeg in Settings, Engine.".to_string());
-    };
-    let mut command = std::process::Command::new(&ffprobe);
-    command
-        .args(["-v", "error", "-show_chapters", "-of", "json"])
-        .arg(&input)
-        .stdin(std::process::Stdio::null());
-    ytdlp::hide_console_std(&mut command);
-    let output = command.output().map_err(|e| format!("Could not run ffprobe: {e}"))?;
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .map_err(|e| format!("Could not parse the ffprobe response: {e}"))?;
-    let chapters = value.get("chapters").and_then(|c| c.as_array()).cloned().unwrap_or_default();
-    let mut markers = Vec::with_capacity(chapters.len());
-    for chapter in chapters {
-        let read_time = |key: &str| -> f64 {
-            chapter
-                .get(key)
-                .and_then(|v| {
-                    v.as_str()
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .or_else(|| v.as_f64())
-                })
-                .unwrap_or(0.0)
+    let data_dir = state.data_dir.clone();
+    tokio::task::spawn_blocking(move || -> Result<Vec<crate::models::ChapterMarker>, String> {
+        let input = std::path::PathBuf::from(&path);
+        if !input.is_file() {
+            return Err("That file no longer exists.".to_string());
+        }
+        let Some(ffprobe) = ytdlp::locate_ffprobe(settings.ffmpeg_path.as_deref(), &data_dir) else {
+            return Err("ffprobe is not installed. Install FFmpeg in Settings, Engine.".to_string());
         };
-        let title = chapter
-            .get("tags")
-            .and_then(|t| t.get("title"))
-            .and_then(|t| t.as_str())
-            .map(String::from);
-        let start = read_time("start_time");
-        let end = read_time("end_time").max(start);
-        markers.push(crate::models::ChapterMarker {
-            title,
-            start_seconds: start,
-            end_seconds: end,
-        });
-    }
-    Ok(markers)
+        let mut command = std::process::Command::new(&ffprobe);
+        command
+            .args(["-v", "error", "-show_chapters", "-of", "json"])
+            .arg(&input)
+            .stdin(std::process::Stdio::null());
+        ytdlp::hide_console_std(&mut command);
+        let output = command.output().map_err(|e| format!("Could not run ffprobe: {e}"))?;
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout)
+            .map_err(|e| format!("Could not parse the ffprobe response: {e}"))?;
+        let chapters = value.get("chapters").and_then(|c| c.as_array()).cloned().unwrap_or_default();
+        let mut markers = Vec::with_capacity(chapters.len());
+        for chapter in chapters {
+            let read_time = |key: &str| -> f64 {
+                chapter
+                    .get(key)
+                    .and_then(|v| {
+                        v.as_str()
+                            .and_then(|s| s.parse::<f64>().ok())
+                            .or_else(|| v.as_f64())
+                    })
+                    .unwrap_or(0.0)
+            };
+            let title = chapter
+                .get("tags")
+                .and_then(|t| t.get("title"))
+                .and_then(|t| t.as_str())
+                .map(String::from);
+            let start = read_time("start_time");
+            let end = read_time("end_time").max(start);
+            markers.push(crate::models::ChapterMarker {
+                title,
+                start_seconds: start,
+                end_seconds: end,
+            });
+        }
+        Ok(markers)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<String>>, String> {
-    fn sha256_file(path: &std::path::Path) -> Option<String> {
-        use sha2::Digest;
-        let mut file = std::fs::File::open(path).ok()?;
-        let mut hasher = sha2::Sha256::new();
-        let mut buffer = vec![0u8; 1024 * 1024];
-        loop {
-            match std::io::Read::read(&mut file, &mut buffer) {
-                Ok(0) => break,
-                Ok(n) => hasher.update(&buffer[..n]),
-                Err(_) => return None,
+    let data_dir = state.data_dir.clone();
+    tokio::task::spawn_blocking(move || {
+        fn sha256_file(path: &std::path::Path) -> Option<String> {
+            use sha2::Digest;
+            let mut file = std::fs::File::open(path).ok()?;
+            let mut hasher = sha2::Sha256::new();
+            let mut buffer = vec![0u8; 1024 * 1024];
+            loop {
+                match std::io::Read::read(&mut file, &mut buffer) {
+                    Ok(0) => break,
+                    Ok(n) => hasher.update(&buffer[..n]),
+                    Err(_) => return None,
+                }
+            }
+            Some(hex::encode(hasher.finalize()))
+        }
+
+        let mut by_size: std::collections::HashMap<u64, Vec<(String, std::path::PathBuf)>> =
+            std::collections::HashMap::new();
+        for entry in history::list(&data_dir) {
+            if !entry.success {
+                continue;
+            }
+            let Some(path) = entry.file_path else { continue };
+            let Ok(meta) = std::fs::metadata(&path) else { continue };
+            if meta.len() == 0 {
+                continue;
+            }
+            by_size.entry(meta.len()).or_default().push((entry.id, std::path::PathBuf::from(path)));
+        }
+
+        let mut by_hash: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        for (_, candidates) in by_size {
+            if candidates.len() < 2 {
+                continue;
+            }
+            for (id, path) in candidates {
+                if let Some(hash) = sha256_file(&path) {
+                    by_hash.entry(hash).or_default().push(id);
+                }
             }
         }
-        Some(hex::encode(hasher.finalize()))
-    }
 
-    let mut by_size: std::collections::HashMap<u64, Vec<(String, std::path::PathBuf)>> =
-        std::collections::HashMap::new();
-    for entry in history::list(&state.data_dir) {
-        if !entry.success {
-            continue;
-        }
-        let Some(path) = entry.file_path else { continue };
-        let Ok(meta) = std::fs::metadata(&path) else { continue };
-        if meta.len() == 0 {
-            continue;
-        }
-        by_size.entry(meta.len()).or_default().push((entry.id, std::path::PathBuf::from(path)));
-    }
+        Ok(by_hash.into_values().filter(|ids| ids.len() >= 2).collect())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
 
-    let mut by_hash: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
-    for (_, candidates) in by_size {
-        if candidates.len() < 2 {
-            continue;
-        }
-        for (id, path) in candidates {
-            if let Some(hash) = sha256_file(&path) {
-                by_hash.entry(hash).or_default().push(id);
+#[tauri::command]
+pub async fn delete_files(paths: Vec<String>) -> Result<usize, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut removed = 0usize;
+        for raw in paths {
+            let path = std::path::PathBuf::from(raw.trim());
+            // Only delete files that actually exist; never follow a symlink outside.
+            if !path.is_file() {
+                continue;
+            }
+            if std::fs::remove_file(&path).is_ok() {
+                removed += 1;
             }
         }
-    }
-
-    Ok(by_hash.into_values().filter(|ids| ids.len() >= 2).collect())
+        Ok(removed)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

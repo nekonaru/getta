@@ -67,6 +67,7 @@ Getta is an original implementation under the MIT license.
 | Feature | Description |
 |---------|-------------|
 | **Pause and resume** | Process-level pause on Windows and Linux/macOS; downloads pick up where they stopped |
+| **Search** | Filter transit, queued, delivered and failed by title, link or site |
 | **Retry with backoff** | Automatic retry for rate limits and transient errors with exponential backoff |
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |
 | **Speed limit** | Cap the download rate globally (MB/s), changeable from the Queue screen |
@@ -77,7 +78,7 @@ Getta is an original implementation under the MIT license.
 
 | Feature | Description |
 |---------|-------------|
-| **Library** | Grid of your completed downloads; play media inline (0.5x-3x speed), filter by type, copy the source URL, remove entries |
+| **Library** | Grid of your completed downloads; play media inline (0.5x-3x speed), sort by date/name/size, bulk select and remove, filter by type, copy the source URL, find and delete duplicate files |
 | **Tools** | Local workbench: 23 tools for audio, video, images and subtitles, powered by FFmpeg |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |

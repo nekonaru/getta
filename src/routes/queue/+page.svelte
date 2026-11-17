@@ -10,10 +10,22 @@
 
 	type Tab = "queue" | "history";
 	let tab = $state<Tab>("queue");
+	let query = $state("");
+
+	const matchesQuery = (item: QueueItemInfo) => {
+		const needle = query.trim().toLowerCase();
+		if (!needle) return true;
+		return (
+			item.title.toLowerCase().includes(needle) ||
+			item.url.toLowerCase().includes(needle) ||
+			item.platform.toLowerCase().includes(needle)
+		);
+	};
 
 	const transit = $derived(
 		[...downloadsStore.items]
 			.filter((i) => i.status === "active" || i.status === "paused")
+			.filter(matchesQuery)
 			.sort((a, b) => {
 				const rank = (s: QueueItemInfo["status"]) => (s === "active" ? 0 : 1);
 				const diff = rank(a.status) - rank(b.status);
@@ -21,13 +33,13 @@
 			})
 	);
 	const queued = $derived(
-		[...downloadsStore.items].filter((i) => i.status === "queued").sort((a, b) => a.id - b.id)
+		[...downloadsStore.items].filter((i) => i.status === "queued").filter(matchesQuery).sort((a, b) => a.id - b.id)
 	);
 	const delivered = $derived(
-		[...downloadsStore.items].filter((i) => i.status === "done").sort((a, b) => b.id - a.id)
+		[...downloadsStore.items].filter((i) => i.status === "done").filter(matchesQuery).sort((a, b) => b.id - a.id)
 	);
 	const failed = $derived(
-		[...downloadsStore.items].filter((i) => i.status === "error").sort((a, b) => b.id - a.id)
+		[...downloadsStore.items].filter((i) => i.status === "error").filter(matchesQuery).sort((a, b) => b.id - a.id)
 	);
 
 	const aggregate = $derived.by(() => {
@@ -206,6 +218,21 @@
 			</button>
 		</div>
 
+		<div class="queue-search-row">
+			<input
+				class="input queue-search"
+				type="search"
+				bind:value={query}
+				placeholder={t("queue.search")}
+				aria-label={t("queue.search")}
+				spellcheck="false"
+			/>
+			{#if query.trim()}
+				<span class="pill mono queue-search-count">{transit.length + queued.length + delivered.length + failed.length}</span>
+				<button class="btn btn-sm btn-ghost" onclick={() => (query = "")}>{t("library.dismiss")}</button>
+			{/if}
+		</div>
+
 		{#if tab === "queue"}
 			{#if aggregate}
 				{@const agg = aggregate}
@@ -225,6 +252,11 @@
 					<h2 class="empty-title">{t("queue.empty")}</h2>
 					<p class="muted">{t("queue.emptyHint")}</p>
 					<a class="btn btn-accent" href="/">{t("queue.emptyCta")}</a>
+				</div>
+			{:else if transit.length + queued.length + delivered.length + failed.length === 0}
+				<div class="empty-state">
+					<h2 class="empty-title">{t("queue.noMatches")}</h2>
+					<button class="btn btn-sm btn-ghost" onclick={() => (query = "")}>{t("library.dismiss")}</button>
 				</div>
 			{:else}
 				{#each sections as section (section.id)}
@@ -368,6 +400,22 @@
 
 	.tabs {
 		margin-bottom: 12px;
+	}
+
+	.queue-search-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.queue-search {
+		flex: 1;
+		max-width: 360px;
+	}
+
+	.queue-search-count {
+		color: var(--muted);
 	}
 
 	.aggregate {

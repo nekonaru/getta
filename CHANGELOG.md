@@ -3,6 +3,23 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.12.0
+
+Work smarter: search the queue, pick multiple items, sort the library.
+
+## New features
+
+- **Search the queue.** Filter in-transit, queued, delivered and failed by title, link or site.
+- **Library sort.** Newest, oldest, name or size.
+- **Multi-select cleanup.** Select entries in the library and remove them in bulk.
+- **Delete duplicate files.** After finding duplicates, delete the extra copies from disk (the first copy is kept).
+- **Check all follows at once** from the Follows page.
+
+## Performance
+
+- **Heavy file work off the async runtime.** The duplicate scan, cookie integrity check and ffprobe chapters now run on blocking workers, keeping the UI snappy during long jobs.
+- **Serialized follow checks.** Manual "check now" and the background poll can no longer enqueue the same upload twice.
+
 ## v0.11.2
 
 Ctrl+Shift+D reads the clipboard natively now.

@@ -11,6 +11,7 @@
 	let url = $state("");
 	let busy = $state(false);
 	let checking = $state<string | null>(null);
+	let checkingAll = $state(false);
 
 	onMount(refresh);
 
@@ -63,6 +64,22 @@
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		} finally {
 			checking = null;
+		}
+	}
+
+	async function checkAll() {
+		checkingAll = true;
+		try {
+			const count = await api.followCheckAll();
+			toastStore.push(
+				count > 0 ? t("follows.queued", { count }) : t("follows.none")
+			);
+			void downloadsStore.start();
+			await refresh();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		} finally {
+			checkingAll = false;
 		}
 	}
 
@@ -119,6 +136,14 @@
 			</button>
 		</form>
 
+		{#if follows.length > 0 && !loading}
+			<div class="follows-toolbar">
+				<button class="btn btn-sm btn-ghost" disabled={checkingAll} onclick={() => checkAll()}>
+					{checkingAll ? t("follows.checkingAll") : t("follows.checkAll")}
+				</button>
+			</div>
+		{/if}
+
 		{#if loading}
 			<div class="spinner" role="status"></div>
 		{:else if follows.length === 0}
@@ -161,6 +186,12 @@
 		gap: 12px;
 		padding: 12px 14px;
 		margin-bottom: 16px;
+	}
+
+	.follows-toolbar {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 12px;
 	}
 
 	.follow-add svg {

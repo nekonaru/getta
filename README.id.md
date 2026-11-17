@@ -67,6 +67,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Jeda dan lanjut** | Jeda level proses di Windows, Linux, dan macOS; unduhan dilanjutkan dari posisi terakhir |
+| **Cari** | Filter sedang berjalan, menunggu, selesai, dan gagal berdasarkan judul, link, atau situs |
 | **Coba ulang dengan backoff** | Coba ulang otomatis untuk rate limit dan error sementara dengan backoff eksponensial |
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |
 | **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Antrean |
@@ -77,7 +78,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| **Pustaka** | Grid unduhan selesai kamu; putar media inline (kecepatan 0.5x-3x), filter per tipe, salin URL sumber, hapus entri |
+| **Pustaka** | Grid unduhan selesai kamu; putar media inline (kecepatan 0.5x-3x), urutkan (tanggal/nama/ukuran), pilih banyak dan hapus, filter per tipe, salin URL sumber, cari dan hapus file duplikat |
 | **Alat** | Meja kerja lokal: 23 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |

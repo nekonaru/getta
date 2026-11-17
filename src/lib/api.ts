@@ -264,6 +264,8 @@ export const api = {
 	followRemove: (id: string) => call(() => invoke<boolean>("follow_remove", { id })),
 	followSetAuto: (id: string, auto: boolean) => call(() => invoke<boolean>("follow_set_auto", { id, auto })),
 	followCheckNow: (id: string) => call(() => invoke<number>("follow_check_now", { id })),
+	followCheckAll: () => call(() => invoke<number>("follow_check_all")),
+	deleteFiles: (paths: string[]) => call(() => invoke<number>("delete_files", { paths })),
 	getClipboardText: () => call(() => invoke<string>("get_clipboard_text")),
 	setClipboardText: (text: string) => call(() => invoke<void>("set_clipboard_text", { text })),
 	historyList: () => call(() => invoke<HistoryEntry[]>("history_list")),

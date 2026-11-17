@@ -186,7 +186,10 @@ pub async fn follow_add(app: &AppHandle, url: &str) -> Result<FollowChannel, Str
 
 /// Check the channel for uploads not seen yet and enqueue them.
 /// Returns how many were enqueued.
+static CHECK_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, String> {
+    let _guard = CHECK_LOCK.lock().await;
     let data_dir = app
         .try_state::<AppState>()
         .map(|state| state.data_dir.clone())
