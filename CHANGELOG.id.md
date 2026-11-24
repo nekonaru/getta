@@ -3,6 +3,21 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.14.1
+
+Progress, ETA, dan ukuran file muncul lagi saat mengunduh.
+
+## Peningkatan
+
+- **Catatan rilis sesuai standar.** Bagian Instalasi / Update kini ada dalam dua bahasa.
+- **Nama installer diperbaiki.** Contoh di README cocok dengan nama aset rilis.
+
+## Perbaikan bug
+
+- **Progress dipaksa hidup.** yt-dlp diluncurkan dengan `--print`, yang diam-diam mematikan progress bar-nya. Getta kini mengirim `--progress`, sehingga persen, kecepatan, ETA, dan ukuran sampai ke UI secara real time.
+- **Deteksi file dibuat eksplisit.** Path akhir kini berasal dari penanda `--print` berprefiks, sehingga file playlist dan hasil gabungan tercatat dengan benar.
+- **Byte ditampilkan tanpa total.** Baris aktif menampilkan byte yang sudah terunduh meski situs tidak melaporkan ukuran total.
+
 ## v0.14.0
 
 Konfigurasimu bisa dilihat dan dipindahkan.

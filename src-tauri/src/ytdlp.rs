@@ -376,6 +376,11 @@ pub fn parse_line(line: &str) -> LineEvent {
         return LineEvent::Ignored;
     }
 
+    if let Some(rest) = line.strip_prefix("GettaFile:") {
+        // --print after_move:GettaFile:%(filepath)s, machine readable.
+        let path = rest.trim();
+        return LineEvent::Destination(path.to_string());
+    }
     if let Some(rest) = line.strip_prefix("[download] Destination:") {
         return LineEvent::Destination(rest.trim().to_string());
     }
@@ -504,6 +509,14 @@ mod tests {
                 assert_eq!(eta_seconds, Some(26));
             }
             other => panic!("expected progress, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_line_reads_forceprint_destination() {
+        match parse_line("GettaFile:/tmp/video [abc123].mp4") {
+            LineEvent::Destination(path) => assert_eq!(path, "/tmp/video [abc123].mp4"),
+            other => panic!("expected destination, got {other:?}"),
         }
     }
 

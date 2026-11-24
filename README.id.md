@@ -148,8 +148,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 
 1. Buka [halaman Releases](https://github.com/nekonaru/getta/releases/latest).
 2. Download file untuk sistemmu:
-   - **Windows.** `getta_x.y.z_x64-setup.exe` (installer) atau `.msi` untuk deployment IT.
-   - **macOS.** `getta_x.y.z_aarch64.dmg` (Apple Silicon) atau `getta_x.y.z_x64.dmg` (Intel).
+   - **Windows.** `Getta_x.y.z_x64-setup.exe` (installer) atau `.msi` untuk deployment IT.
+   - **macOS.** `Getta_x.y.z_aarch64.dmg` (Apple Silicon) atau `Getta_x.y.z_x64.dmg` (Intel).
    - **Linux.** `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE), atau `.AppImage` (lainnya).
 3. Buka file dan ikuti petunjuknya.
 

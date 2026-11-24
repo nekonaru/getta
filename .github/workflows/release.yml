@@ -94,6 +94,11 @@ jobs:
             echo "# English"
             awk -v ver="## v${version}" 'index($0, ver) == 1 {found=1; next} found && /^## v/ {exit} found {print}' CHANGELOG.md
             echo ""
+            echo "## Install / Update"
+            echo ""
+            echo "Download the file for your platform from Assets below, open it and follow the prompts. Requires Windows 10, macOS 12 or Ubuntu 22.04+."
+            echo "Use the .exe or .msi on Windows, the .dmg on macOS, and the .deb, .rpm or .AppImage on Linux."
+            echo ""
             echo "<br>"
             echo ""
             echo "---"
@@ -102,6 +107,11 @@ jobs:
             echo ""
             echo "# Bahasa Indonesia"
             awk -v ver="## v${version}" 'index($0, ver) == 1 {found=1; next} found && /^## v/ {exit} found {print}' CHANGELOG.id.md
+            echo ""
+            echo "## Instalasi / Update"
+            echo ""
+            echo "Download file untuk platformmu dari Assets di bawah, buka, lalu ikuti petunjuknya. Membutuhkan Windows 10, macOS 12, atau Ubuntu 22.04+."
+            echo "Gunakan .exe atau .msi di Windows, .dmg di macOS, serta .deb, .rpm atau .AppImage di Linux."
           } > RELEASE_NOTES.md
           cat RELEASE_NOTES.md
       - name: Publish the release

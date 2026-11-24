@@ -3,6 +3,21 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.14.1
+
+Progress, ETA and file size show again during downloads.
+
+## Improvements
+
+- **Release notes follow the standard.** Install / Update is included in both languages.
+- **Installer names corrected.** README examples match the actual release asset names.
+
+## Bug fixes
+
+- **Progress forced back on.** yt-dlp was launched with `--print`, which silently disabled its progress bar. Getta now passes `--progress`, so percent, speed, ETA and size reach the UI in real time.
+- **File detection made explicit.** The final path now comes from a prefixed `--print` marker, so playlist and merged files register reliably.
+- **Bytes shown without a total.** Active rows show bytes transferred even when the site does not report a total size.
+
 ## v0.14.0
 
 Your setup, inspectable and portable.

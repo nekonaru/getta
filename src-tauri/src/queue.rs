@@ -602,9 +602,12 @@ fn build_args(
 ) -> Vec<String> {
     let mut args: Vec<String> = vec![
         "--newline".to_string(),
+        // --print makes yt-dlp quiet by default, which disables its progress
+        // bar. Force it back on so percent, speed, ETA and size reach the UI.
+        "--progress".to_string(),
         "--no-colors".to_string(),
         "--print".to_string(),
-        "after_move:filepath".to_string(),
+        "after_move:GettaFile:%(filepath)s".to_string(),
     ];
 
     let template = if settings.organize_by_platform {
@@ -1724,6 +1727,15 @@ mod tests {
         assert!(joined.contains("-x"));
         assert!(joined.contains("--audio-format m4a"));
         assert!(joined.contains("/tmp/out/"));
+    }
+
+    #[test]
+    fn build_args_forces_progress_output() {
+        let args = build_args("https://example.com/v", DownloadMode::Auto, "best", None, None, &test_settings(), "/tmp/out");
+        let joined = args.join(" ");
+        assert!(joined.contains("--progress"), "progress must be enabled even with --print");
+        assert!(joined.contains("--newline"));
+        assert!(joined.contains("after_move:GettaFile:%(filepath)s"));
     }
 
     #[test]

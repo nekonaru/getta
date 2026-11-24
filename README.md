@@ -148,8 +148,8 @@ Getta is an original implementation under the MIT license.
 
 1. Go to the [Releases page](https://github.com/nekonaru/getta/releases/latest).
 2. Download the file for your system:
-   - **Windows.** `getta_x.y.z_x64-setup.exe` (installer) or the `.msi` for IT deployments.
-   - **macOS.** `getta_x.y.z_aarch64.dmg` (Apple Silicon) or `getta_x.y.z_x64.dmg` (Intel).
+   - **Windows.** `Getta_x.y.z_x64-setup.exe` (installer) or the `.msi` for IT deployments.
+   - **macOS.** `Getta_x.y.z_aarch64.dmg` (Apple Silicon) or `Getta_x.y.z_x64.dmg` (Intel).
    - **Linux.** `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE) or `.AppImage` (everything else).
 3. Open the file and follow the prompts.
 

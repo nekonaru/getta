@@ -364,10 +364,9 @@
 												</div>
 												<div class="row-meta muted">
 													<span class="mono">{item.platform}</span>
-													{#if item.total_bytes}<span>· {formatBytes(item.downloaded_bytes)} / {formatBytes(item.total_bytes)}</span>{/if}
+													{#if item.total_bytes || item.downloaded_bytes > 0}<span>· {formatBytes(item.downloaded_bytes)}{#if item.total_bytes} / {formatBytes(item.total_bytes)}{/if}</span>{/if}
 													{#if item.status === "active" && item.speed_bps > 0}<span class="mono">· {formatSpeed(item.speed_bps)}</span>{/if}
 													{#if item.status === "active" && item.eta_seconds != null}<span>· {t("queue.eta", { time: formatEta(item.eta_seconds) })}</span>{/if}
-													{#if item.status === "paused"}<span>· {formatBytes(item.downloaded_bytes)}</span>{/if}
 									{#if (item.status === "active" || item.status === "queued") && item.phase && item.phase !== "downloading"}<span class="phase-chip mono">{item.phase}</span>{/if}
 												</div>
 												{#if item.error_message}
