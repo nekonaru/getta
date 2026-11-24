@@ -150,6 +150,19 @@ export interface CookieReport {
 	error: string | null;
 }
 
+export interface Diagnostics {
+	data_dir: string;
+	settings_file: string;
+	output_dir: string;
+	history_count: number;
+	follows_count: number;
+	recovery_count: number;
+	autostart: boolean;
+	close_to_tray: boolean;
+	proxy_configured: boolean;
+	cookies_configured: boolean;
+}
+
 export interface ChapterMarker {
 	title: string | null;
 	start_seconds: number;
@@ -268,6 +281,9 @@ export const api = {
 	followCheckNow: (id: string) => call(() => invoke<number>("follow_check_now", { id })),
 	followCheckAll: () => call(() => invoke<number>("follow_check_all")),
 	deleteFiles: (paths: string[]) => call(() => invoke<number>("delete_files", { paths })),
+	getDiagnostics: () => call(() => invoke<Diagnostics>("get_diagnostics")),
+	exportQueue: (path: string) => call(() => invoke<void>("export_queue", { path })),
+	importQueue: (path: string) => call(() => invoke<number>("import_queue", { path })),
 	getClipboardText: () => call(() => invoke<string>("get_clipboard_text")),
 	setClipboardText: (text: string) => call(() => invoke<void>("set_clipboard_text", { text })),
 	historyList: () => call(() => invoke<HistoryEntry[]>("history_list")),

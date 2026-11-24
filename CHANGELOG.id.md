@@ -3,6 +3,20 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.14.0
+
+Konfigurasimu bisa dilihat dan dipindahkan.
+
+## Fitur baru
+
+- **Diagnostik di About.** Folder data, folder output, jumlah pustaka, channel diikuti, pemulihan tertunda, verifikasi mesin sekali klik, dan "Buka folder data".
+- **Ekspor/impor antrean.** Simpan manifest ke file JSON dan muat ulang di komputer lain. Impor menerima maksimal 500 link per file.
+
+## Perbaikan bug
+
+- **Folder output kustom sekarang bisa diputar di pustaka.** File di luar Downloads dulu diblokir scope asset protocol. File yang dikenal kini ditambahkan ke scope saat unduhan selesai dan saat pustaka dimuat.
+- **Pembersihan duplikat hanya menghapus file yang dikenal.** Perintah hapus kini memeriksa ulang path terhadap riwayat pustaka.
+
 ## v0.13.0
 
 Atur urutan manifest sekarang.

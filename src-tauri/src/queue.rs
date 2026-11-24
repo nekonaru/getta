@@ -892,6 +892,11 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                 )
             };
             if let Some(state) = app.try_state::<AppState>() {
+                if let Some(path) = file_path.as_deref() {
+                    if std::path::Path::new(path).is_file() {
+                        let _ = app.asset_protocol_scope().allow_file(path);
+                    }
+                }
                 history::push(
                     &state.data_dir,
                     crate::models::HistoryEntry {

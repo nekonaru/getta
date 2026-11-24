@@ -7,6 +7,7 @@ mod commands;
 mod cookies;
 mod follows;
 mod history;
+mod maintenance;
 mod models;
 mod platform;
 mod queue;
@@ -195,6 +196,9 @@ pub fn run() {
             commands::follow_check_now,
             commands::follow_check_all,
             commands::delete_files,
+            commands::get_diagnostics,
+            commands::export_queue,
+            commands::import_queue,
             commands::get_clipboard_text,
             commands::set_clipboard_text,
             commands::cookie_bucket_check,

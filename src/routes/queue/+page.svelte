@@ -130,6 +130,38 @@
 		}
 	}
 
+	async function exportQueueFile() {
+		try {
+			const { save } = await import("@tauri-apps/plugin-dialog");
+			const path = await save({
+				defaultPath: "getta-queue.json",
+				filters: [{ name: "JSON", extensions: ["json"] }]
+			});
+			if (!path) return;
+			await api.exportQueue(path);
+			toastStore.push(t("queue.queueExported"));
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function importQueueFile() {
+		try {
+			const { open } = await import("@tauri-apps/plugin-dialog");
+			const picked = await open({
+				multiple: false,
+				directory: false,
+				filters: [{ name: "JSON", extensions: ["json"] }]
+			});
+			if (typeof picked !== "string") return;
+			const count = await api.importQueue(picked);
+			toastStore.push(t("queue.queueImported", { count }));
+			void downloadsStore.start();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function exportHistory(format: "csv" | "json") {
 		try {
 			const { save } = await import("@tauri-apps/plugin-dialog");
@@ -228,6 +260,8 @@
 					{/each}
 				</select>
 				{#if tab === "queue"}
+					<button class="btn btn-sm btn-ghost" onclick={exportQueueFile}>{t("queue.exportQueue")}</button>
+					<button class="btn btn-sm btn-ghost" onclick={importQueueFile}>{t("queue.importQueue")}</button>
 					<button class="btn btn-sm btn-ghost" onclick={clearFinished}>{t("queue.clearFinished")}</button>
 				{:else}
 					<button class="btn btn-sm btn-ghost" onclick={() => exportHistory("csv")}>{t("queue.exportCsv")}</button>

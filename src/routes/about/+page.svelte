@@ -2,6 +2,9 @@
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { t } from "#lib/i18n.svelte";
 	import { openExternal } from "#lib/external";
+	import { api, type Diagnostics } from "#lib/api";
+	import { toastStore } from "#lib/stores/toast.svelte";
+	import { onMount } from "svelte";
 	import { check } from "@tauri-apps/plugin-updater";
 	import { relaunch } from "@tauri-apps/plugin-process";
 	import pkg from "../../../package.json";
@@ -11,6 +14,44 @@
 	let updateState = $state<UpdateState>("idle");
 	let updateVersion = $state<string | null>(null);
 	let updateError = $state<string | null>(null);
+	let diagnostics = $state<Diagnostics | null>(null);
+	let checkingEngines = $state(false);
+
+	onMount(async () => {
+		try {
+			diagnostics = await api.getDiagnostics();
+		} catch {
+			diagnostics = null;
+		}
+	});
+
+	async function verifyEngines() {
+		checkingEngines = true;
+		try {
+			const status = await api.engineStatus();
+			const ok = status.ytdlp.found && status.ffmpeg.found;
+			toastStore.push(
+				ok
+					? t("about.enginesOk", { ytdlp: status.ytdlp.version ?? "?", ffmpeg: status.ffmpeg.version ?? "?" })
+					: t("about.enginesMissing"),
+				ok ? "info" : "error"
+			);
+			diagnostics = await api.getDiagnostics();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		} finally {
+			checkingEngines = false;
+		}
+	}
+
+	async function openDataFolder() {
+		if (!diagnostics) return;
+		try {
+			await api.revealInFolder(diagnostics.data_dir);
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
 
 	async function checkForUpdates() {
 		updateState = "checking";
@@ -91,6 +132,22 @@
 					<button class="btn btn-sm" onclick={checkForUpdates}>{t("about.updateCheck")}</button>
 				{/if}
 			</div>
+			{#if diagnostics}
+				<div class="diagnostics">
+					<p class="update-title">{t("about.diagnostics")}</p>
+					<dl class="diag-list">
+						<div><dt>{t("about.dataDir")}</dt><dd class="mono" title={diagnostics.data_dir}>{diagnostics.data_dir}</dd></div>
+						<div><dt>{t("about.outputDir")}</dt><dd class="mono" title={diagnostics.output_dir}>{diagnostics.output_dir}</dd></div>
+						<div><dt>{t("about.historyEntries")}</dt><dd class="mono">{diagnostics.history_count}</dd></div>
+						<div><dt>{t("about.followedChannels")}</dt><dd class="mono">{diagnostics.follows_count}</dd></div>
+						<div><dt>{t("about.pendingRecovery")}</dt><dd class="mono">{diagnostics.recovery_count}</dd></div>
+					</dl>
+					<div class="diag-actions">
+						<button class="btn btn-sm btn-ghost" onclick={verifyEngines} disabled={checkingEngines}>{checkingEngines ? t("about.updateChecking") : t("about.verifyEngines")}</button>
+						<button class="btn btn-sm btn-ghost" onclick={openDataFolder}>{t("about.openData")}</button>
+					</div>
+				</div>
+			{/if}
 			<p class="muted license-line">{t("about.license")}</p>
 		</div>
 	</div>
@@ -209,6 +266,41 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
+		flex-wrap: wrap;
+	}
+
+	.diagnostics {
+		border-top: 1px solid var(--border);
+		padding-top: 14px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.diag-list {
+		display: grid;
+		grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+		gap: 4px 12px;
+		margin: 0;
+		font-size: 11px;
+	}
+
+	.diag-list dt {
+		color: var(--muted);
+		font-weight: 600;
+	}
+
+	.diag-list dd {
+		margin: 0;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.diag-actions {
+		display: flex;
+		gap: 8px;
 		flex-wrap: wrap;
 	}
 

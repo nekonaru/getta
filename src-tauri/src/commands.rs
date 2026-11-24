@@ -141,8 +141,18 @@ pub async fn queue_snapshot(state: State<'_, AppState>, app: AppHandle) -> Resul
 }
 
 #[tauri::command]
-pub async fn history_list(state: State<'_, AppState>) -> Result<Vec<crate::models::HistoryEntry>, String> {
-    Ok(history::list(&state.data_dir))
+pub async fn history_list(app: AppHandle, state: State<'_, AppState>) -> Result<Vec<crate::models::HistoryEntry>, String> {
+    let entries = history::list(&state.data_dir);
+    // Files saved in a custom output folder are not in the static asset
+    // scope. Allow each known file explicitly so inline playback works.
+    for entry in &entries {
+        if let Some(path) = entry.file_path.as_deref() {
+            if std::path::Path::new(path).is_file() {
+                let _ = app.asset_protocol_scope().allow_file(path);
+            }
+        }
+    }
+    Ok(entries)
 }
 
 #[tauri::command]
@@ -204,6 +214,21 @@ pub async fn set_clipboard_text(app: AppHandle, text: String) -> Result<(), Stri
 #[tauri::command]
 pub async fn export_history_csv(state: State<'_, AppState>, path: String) -> Result<(), String> {
     history::export_csv(&state.data_dir, std::path::Path::new(&path)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_diagnostics(state: State<'_, AppState>) -> Result<crate::maintenance::Diagnostics, String> {
+    Ok(crate::maintenance::diagnostics(&state))
+}
+
+#[tauri::command]
+pub async fn export_queue(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    crate::maintenance::export_queue(&state, std::path::Path::new(&path)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn import_queue(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<usize, String> {
+    crate::maintenance::import_queue(&app, &state, std::path::Path::new(&path))
 }
 
 #[tauri::command]
@@ -323,12 +348,19 @@ pub async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<Strin
 }
 
 #[tauri::command]
-pub async fn delete_files(paths: Vec<String>) -> Result<usize, String> {
+pub async fn delete_files(state: State<'_, AppState>, paths: Vec<String>) -> Result<usize, String> {
+    // Only files known to the library can be deleted through this command.
+    let known: std::collections::HashSet<String> = history::list(&state.data_dir)
+        .into_iter()
+        .filter_map(|entry| entry.file_path)
+        .collect();
     tokio::task::spawn_blocking(move || {
         let mut removed = 0usize;
         for raw in paths {
+            if !known.contains(raw.trim()) {
+                continue;
+            }
             let path = std::path::PathBuf::from(raw.trim());
-            // Only delete files that actually exist; never follow a symlink outside.
             if !path.is_file() {
                 continue;
             }

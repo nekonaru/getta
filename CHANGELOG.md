@@ -3,6 +3,20 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.14.0
+
+Your setup, inspectable and portable.
+
+## New features
+
+- **Diagnostics on About.** Data folder, output folder, library counts, followed channels, pending recovery, one-click engine verification and "Open data folder".
+- **Queue export and import.** Save the manifest to a JSON file and load it back on another machine. Import accepts up to 500 links per file.
+
+## Bug fixes
+
+- **Custom output folders now play in the library.** Downloaded files outside Downloads were silently blocked by the asset protocol scope. Known files are added to the scope when a download finishes and when the library loads.
+- **Duplicate cleanup only deletes known files.** The delete command now cross-checks paths against library history.
+
 ## v0.13.0
 
 Drag the manifest into the order you want.
