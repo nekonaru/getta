@@ -37,11 +37,28 @@ export function formatDuration(seconds: number | null | undefined): string {
 	return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
-export function formatRelativeTime(unixSeconds: number): string {
+export interface RelativeTimeLabels {
+	justNow: string;
+	minutesAgo: string;
+	hoursAgo: string;
+	daysAgo: string;
+}
+
+const ENGLISH_RELATIVE: RelativeTimeLabels = {
+	justNow: "just now",
+	minutesAgo: "{n}m ago",
+	hoursAgo: "{n}h ago",
+	daysAgo: "{n}d ago",
+};
+
+export function formatRelativeTime(
+	unixSeconds: number,
+	labels: RelativeTimeLabels = ENGLISH_RELATIVE
+): string {
 	const diff = Math.max(0, Math.floor(Date.now() / 1000 - unixSeconds));
-	if (diff < 60) return "just now";
-	if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-	if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-	if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d ago`;
+	if (diff < 60) return labels.justNow;
+	if (diff < 3600) return labels.minutesAgo.replace("{n}", String(Math.floor(diff / 60)));
+	if (diff < 86400) return labels.hoursAgo.replace("{n}", String(Math.floor(diff / 3600)));
+	if (diff < 86400 * 7) return labels.daysAgo.replace("{n}", String(Math.floor(diff / 86400)));
 	return new Date(unixSeconds * 1000).toLocaleDateString();
 }

@@ -72,6 +72,8 @@ Getta is an original implementation under the MIT license.
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |
 | **Speed limit** | Cap the download rate globally (MB/s), changeable from the Queue screen |
 | **Live progress** | Speed sparkline, ETA countdown, transfer phases and an aggregate strip over the queue |
+| **Download archive** | Optional ID archive skips links already saved, including playlist entries |
+| **Retry all failed** | Requeue every failed item in one click |
 | **History** | Finished downloads with size, actions to re-download, reveal, export to CSV/JSON or delete |
 | **Queue portability** | Export the manifest to JSON and import it back, up to 500 links per file |
 

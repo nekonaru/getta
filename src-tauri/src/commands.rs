@@ -74,6 +74,11 @@ pub async fn remove_download(app: AppHandle, id: u64, delete_file: bool) -> Resu
 }
 
 #[tauri::command]
+pub async fn retry_all_failed(state: State<'_, AppState>, app: AppHandle) -> Result<usize, String> {
+    Ok(state.queue.retry_all_failed(&app))
+}
+
+#[tauri::command]
 pub async fn clear_finished(app: AppHandle) -> Result<(), String> {
     if let Some(state) = app.try_state::<AppState>() {
         state.queue.clear_finished(&app);
@@ -348,14 +353,14 @@ pub async fn find_duplicates(state: State<'_, AppState>) -> Result<Vec<Vec<Strin
 }
 
 #[tauri::command]
-pub async fn delete_files(state: State<'_, AppState>, paths: Vec<String>) -> Result<usize, String> {
+pub async fn delete_files(state: State<'_, AppState>, paths: Vec<String>) -> Result<Vec<String>, String> {
     // Only files known to the library can be deleted through this command.
     let known: std::collections::HashSet<String> = history::list(&state.data_dir)
         .into_iter()
         .filter_map(|entry| entry.file_path)
         .collect();
     tokio::task::spawn_blocking(move || {
-        let mut removed = 0usize;
+        let mut removed = Vec::new();
         for raw in paths {
             if !known.contains(raw.trim()) {
                 continue;
@@ -365,7 +370,7 @@ pub async fn delete_files(state: State<'_, AppState>, paths: Vec<String>) -> Res
                 continue;
             }
             if std::fs::remove_file(&path).is_ok() {
-                removed += 1;
+                removed.push(raw.trim().to_string());
             }
         }
         Ok(removed)

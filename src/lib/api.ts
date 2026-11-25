@@ -110,6 +110,7 @@ export interface AppSettings {
 	always_ask_path: boolean;
 	organize_by_platform: boolean;
 	skip_existing: boolean;
+	download_archive: boolean;
 	filename_template: string;
 	video_quality: string;
 	max_concurrent: number;
@@ -269,6 +270,7 @@ export const api = {
 	resumeAll: () => call(() => invoke<void>("resume_all")),
 	queueSnapshot: () => call(() => invoke<QueueItemInfo[]>("queue_snapshot")),
 	moveItem: (id: number, delta: number) => call(() => invoke<void>("move_item", { id, delta })),
+	retryAllFailed: () => call(() => invoke<number>("retry_all_failed")),
 	moveItemTo: (id: number, targetIndex: number) =>
 		call(() => invoke<void>("move_item_to", { id, targetIndex })),
 	getRecoveryItems: () => call(() => invoke<RecoveryEntry[]>("get_recovery_items")),
@@ -280,7 +282,7 @@ export const api = {
 	followSetAuto: (id: string, auto: boolean) => call(() => invoke<boolean>("follow_set_auto", { id, auto })),
 	followCheckNow: (id: string) => call(() => invoke<number>("follow_check_now", { id })),
 	followCheckAll: () => call(() => invoke<number>("follow_check_all")),
-	deleteFiles: (paths: string[]) => call(() => invoke<number>("delete_files", { paths })),
+	deleteFiles: (paths: string[]) => call(() => invoke<string[]>("delete_files", { paths })),
 	getDiagnostics: () => call(() => invoke<Diagnostics>("get_diagnostics")),
 	exportQueue: (path: string) => call(() => invoke<void>("export_queue", { path })),
 	importQueue: (path: string) => call(() => invoke<number>("import_queue", { path })),

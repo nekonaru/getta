@@ -40,6 +40,16 @@
 		dropIndex = null;
 	}
 
+	async function retryFailed() {
+		try {
+			const count = await api.retryAllFailed();
+			toastStore.push(t("queue.retryAllDone", { count }), "info");
+			void downloadsStore.start();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	const matchesQuery = (item: QueueItemInfo) => {
 		const needle = query.trim().toLowerCase();
 		if (!needle) return true;
@@ -61,7 +71,8 @@
 			})
 	);
 	const queued = $derived(
-		[...downloadsStore.items].filter((i) => i.status === "queued").filter(matchesQuery).sort((a, b) => a.id - b.id)
+		// Keep the backend order: drag reordering writes into this order.
+		[...downloadsStore.items].filter((i) => i.status === "queued").filter(matchesQuery)
 	);
 	const delivered = $derived(
 		[...downloadsStore.items].filter((i) => i.status === "done").filter(matchesQuery).sort((a, b) => b.id - a.id)
@@ -260,6 +271,9 @@
 					{/each}
 				</select>
 				{#if tab === "queue"}
+					{#if downloadsStore.failedCount > 0}
+						<button class="btn btn-sm btn-ghost" onclick={retryFailed}>{t("queue.retryAllFailed", { count: downloadsStore.failedCount })}</button>
+					{/if}
 					<button class="btn btn-sm btn-ghost" onclick={exportQueueFile}>{t("queue.exportQueue")}</button>
 					<button class="btn btn-sm btn-ghost" onclick={importQueueFile}>{t("queue.importQueue")}</button>
 					<button class="btn btn-sm btn-ghost" onclick={clearFinished}>{t("queue.clearFinished")}</button>
@@ -280,6 +294,7 @@
 			</button>
 		</div>
 
+		{#if tab === "queue"}
 		<div class="queue-search-row">
 			<input
 				class="input queue-search"
@@ -294,6 +309,7 @@
 				<button class="btn btn-sm btn-ghost" onclick={() => (query = "")}>{t("library.dismiss")}</button>
 			{/if}
 		</div>
+		{/if}
 
 		{#if tab === "queue"}
 			{#if aggregate}
@@ -347,7 +363,12 @@
 													draggable="true"
 													ondragstart={(e) => onDragStart(e, item.id)}
 													ondragend={onDragEnd}
-													onkeydown={(e) => { e.preventDefault(); if (e.key === "ArrowUp" && dragIndex > 0) void api.moveItemTo(item.id, dragIndex - 1); else if (e.key === "ArrowDown") void api.moveItemTo(item.id, Math.min(dragIndex + 1, section.list.length - 1)); }}
+													onkeydown={(e) => {
+												if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+												e.preventDefault();
+												if (e.key === "ArrowUp" && dragIndex > 0) void api.moveItemTo(item.id, dragIndex - 1);
+												else if (e.key === "ArrowDown") void api.moveItemTo(item.id, Math.min(dragIndex + 1, section.list.length - 1));
+											}}
 												><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h6M9 12h6M9 19h6" /></svg></span>
 											{/if}
 											<div class="thumb" aria-hidden="true">

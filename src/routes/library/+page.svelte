@@ -229,22 +229,33 @@
 		if (paths.length === 0) return;
 		if (!window.confirm(t("library.deleteDuplicatesConfirm", { count: paths.length }))) return;
 		try {
-			const removed = await api.deleteFiles(paths);
-			for (const id of ids) {
+			const removed = new Set(await api.deleteFiles(paths));
+			const removedIds = ids.filter((id) => {
+				const path = entries.find((entry) => entry.id === id)?.file_path;
+				return path != null && removed.has(path);
+			});
+			for (const id of removedIds) {
 				try {
 					await api.historyRemove(id);
 				} catch {
 					/* best effort */
 				}
 			}
-			entries = entries.filter((entry) => !ids.includes(entry.id));
-			if (active && ids.includes(active.id)) active = null;
+			entries = entries.filter((entry) => !removedIds.includes(entry.id));
+			if (active && removedIds.includes(active.id)) active = null;
 			dupGroups = [];
-			toastStore.push(t("library.duplicatesDeleted", { count: removed }));
+			toastStore.push(t("library.duplicatesDeleted", { count: removedIds.length }));
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
 	}
+
+	const relativeLabels = () => ({
+		justNow: t("time.justNow"),
+		minutesAgo: t("time.minutesAgo"),
+		hoursAgo: t("time.hoursAgo"),
+		daysAgo: t("time.daysAgo")
+	});
 
 	const KIND_LABELS: Array<[Kind, () => string]> = [
 		["all", () => t("library.filterAll")],
@@ -254,6 +265,8 @@
 		["file", () => t("library.filterFile")]
 	];
 </script>
+
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && active) active = null; }} />
 
 <div class="page">
 	<div class="page-inner">
@@ -334,7 +347,7 @@
 							</span>
 							<span class="media-meta">
 								<span class="media-title" title={entry.title}>{entry.title}</span>
-								<span class="media-sub mono">{entry.platform}{entry.file_size_bytes ? ` · ${formatBytes(entry.file_size_bytes)}` : ""}{entry.completed_at ? ` · ${formatRelativeTime(entry.completed_at)}` : ""}</span>
+								<span class="media-sub mono">{entry.platform}{entry.file_size_bytes ? ` · ${formatBytes(entry.file_size_bytes)}` : ""}{entry.completed_at ? ` · ${formatRelativeTime(entry.completed_at, relativeLabels())}` : ""}</span>
 							</span>
 						</button>
 					</li>
@@ -390,7 +403,7 @@
 					<span class="mono media-path">{active.file_path}</span>
 					<div class="media-facts">
 						{#if active.file_size_bytes}<span class="pill mono">{formatBytes(active.file_size_bytes)}</span>{/if}
-						<span class="pill mono" title={new Date(active.completed_at * 1000).toISOString()}>{formatRelativeTime(active.completed_at)}</span>
+						<span class="pill mono" title={new Date(active.completed_at * 1000).toISOString()}>{formatRelativeTime(active.completed_at, relativeLabels())}</span>
 					</div>
 				</div>
 				<div class="media-modal-actions">

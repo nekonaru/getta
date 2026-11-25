@@ -211,33 +211,38 @@ pub async fn install_ytdlp(data_dir: &Path) -> Result<PathBuf, EngineError> {
 
     let target = managed_binary(data_dir);
     std::fs::create_dir_all(target.parent().expect("bin dir")).map_err(|_| EngineError::DownloadFailed)?;
-    std::fs::write(&target, &bytes).map_err(|_| EngineError::DownloadFailed)?;
+    // Write and verify a sibling temp file, then rename. A crash mid-install
+    // never leaves a truncated binary at the managed path.
+    let tmp = target.with_extension(format!("tmp-{}", std::process::id()));
+    let _ = std::fs::remove_file(&tmp);
+    std::fs::write(&tmp, &bytes).map_err(|_| EngineError::DownloadFailed)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&target).map_err(|_| EngineError::DownloadFailed)?.permissions();
+        let mut perms = std::fs::metadata(&tmp).map_err(|_| EngineError::DownloadFailed)?.permissions();
         perms.set_mode(0o755);
-        std::fs::set_permissions(&target, perms).map_err(|_| EngineError::DownloadFailed)?;
+        std::fs::set_permissions(&tmp, perms).map_err(|_| EngineError::DownloadFailed)?;
     }
     #[cfg(target_os = "macos")]
     {
         let _ = std::process::Command::new("xattr")
             .args(["-d", "com.apple.quarantine"])
-            .arg(&target)
+            .arg(&tmp)
             .output();
     }
 
     // Refuse an unusable binary: it must print a version.
-    let mut verify = std::process::Command::new(&target);
+    let mut verify = std::process::Command::new(&tmp);
     verify.arg("--version");
     hide_console_std(&mut verify);
     let output = verify
         .output()
         .map_err(|_| EngineError::VerificationFailed)?;
     if !output.status.success() || String::from_utf8_lossy(&output.stdout).trim().is_empty() {
-        let _ = std::fs::remove_file(&target);
+        let _ = std::fs::remove_file(&tmp);
         return Err(EngineError::VerificationFailed);
     }
+    std::fs::rename(&tmp, &target).map_err(|_| EngineError::DownloadFailed)?;
 
     Ok(target)
 }

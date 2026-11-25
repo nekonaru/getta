@@ -19,6 +19,7 @@
 	let mode = $state<"auto" | "audio" | "mute" | "subs">("auto");
 	let playlistSelected = $state<Set<number>>(new Set());
 	let analyzeTimer: ReturnType<typeof setTimeout> | undefined;
+	let analyzeSeq = 0;
 
 	const links = $derived(parseLinks(url));
 	const singleLink = $derived(links.length === 1 ? links[0] : null);
@@ -36,7 +37,12 @@
 		[...downloadsStore.items].sort((a, b) => b.id - a.id).slice(0, 4)
 	);
 
-	const stats = readStats();
+	let stats = $state(readStats());
+	$effect(() => {
+		// Completions write localStorage in the store; refresh the visible line.
+		downloadsStore.doneCount;
+		stats = readStats();
+	});
 
 	onMount(async () => {
 		try {
@@ -74,13 +80,16 @@
 	async function analyze() {
 		const target = downloadTarget;
 		if (!target) return;
+		const seq = ++analyzeSeq;
 		try {
 			const result = await api.analyzeUrl(target);
+			if (seq !== analyzeSeq || target !== downloadTarget) return;
 			analysis = result;
 			busy = "ready";
 			quality = "best";
 			playlistSelected = new Set(result.playlist_entries.map((e) => e.index));
 		} catch (e) {
+			if (seq !== analyzeSeq) return;
 			busy = "error";
 			errorMessage = e instanceof Error ? e.message : String(e);
 		}
@@ -117,7 +126,6 @@
 		} catch (e) {
 			busy = "error";
 			errorMessage = e instanceof Error ? e.message : String(e);
-			busy = "ready";
 		}
 	}
 

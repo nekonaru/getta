@@ -188,6 +188,7 @@
 				class="palette-input"
 				type="text"
 				bind:value={query}
+				oninput={() => (selected = 0)}
 				placeholder={t("palette.placeholder")}
 				spellcheck="false"
 				autocomplete="off"

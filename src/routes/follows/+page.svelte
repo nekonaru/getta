@@ -103,9 +103,16 @@
 		}
 	}
 
+	const relativeLabels = () => ({
+		justNow: t("time.justNow"),
+		minutesAgo: t("time.minutesAgo"),
+		hoursAgo: t("time.hoursAgo"),
+		daysAgo: t("time.daysAgo")
+	});
+
 	function checkedLabel(follow: FollowChannel): string {
 		if (follow.last_checked_at == null) return t("follows.neverChecked");
-		return t("follows.lastChecked", { time: formatRelativeTime(follow.last_checked_at) });
+		return t("follows.lastChecked", { time: formatRelativeTime(follow.last_checked_at, relativeLabels()) });
 	}
 </script>
 

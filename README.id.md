@@ -72,6 +72,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |
 | **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Antrean |
 | **Progres live** | Sparkline kecepatan, hitung mundur ETA, fase transfer, dan strip agregat di atas antrean |
+| **Arsip unduhan** | Arsip ID opsional melewati link yang sudah tersimpan, termasuk entri playlist |
+| **Coba ulang semua** | Masukkan ulang semua item gagal dengan satu klik |
 | **Riwayat** | Unduhan selesai dengan ukuran, tombol unduh ulang, tampilkan, ekspor ke CSV/JSON, atau hapus |
 | **Antrean portabel** | Ekspor manifest ke JSON dan impor kembali, maksimal 500 link per file |
 

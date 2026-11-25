@@ -95,6 +95,7 @@ async fn fetch_flat_playlist(app: &AppHandle, target: &str) -> Result<Value, Str
             "--playlist-end",
             "15",
         ])
+        .args(crate::queue::metadata_args(&settings))
         .arg(target)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())

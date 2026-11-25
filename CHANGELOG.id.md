@@ -3,6 +3,35 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.15.0
+
+Hasil audit mendalam dan dua kontrol unduhan baru.
+
+## Fitur baru
+
+- **Arsip unduhan.** Arsip ID opsional melewati link yang sudah diunduh, termasuk dalam playlist.
+- **Coba ulang semua yang gagal.** Satu tombol memasukkan ulang semua item gagal dengan backoff dan pengaturan baru.
+
+## Peningkatan
+
+- **Waktu relatif lokal.** Waktu di pustaka dan ikutan mengikuti bahasa UI yang dipilih.
+- **Statistik Beranda diperbarui.** Jumlah file dan byte tersimpan berubah saat Beranda tetap terbuka.
+- **Pilihan palette direset.** Mengetik query baru menghapus seleksi keyboard yang lama.
+
+## Perbaikan bug
+
+- **PID basi dibersihkan.** Item selesai tidak menyimpan PID yang bisa membunuh proses lain saat dihapus.
+- **Race saat lanjut diatasi.** Token generasi menghentikan job lama menimpa job pengganti.
+- **Backoff retry dipertahankan.** Aktivitas antrean lain tidak bisa melewati tunggu setelah gagal rate-limit.
+- **Playlist mencatat semua file.** Semua tujuan disimpan dan dihapus, bukan hanya file terakhir.
+- **Cookie dan proxy berlaku di pratinjau.** Analisis dan pemeriksaan ikutan memakai konteks login yang sama dengan unduhan.
+- **Instalasi mesin bersifat atomik.** Crash saat instalasi tidak meninggalkan yt-dlp yang terpotong.
+- **Urutan antrean tetap benar.** Seret urutan menulis ke urutan yang ditampilkan UI.
+- **Error Beranda terlihat.** Kegagalan memulai tidak menutup panel error.
+- **Analisis lama diabaikan.** Pratinjau lambat tidak menimpa link yang lebih baru.
+- **Pustaka tertutup dengan Escape.** Dialog mendengarkan window, bukan bergantung pada fokus.
+- **Waktu relatif diterjemahkan.** String Inggris tidak muncul lagi di Bahasa Indonesia.
+
 ## v0.14.1
 
 Progress, ETA, dan ukuran file muncul lagi saat mengunduh.

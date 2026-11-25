@@ -3,6 +3,35 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.15.0
+
+Deep audit fixes and two new download controls.
+
+## New features
+
+- **Download archive.** Optional ID archive skips links already downloaded, including across playlists.
+- **Retry all failed.** One button requeues every failed item with fresh backoff and quality settings.
+
+## Improvements
+
+- **Local relative times.** Library and follow timestamps now follow the selected UI language.
+- **Home stats refresh.** The file count and saved bytes update while Home stays open.
+- **Palette selection resets.** Typing a new query clears the stale keyboard selection.
+
+## Bug fixes
+
+- **Stale process IDs are cleared.** Completed items no longer keep a PID that could kill an unrelated process on removal.
+- **Resume races are closed.** A generation token stops the killed job from finalizing over its replacement.
+- **Retry backoff holds.** Other queue activity can no longer bypass the wait after a rate-limit failure.
+- **Playlists record every file.** All destinations are saved and deleted, not just the last one.
+- **Cookies and proxy apply to previews.** Analyze and follow checks use the same login context as downloads.
+- **Engine install is atomic.** A crash mid-install cannot leave a truncated yt-dlp binary.
+- **Queue order survives filtering.** Drag reordering writes into the order the UI shows.
+- **Home errors are visible.** A failed start keeps the error panel open instead of reverting to ready.
+- **Stale analysis is ignored.** A slow earlier preview cannot overwrite a newer link.
+- **The Library closes on Escape.** The dialog listens on the window instead of relying on focus.
+- **Relative times are translated.** English strings no longer leak into Bahasa Indonesia.
+
 ## v0.14.1
 
 Progress, ETA and file size show again during downloads.

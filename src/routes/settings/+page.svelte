@@ -11,6 +11,7 @@
 	let category = $state<Category>("output");
 	let engine = $state<EngineStatus | null>(null);
 	let installBusy = $state<string | null>(null);
+	let patching = $state(false);
 	let autostartEnabled = $state(false);
 
 	const settings = $derived(settingsStore.value);
@@ -45,10 +46,13 @@
 	}
 
 	async function patch(p: Partial<import("#lib/api").AppSettings>) {
+		patching = true;
 		try {
 			await settingsStore.update(p);
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		} finally {
+			patching = false;
 		}
 	}
 
@@ -79,11 +83,13 @@
 	}
 
 	function patchRule(id: string, rulePatch: Partial<DownloadRule>) {
+		if (patching) return;
 		const rules = (settings?.download_rules ?? []).map((r) => (r.id === id ? { ...r, ...rulePatch } : r));
 		void patch({ download_rules: rules });
 	}
 
 	function addRule() {
+		if (patching) return;
 		const rules = [
 			...(settings?.download_rules ?? []),
 			{ id: crypto.randomUUID(), pattern: "", dir: "" }
@@ -92,6 +98,7 @@
 	}
 
 	function removeRule(id: string) {
+		if (patching) return;
 		void patch({ download_rules: (settings?.download_rules ?? []).filter((r) => r.id !== id) });
 	}
 
@@ -259,7 +266,7 @@
 								<p class="hint">{t("settings.filenameTemplateHint")}</p>
 							</div>
 						</div>
-						{#each [{ id: "organize_by_platform", label: t("settings.organizeByPlatform"), value: settings.organize_by_platform }, { id: "always_ask_path", label: t("settings.alwaysAsk"), value: settings.always_ask_path }, { id: "skip_existing", label: t("settings.skipExisting"), value: settings.skip_existing }] as flag (flag.id)}
+						{#each [{ id: "organize_by_platform", label: t("settings.organizeByPlatform"), value: settings.organize_by_platform }, { id: "always_ask_path", label: t("settings.alwaysAsk"), value: settings.always_ask_path }, { id: "skip_existing", label: t("settings.skipExisting"), value: settings.skip_existing }, { id: "download_archive", label: t("settings.downloadArchive"), value: settings.download_archive }] as flag (flag.id)}
 							<div class="row row-switch">
 								<span class="switch-label">{flag.label}</span>
 								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
@@ -268,7 +275,7 @@
 					<div class="rules-block">
 						<div class="rules-head">
 							<span class="field-label" style="margin:0">{t("settings.downloadRules")}</span>
-							<button class="btn btn-sm" onclick={addRule}>{t("settings.addRule")}</button>
+							<button class="btn btn-sm" onclick={addRule} disabled={patching}>{t("settings.addRule")}</button>
 						</div>
 						<p class="hint">{t("settings.downloadRulesHint")}</p>
 						{#each settings.download_rules as rule (rule.id)}

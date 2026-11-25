@@ -23,6 +23,14 @@ use crate::{AppState, history};
 use tauri::{Emitter, Manager};
 
 static ID_SEED: AtomicU64 = AtomicU64::new(0);
+static GEN_SEED: AtomicU64 = AtomicU64::new(0);
+
+/// Monotonic token for one attempt of a queue item. A new attempt
+/// invalidates the old background job so a killed process cannot finalize
+/// a download that has been requeued.
+fn next_generation() -> u64 {
+    GEN_SEED.fetch_add(1, Ordering::Relaxed) + 1
+}
 
 fn next_id() -> u64 {
     let seed = ID_SEED.fetch_add(1, Ordering::Relaxed);
@@ -59,6 +67,9 @@ struct QueueItem {
     retry_count: u32,
     cancelled: bool,
     pid: Option<u32>,
+    generation: u64,
+    next_attempt_at: Option<i64>,
+    file_paths: Vec<String>,
     started_at: Option<i64>,
     output_dir: Option<String>,
     playlist_items: Option<String>,
@@ -173,6 +184,9 @@ impl QueueManager {
             retry_count: 0,
             cancelled: false,
             pid: None,
+            generation: next_generation(),
+            next_attempt_at: None,
+            file_paths: Vec::new(),
             started_at: None,
             output_dir: options.output_dir.clone().filter(|d| !d.trim().is_empty()),
             playlist_items: options
@@ -209,29 +223,34 @@ impl QueueManager {
             .and_then(|state| state.settings.lock().ok().map(|s| s.max_concurrent))
             .unwrap_or(2)
             .max(1);
-        let mut to_spawn = Vec::new();
+        let mut to_spawn: Vec<(u64, u64)> = Vec::new();
         {
             let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let running = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
             let free = max_concurrent.saturating_sub(running);
-            let mut queued: Vec<u64> = inner
+            let now = now_secs();
+            let mut queued: Vec<(u64, u64)> = inner
                 .items
                 .iter()
                 .filter(|i| i.status == QueueStatus::Queued)
-                .map(|i| i.id)
+                // A retrying item must wait for its own backoff deadline,
+                // even if other queue activity calls try_start_next.
+                .filter(|i| i.next_attempt_at.map_or(true, |at| at <= now))
+                .map(|i| (i.id, i.generation))
                 .collect();
             // Keep the user's manual order (drag / move up/down): spawn in Vec order.
-            for id in queued.into_iter().take(free as usize) {
+            for (id, generation) in queued.into_iter().take(free as usize) {
                 if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                     item.status = QueueStatus::Active;
                     item.phase = Some("starting".to_string());
-                    item.started_at = Some(now_secs());
-                    to_spawn.push(id);
+                    item.started_at = Some(now);
+                    item.pid = None;
+                    to_spawn.push((id, generation));
                 }
             }
         }
-        for id in to_spawn {
-            spawn_job(app.clone(), id);
+        for (id, generation) in to_spawn {
+            spawn_job(app.clone(), id, generation);
         }
         sync_prevent_sleep(app);
     }
@@ -303,6 +322,8 @@ impl QueueManager {
                 if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                     // yt-dlp picks up from the .part file in the output dir.
                     item.pid = None;
+                    // Invalidate the suspended job: it will be killed below.
+                    item.generation = next_generation();
                     item.status = QueueStatus::Queued;
                     item.phase = Some("resuming".to_string());
                     item.speed_bps = 0;
@@ -315,16 +336,21 @@ impl QueueManager {
     }
 
     pub fn cancel(&self, app: &tauri::AppHandle, id: u64) {
-        let pid = {
+        let (pid, was_running) = {
             let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let Some(index) = inner.items.iter().position(|i| i.id == id) else {
                 return;
             };
             inner.items[index].cancelled = true;
-            inner.items.remove(index).pid
+            let running = matches!(inner.items[index].status, QueueStatus::Active | QueueStatus::Paused);
+            let pid = if running { inner.items[index].pid } else { None };
+            inner.items.remove(index);
+            (pid, running)
         };
-        if let Some(pid) = pid {
-            kill_process(pid);
+        if was_running {
+            if let Some(pid) = pid {
+                kill_process(pid);
+            }
         }
         let _ = recovery::remove(&self.data_dir, id);
         emit_queue(app);
@@ -339,6 +365,8 @@ impl QueueManager {
                 if item.status != QueueStatus::Error {
                     return;
                 }
+                item.generation = next_generation();
+                item.next_attempt_at = None;
                 item.status = QueueStatus::Queued;
                 item.error_message = None;
                 item.retryable = false;
@@ -358,18 +386,28 @@ impl QueueManager {
     }
 
     pub fn remove(&self, app: &tauri::AppHandle, id: u64, delete_file: bool) {
-        let (pid, file_path) = {
+        let (pid, running, paths) = {
             let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let Some(index) = inner.items.iter().position(|i| i.id == id) else {
                 return;
             };
             let item = inner.items.remove(index);
-            (item.pid, if delete_file { item.file_path } else { None })
+            let running = matches!(item.status, QueueStatus::Active | QueueStatus::Paused);
+            let pid = if running { item.pid } else { None };
+            let mut paths = item.file_paths;
+            if let Some(path) = item.file_path {
+                if !paths.contains(&path) {
+                    paths.push(path);
+                }
+            }
+            (pid, running, if delete_file { paths } else { Vec::new() })
         };
-        if let Some(pid) = pid {
-            kill_process(pid);
+        if running {
+            if let Some(pid) = pid {
+                kill_process(pid);
+            }
         }
-        if let Some(path) = file_path {
+        for path in paths {
             let _ = std::fs::remove_file(&path);
         }
         let _ = recovery::remove(&self.data_dir, id);
@@ -441,6 +479,36 @@ impl QueueManager {
         }
         emit_queue(app);
         Ok(())
+    }
+
+    /// Requeue every failed item. Returns how many were requeued.
+    pub fn retry_all_failed(&self, app: &tauri::AppHandle) -> usize {
+        let mut count = 0usize;
+        {
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+            for item in inner.items.iter_mut() {
+                if item.status != QueueStatus::Error {
+                    continue;
+                }
+                count += 1;
+                item.generation = next_generation();
+                item.next_attempt_at = None;
+                item.status = QueueStatus::Queued;
+                item.error_message = None;
+                item.retryable = false;
+                item.retry_count = 0;
+                item.percent = 0.0;
+                item.speed_bps = 0;
+                item.downloaded_bytes = 0;
+                item.total_bytes = None;
+                item.eta_seconds = None;
+                item.phase = None;
+                item.cancelled = false;
+            }
+        }
+        emit_queue(app);
+        self.try_start_next(app);
+        count
     }
 
     pub fn clear_finished(&self, app: &tauri::AppHandle) {
@@ -591,6 +659,29 @@ fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
+/// Cookie and proxy arguments shared by downloads, analysis and follow checks.
+/// The same login context must be used everywhere or previews fail while
+/// downloads succeed.
+pub(crate) fn metadata_args(settings: &crate::settings::AppSettings) -> Vec<String> {
+    let mut args = Vec::new();
+    let cookie_file = settings.cookie_file.trim();
+    let cookie_browser = settings.cookies_from_browser.trim();
+    // A cookies file takes precedence: Chrome 127+ blocks DPAPI access,
+    // so --cookies-from-browser fails the whole download on Windows.
+    if !cookie_file.is_empty() && std::path::PathBuf::from(cookie_file).is_file() {
+        args.push("--cookies".to_string());
+        args.push(cookie_file.to_string());
+    } else if !cookie_browser.is_empty() {
+        args.push("--cookies-from-browser".to_string());
+        args.push(cookie_browser.to_string());
+    }
+    if !settings.proxy.trim().is_empty() {
+        args.push("--proxy".to_string());
+        args.push(settings.proxy.trim().to_string());
+    }
+    args
+}
+
 fn build_args(
     item_url: &str,
     mode: DownloadMode,
@@ -625,6 +716,12 @@ fn build_args(
 
     if settings.skip_existing {
         args.push("--no-overwrites".to_string());
+    }
+    if settings.download_archive {
+        // yt-dlp records video ids and skips links already downloaded.
+        let archive = crate::storage::data_dir().join("download-archive.txt");
+        args.push("--download-archive".to_string());
+        args.push(archive.to_string_lossy().into_owned());
     }
 
     match mode {
@@ -693,36 +790,40 @@ fn build_args(
         args.push("--concurrent-fragments".to_string());
         args.push(settings.concurrent_fragments.to_string());
     }
-    {
-        let cookie_file = settings.cookie_file.trim();
-        let cookie_browser = settings.cookies_from_browser.trim();
-        // A cookies file takes precedence: Chrome 127+ blocks DPAPI access,
-        // so --cookies-from-browser fails the whole download on Windows.
-        if !cookie_file.is_empty() && std::path::PathBuf::from(cookie_file).is_file() {
-            args.push("--cookies".to_string());
-            args.push(cookie_file.to_string());
-        } else if !cookie_browser.is_empty() {
-            args.push("--cookies-from-browser".to_string());
-            args.push(cookie_browser.to_string());
-        }
-    }
-    if !settings.proxy.trim().is_empty() {
-        args.push("--proxy".to_string());
-        args.push(settings.proxy.trim().to_string());
-    }
+    args.extend(metadata_args(settings));
 
     args.push("--yes-playlist".to_string());
     args.push(item_url.to_string());
     args
 }
 
-fn spawn_job(app: tauri::AppHandle, id: u64) {
+/// True only while this background job is still the current attempt.
+fn is_current(app: &tauri::AppHandle, id: u64, generation: u64) -> bool {
+    app.try_state::<AppState>()
+        .map(|state| {
+            state
+                .queue
+                .inner
+                .lock()
+                .map(|inner| {
+                    inner
+                        .items
+                        .iter()
+                        .find(|i| i.id == id)
+                        .map_or(false, |i| i.generation == generation)
+                })
+                .unwrap_or(false)
+        })
+        .unwrap_or(false)
+}
+
+fn spawn_job(app: tauri::AppHandle, id: u64, generation: u64) {
     tauri::async_runtime::spawn(async move {
-        run_job(app, id).await;
+        run_job(app, id, generation).await;
     });
 }
 
-async fn run_job(app: tauri::AppHandle, id: u64) {
+async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
     let (output_dir, args, ytdlp_path) = {
         let Some(state) = app.try_state::<AppState>() else { return };
         let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner()).clone();
@@ -741,11 +842,15 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
     };
 
     if std::fs::create_dir_all(&output_dir).is_err() {
-        finalize_error(&app, id, "The download folder cannot be created.", false);
+        if is_current(&app, id, generation) {
+            finalize_error(&app, id, "The download folder cannot be created.", false);
+        }
         return;
     }
     let Some(ytdlp_path) = ytdlp_path else {
-        finalize_error(&app, id, "The download engine is not installed. Install it in Settings, Engine.", false);
+        if is_current(&app, id, generation) {
+            finalize_error(&app, id, "The download engine is not installed. Install it in Settings, Engine.", false);
+        }
         return;
     };
 
@@ -764,7 +869,9 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
-            finalize_error(&app, id, &format!("Could not start yt-dlp: {e}"), false);
+            if is_current(&app, id, generation) {
+                finalize_error(&app, id, &format!("Could not start yt-dlp: {e}"), false);
+            }
             return;
         }
     };
@@ -773,6 +880,9 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
         if let Some(state) = app.try_state::<AppState>() {
             let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                if item.generation != generation {
+                    return;
+                }
                 item.pid = child.id();
                 item.phase = Some("fetching info".to_string());
             }
@@ -804,7 +914,7 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                     if let Some(state) = app.try_state::<AppState>() {
                         let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
-                            if item.cancelled {
+                            if item.generation != generation || item.cancelled {
                                 continue;
                             }
                             item.percent = percent;
@@ -823,6 +933,13 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                     if let Some(state) = app.try_state::<AppState>() {
                         let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                            if item.generation != generation {
+                                structural_emit = false;
+                                continue;
+                            }
+                            if !item.file_paths.contains(&path) {
+                                item.file_paths.push(path.clone());
+                            }
                             item.file_path = Some(path);
                             item.file_count = Some(item.file_count.unwrap_or(0) + 1);
                             item.phase = Some("saving".to_string());
@@ -834,7 +951,9 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                     if let Some(state) = app.try_state::<AppState>() {
                         let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
-                            item.phase = Some(phase);
+                            if item.generation == generation {
+                                item.phase = Some(phase);
+                            }
                         }
                     }
                     structural_emit = true;
@@ -843,7 +962,9 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                     if let Some(state) = app.try_state::<AppState>() {
                         let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
-                            item.phase = Some(format!("item {index}"));
+                            if item.generation == generation {
+                                item.phase = Some(format!("item {index}"));
+                            }
                         }
                     }
                     structural_emit = true;
@@ -859,34 +980,36 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
 
     let exit = child.wait().await;
     let stderr_tail = stderr_task.await.unwrap_or_default();
-    let cancelled = app
-        .try_state::<AppState>()
-        .map(|state| state.queue.inner.lock().map(|inner| inner.items.iter().all(|i| i.id != id)).unwrap_or(true))
-        .unwrap_or(true);
-
-    if cancelled {
-        // The item was cancelled or removed while running; nothing left to do.
+    if !is_current(&app, id, generation) {
+        // Cancelled, removed, paused into a new attempt, or retried.
         emit_queue(&app);
         return;
     }
 
     match exit {
         Ok(status) if status.success() => {
-            let (title, url, file_path, file_size, platform, thumbnail_url, quality, mode) = {
+            let (title, url, file_paths, fallback_path, file_size, platform, thumbnail_url, quality, mode) = {
                 let Some(state) = app.try_state::<AppState>() else { return };
                 let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                 let Some(item) = inner.items.iter_mut().find(|i| i.id == id) else { return };
+                if item.generation != generation {
+                    return;
+                }
                 item.status = QueueStatus::Done;
                 item.percent = 100.0;
                 item.speed_bps = 0;
                 item.eta_seconds = None;
                 item.phase = None;
+                item.pid = None;
                 let size = item.file_path.as_ref().and_then(|p| std::fs::metadata(p).ok()).map(|m| m.len());
                 item.downloaded_bytes = item.total_bytes.or(Some(item.downloaded_bytes)).unwrap_or(item.downloaded_bytes);
+                let paths = item.file_paths.clone();
+                let fallback_path = item.file_path.clone();
                 (
                     item.title.clone(),
                     item.url.clone(),
-                    item.file_path.clone(),
+                    paths,
+                    fallback_path,
                     size,
                     item.platform.clone(),
                     item.thumbnail_url.clone(),
@@ -895,28 +1018,36 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
                 )
             };
             if let Some(state) = app.try_state::<AppState>() {
-                if let Some(path) = file_path.as_deref() {
-                    if std::path::Path::new(path).is_file() {
-                        let _ = app.asset_protocol_scope().allow_file(path);
+                // A playlist can produce several files. Record all of them so
+                // "remove and delete file" cleans up the whole download.
+                let paths = if file_paths.is_empty() {
+                    fallback_path.into_iter().collect::<Vec<_>>()
+                } else {
+                    file_paths
+                };
+                for path in paths {
+                    if std::path::Path::new(&path).is_file() {
+                        let _ = app.asset_protocol_scope().allow_file(&path);
                     }
+                    let size = std::fs::metadata(&path).ok().map(|m| m.len());
+                    history::push(
+                        &state.data_dir,
+                        crate::models::HistoryEntry {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            url: url.clone(),
+                            platform: platform.clone(),
+                            title: title.clone(),
+                            file_path: Some(path),
+                            file_size_bytes: size.or(file_size),
+                            success: true,
+                            error: None,
+                            completed_at: now_secs(),
+                            thumbnail_url: thumbnail_url.clone(),
+                            quality: Some(quality.clone()),
+                            download_mode: Some(mode.clone()),
+                        },
+                    );
                 }
-                history::push(
-                    &state.data_dir,
-                    crate::models::HistoryEntry {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        url,
-                        platform,
-                        title,
-                        file_path,
-                        file_size_bytes: file_size,
-                        success: true,
-                        error: None,
-                        completed_at: now_secs(),
-                        thumbnail_url,
-                        quality: Some(quality),
-                        download_mode: Some(mode),
-                    },
-                );
                 let _ = recovery::remove(&state.data_dir, id);
             }
             emit_queue(&app);
@@ -931,10 +1062,14 @@ async fn run_job(app: tauri::AppHandle, id: u64) {
             } else {
                 tail.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("unknown error").to_string()
             };
-            finalize_maybe_retry(&app, id, &message);
+            if is_current(&app, id, generation) {
+                finalize_maybe_retry(&app, id, &message);
+            }
         }
         Err(e) => {
-            finalize_error(&app, id, &format!("yt-dlp failed to run: {e}"), false);
+            if is_current(&app, id, generation) {
+                finalize_error(&app, id, &format!("yt-dlp failed to run: {e}"), false);
+            }
         }
     }
 }
@@ -963,6 +1098,8 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
         if let Some(state) = app.try_state::<AppState>() {
             let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                item.generation = next_generation();
+                item.next_attempt_at = Some(now_secs() + delay_secs as i64);
                 item.status = QueueStatus::Queued;
                 item.retry_count += 1;
                 item.pid = None;
@@ -976,6 +1113,11 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(Duration::from_secs(delay_secs)).await;
             if let Some(state) = retry_app.try_state::<AppState>() {
+                if let Ok(mut inner) = state.queue.inner.lock() {
+                    if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                        item.next_attempt_at = None;
+                    }
+                }
                 state.queue.try_start_next(&retry_app);
             }
         });
@@ -1590,6 +1732,7 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
             "--dump-single-json",
             "--no-warnings",
         ])
+        .args(metadata_args(&settings))
         .arg(trimmed)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -1736,6 +1879,24 @@ mod tests {
         assert!(joined.contains("--progress"), "progress must be enabled even with --print");
         assert!(joined.contains("--newline"));
         assert!(joined.contains("after_move:GettaFile:%(filepath)s"));
+    }
+
+    #[test]
+    fn build_args_download_archive_when_enabled() {
+        let mut settings = test_settings();
+        settings.download_archive = true;
+        let args = build_args("https://example.com/v", DownloadMode::Auto, "best", None, None, &settings, "/tmp/out");
+        let joined = args.join(" ");
+        assert!(joined.contains("--download-archive"));
+        assert!(joined.contains("download-archive.txt"));
+    }
+
+    #[test]
+    fn build_args_metadata_args_shared() {
+        let mut settings = test_settings();
+        settings.proxy = "http://127.0.0.1:8080".to_string();
+        let parsed = metadata_args(&settings);
+        assert_eq!(parsed, vec!["--proxy".to_string(), "http://127.0.0.1:8080".to_string()]);
     }
 
     #[test]

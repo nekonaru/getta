@@ -185,6 +185,7 @@ pub fn run() {
             commands::resume_all,
             commands::queue_snapshot,
             commands::move_item,
+            commands::retry_all_failed,
             commands::move_item_to,
             commands::get_recovery_items,
             commands::restore_recovery,

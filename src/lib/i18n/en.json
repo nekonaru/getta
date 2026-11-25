@@ -109,7 +109,10 @@
 		"reveal": "Reveal in folder",
 		"remove": "Remove from queue",
 		"removeFile": "Remove and delete file",
-		"confirmRemoveFile": "Delete \"{title}\" from disk? This cannot be undone."
+		"confirmRemoveFile": "Delete \"{title}\" from disk? This cannot be undone.",
+		"reorder": "Drag to reorder",
+		"retryAllFailed": "Retry {count} failed",
+		"retryAllDone": "{count} links requeued"
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -360,7 +363,8 @@
 		"cookieBucketUsed": "Now using {name}",
 		"proxyHint": "e.g. http://127.0.0.1:8080 or socks5://host:1080. Empty means none.",
 		"notifications": "Notify when a download finishes",
-		"preventSleep": "Keep the computer awake while downloading"
+		"preventSleep": "Keep the computer awake while downloading",
+		"downloadArchive": "Skip links already downloaded (ID archive)"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",
@@ -428,6 +432,11 @@
 		"delete": "Delete",
 		"installing": "Installing…",
 		"queued": "Queued for download"
+	},
+	"time": {
+		"justNow": "just now",
+		"minutesAgo": "{n}m ago",
+		"hoursAgo": "{n}h ago",
+		"daysAgo": "{n}d ago"
 	}
 }
-
