@@ -9,6 +9,7 @@ Hasil audit mendalam dan dua kontrol unduhan baru.
 
 ## Fitur baru
 
+- **Dependensi diperbarui.** Dua belas paket dan GitHub Actions naik ke versi baru.
 - **Arsip unduhan.** Arsip ID opsional melewati link yang sudah diunduh, termasuk dalam playlist.
 - **Coba ulang semua yang gagal.** Satu tombol memasukkan ulang semua item gagal dengan backoff dan pengaturan baru.
 

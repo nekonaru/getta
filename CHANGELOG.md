@@ -9,6 +9,7 @@ Deep audit fixes and two new download controls.
 
 ## New features
 
+- **Dependencies refreshed.** Twelve audited packages and GitHub Actions moved to newer versions.
 - **Download archive.** Optional ID archive skips links already downloaded, including across playlists.
 - **Retry all failed.** One button requeues every failed item with fresh backoff and quality settings.
 
