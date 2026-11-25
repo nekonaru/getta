@@ -117,18 +117,22 @@ pub async fn restore_recovery(app: AppHandle, state: State<'_, AppState>) -> Res
     let mut restored = 0u64;
     for entry in entries {
         let options = StartOptions {
-            url: entry.url,
-            download_mode: entry.download_mode,
-            quality: entry.quality,
-            format_id: entry.format_id,
-            playlist_items: entry.playlist_items,
-            output_dir: entry.output_dir,
+            url: entry.url.clone(),
+            download_mode: entry.download_mode.clone(),
+            quality: entry.quality.clone(),
+            format_id: entry.format_id.clone(),
+            playlist_items: entry.playlist_items.clone(),
+            output_dir: entry.output_dir.clone(),
         };
         if state.queue.start(&app, &options.url, &options).is_ok() {
+            // start() pushes a fresh RecoveryEntry for the new attempt, so
+            // remove only the original id. A clear-all here would delete the
+            // fresh intents too.
+            let _ = crate::recovery::remove(&state.data_dir, entry.id);
             restored += 1;
         }
+        // Failed starts keep their original recovery entry for next launch.
     }
-    crate::recovery::clear(&state.data_dir).map_err(|e| e.to_string())?;
     Ok(restored)
 }
 
@@ -411,8 +415,13 @@ pub async fn settings_update(
     }
     let merged: AppSettings = serde_json::from_value(current).map_err(|e| e.to_string())?;
     crate::settings::save(&state.data_dir, &merged).map_err(|e| e.to_string())?;
+    let language_changed = patch.get("language").is_some();
+    let language = merged.language.clone();
     *settings = merged.clone();
     drop(settings);
+    if language_changed {
+        crate::tray::update_labels(&app, &language);
+    }
     if let Some(state) = app.try_state::<AppState>() {
         state.queue.try_start_next(&app);
     }
@@ -521,7 +530,7 @@ pub async fn reveal_in_folder(path: String) -> Result<(), String> {
     if cfg!(target_os = "windows") {
         // explorer /select highlights the file; fall back to opening the parent.
         let mut explorer = Command::new("explorer");
-        explorer.arg("/select,").arg(&target);
+        explorer.arg(format!("/select,{}", target.display()));
         ytdlp::hide_console_std(&mut explorer);
         let status = explorer
             .status()

@@ -284,7 +284,9 @@
 		"finish": "Start fetching",
 		"skip": "Skip for now",
 		"back": "Back",
-		"next": "Continue"
+		"next": "Continue",
+		"engineError": "Engine status could not be checked.",
+		"retry": "Retry"
 	},
 	"settings": {
 		"title": "Settings",
@@ -364,7 +366,10 @@
 		"proxyHint": "e.g. http://127.0.0.1:8080 or socks5://host:1080. Empty means none.",
 		"notifications": "Notify when a download finishes",
 		"preventSleep": "Keep the computer awake while downloading",
-		"downloadArchive": "Skip links already downloaded (ID archive)"
+		"downloadArchive": "Skip links already downloaded (ID archive)",
+		"sections": "Settings sections",
+		"rulePattern": "Link pattern",
+		"cookieCheckSummary": "{total} cookies · {sites} sites"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",
@@ -392,7 +397,11 @@
 		"verifyEngines": "Verify engines",
 		"openData": "Open data folder",
 		"enginesOk": "Engines OK: yt-dlp {ytdlp}, FFmpeg {ffmpeg}",
-		"enginesMissing": "An engine is missing. Install it in Settings, Engine."
+		"enginesMissing": "An engine is missing. Install it in Settings, Engine.",
+		"checkingEngines": "Checking engines...",
+		"diagnosticsError": "Diagnostics could not be loaded.",
+		"retry": "Retry",
+		"engineError": "Engine status could not be checked."
 	},
 	"recovery": {
 		"title": "Unfinished downloads",
@@ -424,14 +433,16 @@
 		"invalidUrl": "That does not look like a link."
 	},
 	"layout": {
-		"engineBroken": "The download engine is not working. Reinstall it in Settings, Engine."
+		"engineBroken": "The download engine is not working. Reinstall it in Settings, Engine.",
+		"dropHint": "Drop a link anywhere to fetch it"
 	},
 	"common": {
 		"ok": "OK",
 		"cancel": "Cancel",
 		"delete": "Delete",
 		"installing": "Installing…",
-		"queued": "Queued for download"
+		"queued": "Queued for download",
+		"close": "Close"
 	},
 	"time": {
 		"justNow": "just now",

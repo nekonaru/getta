@@ -3,6 +3,36 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.16.0
+
+Audit native putaran berikutnya, ambil link dengan seret, dan penulisan state yang lebih aman.
+
+## Fitur baru
+
+- **Jatuhkan link ke mana saja.** Seret URL dari browser ke Getta dan link langsung diambil tanpa dialog tambahan.
+
+## Peningkatan
+
+- **Tray mengikuti bahasa UI.** Ganti bahasa memperbarui menu tray tanpa restart.
+- **Toast lebih mudah diakses.** Region live selalu hadir, error memakai `alert`, dan tombol tutup diterjemahkan.
+- **Dialog menerima fokus.** Onboarding dan dialog pemulihan memberi fokus diri dan tertutup dengan Escape.
+- **Tanggal kedaluwarsa lokal.** Tanggal cookie memakai lokal perangkat, bukan UTC.
+
+## Perbaikan bug
+
+- **Pemulihan tetap tercatat.** Restore tidak menghapus entri recovery baru yang dibuat unduhan hasil restore.
+- **Penulisan state diserial.** Unduhan bersamaan, ikutan, dan recovery tidak saling menimpa.
+- **Gagal masuk ikutan tetap belum terlihat.** Link yang ditolak dicoba lagi pada pemeriksaan berikutnya.
+- **Ikutan melihat lebih banyak unggahan.** Pemindaian playlist kini mencakup 200 entri per pemeriksaan.
+- **Ekspor antrean mempertahankan opsi.** Format id, item playlist, dan folder tujuan ikut tersimpan.
+- **Windows menyorot file.** Explorer menerima `/select,<path>` sebagai satu argumen.
+- **Ekspor CSV tahan formula.** Sel yang diawali karakter formula dinetralisir.
+- **Parameter alat berupa string.** Input angka tidak gagal saat menjalankan alat.
+- **Alat menunggu FFmpeg.** Pemeriksaan mesin yang gagal menampilkan peringatan dan menonaktifkan Run.
+- **Klik pengaturan tidak saling mengganggu.** Klik cepat pada aturan dan toggle tidak memakai state basi.
+- **Onboarding melihat folder tersimpan.** Langkah 3 membaca output directory yang sudah ada.
+- **Gagal mesin dan diagnostik terlihat.** Keduanya menampilkan tombol coba lagi.
+
 ## v0.15.0
 
 Hasil audit mendalam dan dua kontrol unduhan baru.

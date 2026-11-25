@@ -8,6 +8,7 @@
 	let items = $state<RecoveryEntry[]>([]);
 	let open = $state(false);
 	let busy = $state(false);
+	let dialogEl = $state<HTMLDivElement | null>(null);
 
 	onMount(async () => {
 		try {
@@ -16,6 +17,10 @@
 		} catch {
 			items = [];
 		}
+	});
+
+	$effect(() => {
+		if (open) dialogEl?.focus();
 	});
 
 	async function restore() {
@@ -43,8 +48,10 @@
 	}
 </script>
 
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && open && !busy) void dismiss(); }} />
+
 {#if open}
-	<div class="veil" role="dialog" aria-modal="true" aria-label={t("recovery.title")}>
+	<div bind:this={dialogEl} class="veil" role="dialog" aria-modal="true" aria-label={t("recovery.title")} tabindex="-1">
 		<div class="modal">
 			<h2 class="ob-title">{t("recovery.title")}</h2>
 			<p class="ob-body">{t("recovery.body")}</p>

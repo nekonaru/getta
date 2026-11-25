@@ -11,6 +11,8 @@ use tauri::{AppHandle, Manager};
 
 use crate::models::{ChannelEntry, FollowChannel};
 use crate::storage;
+
+static STATE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 use crate::ytdlp;
 use crate::AppState;
 
@@ -27,12 +29,21 @@ fn save(data_dir: &Path, follows: &[FollowChannel]) -> std::io::Result<()> {
 }
 
 pub fn add(data_dir: &Path, channel: FollowChannel) -> std::io::Result<()> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut follows = list(data_dir);
+    let target = channel_target(&channel.url);
+    if follows
+        .iter()
+        .any(|f| channel_target(&f.url) == target)
+    {
+        return Ok(());
+    }
     follows.push(channel);
     save(data_dir, &follows)
 }
 
 pub fn remove(data_dir: &Path, id: &str) -> std::io::Result<bool> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let before = list(data_dir);
     let after: Vec<FollowChannel> = before.iter().filter(|f| f.id != id).cloned().collect();
     if after.len() == before.len() {
@@ -43,6 +54,7 @@ pub fn remove(data_dir: &Path, id: &str) -> std::io::Result<bool> {
 }
 
 pub fn set_auto(data_dir: &Path, id: &str, auto_download: bool) -> std::io::Result<bool> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut follows = list(data_dir);
     let mut found = false;
     for follow in follows.iter_mut() {
@@ -93,7 +105,7 @@ async fn fetch_flat_playlist(app: &AppHandle, target: &str) -> Result<Value, Str
             "--dump-single-json",
             "--no-warnings",
             "--playlist-end",
-            "15",
+            "200",
         ])
         .args(crate::queue::metadata_args(&settings))
         .arg(target)
@@ -190,6 +202,7 @@ pub async fn follow_add(app: &AppHandle, url: &str) -> Result<FollowChannel, Str
 static CHECK_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, String> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let _guard = CHECK_LOCK.lock().await;
     let data_dir = app
         .try_state::<AppState>()
@@ -224,12 +237,16 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
             playlist_items: None,
             output_dir: None,
         };
-        if let Some(state) = app.try_state::<AppState>() {
-            if state.queue.start(app, &entry.url, &options).is_ok() {
-                enqueued += 1;
-            }
+        let started = app
+            .try_state::<AppState>()
+            .map(|state| state.queue.start(app, &entry.url, &options).is_ok())
+            .unwrap_or(false);
+        // Only successful enqueues are marked seen. A rejected link must be
+        // offered again on the next check instead of being lost forever.
+        if started {
+            enqueued += 1;
+            new_seen.push(entry.id.clone());
         }
-        new_seen.push(entry.id.clone());
     }
 
     // Bound the baseline file; the newest entries stay.

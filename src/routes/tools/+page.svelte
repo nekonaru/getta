@@ -122,7 +122,7 @@
 	);
 
 	onMount(() => {
-		void api.engineStatus().then((engine) => (ffmpegReady = engine.ffmpeg.found)).catch(() => (ffmpegReady = null));
+		void api.engineStatus().then((engine) => (ffmpegReady = engine.ffmpeg.found)).catch(() => (ffmpegReady = false));
 		const unlistenFinished = onToolFinished((event) => {
 			const tool = event.tool as ToolName;
 			const state = toolsState[tool];
@@ -184,7 +184,12 @@
 		state.error = null;
 		state.progress = 0;
 		try {
-			await api.runTool({ tool, input: state.input, params: { ...paramValues[tool] } });
+			// type="number" binds to numbers in Svelte, but the Rust side
+			// expects HashMap<String, String>. Normalise before invoke.
+			const params = Object.fromEntries(
+				Object.entries(paramValues[tool]).map(([key, value]) => [key, String(value ?? "")])
+			);
+			await api.runTool({ tool, input: state.input, params });
 		} catch (e) {
 			state.running = false;
 			state.error = e instanceof Error ? e.message : String(e);
@@ -210,7 +215,7 @@
 		</header>
 		<p class="intro muted">{t("tools.intro")}</p>
 
-		{#if ffmpegReady === false}
+		{#if ffmpegReady !== true}
 			<div class="engine-banner" role="alert">
 				<span>{t("tools.ffmpegMissing")}</span>
 				<a class="btn btn-accent btn-sm" href="/settings">{t("tools.goEngine")}</a>
@@ -302,7 +307,7 @@
 								{/if}
 
 								<div class="run-row">
-									<button class="btn btn-accent" disabled={!state.input || state.running || ffmpegReady === false} onclick={() => runTool(def.id)}>
+									<button class="btn btn-accent" disabled={!state.input || state.running || ffmpegReady !== true} onclick={() => runTool(def.id)}>
 										{#if state.running}<span class="spinner"></span>{t("tools.running")}{:else}{t("tools.run")}{/if}
 									</button>
 									{#if state.output}

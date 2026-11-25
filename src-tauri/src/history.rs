@@ -6,6 +6,7 @@ use crate::models::HistoryEntry;
 use crate::storage;
 
 const HISTORY_CAP: usize = 200;
+static STATE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn history_path(data_dir: &Path) -> PathBuf {
     data_dir.join("history.json")
@@ -16,6 +17,7 @@ pub fn list(data_dir: &Path) -> Vec<HistoryEntry> {
 }
 
 pub fn push(data_dir: &Path, entry: HistoryEntry) {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut entries = list(data_dir);
     entries.insert(0, entry);
     entries.truncate(HISTORY_CAP);
@@ -55,10 +57,17 @@ pub fn export_csv(data_dir: &Path, dest: &Path) -> std::io::Result<()> {
 }
 
 fn csv_cell(field: &str) -> String {
-    if field.contains([',', '"', '\n', '\r']) {
-        format!("\"{}\"", field.replace('"', "\"\""))
+    // Spreadsheet formula injection: a cell starting with one of these
+    // characters is interpreted as a formula when the CSV is opened.
+    let safe = if field.starts_with(['=', '+', '-', '@', '\t', '\r']) {
+        format!("'{}", field)
     } else {
         field.to_string()
+    };
+    if safe.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", safe.replace('"', "\"\""))
+    } else {
+        safe
     }
 }
 
@@ -83,11 +92,13 @@ fn unix_to_utc(secs: i64) -> String {
 }
 
 pub fn clear(data_dir: &Path) -> std::io::Result<()> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     storage::write_json_atomic(&history_path(data_dir), &Vec::<HistoryEntry>::new())
 }
 
 /// Remove one entry by id. Returns true when an entry was removed.
 pub fn remove(data_dir: &Path, id: &str) -> std::io::Result<bool> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let entries = list(data_dir);
     let before = entries.len();
     let kept: Vec<HistoryEntry> = entries.into_iter().filter(|e| e.id != id).collect();

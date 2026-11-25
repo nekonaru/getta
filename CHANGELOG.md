@@ -3,6 +3,36 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.16.0
+
+Another native audit pass, drag-and-drop fetching, and safer state writes.
+
+## New features
+
+- **Drop a link anywhere.** Drag a URL from the browser onto Getta and it is fetched without opening a dialog.
+
+## Improvements
+
+- **Tray follows the UI language.** Switching language updates the tray menu without a restart.
+- **Accessible toasts.** The live region is always present, errors use `alert`, and the close label is translated.
+- **Dialogs take focus.** Onboarding and recovery dialogs focus themselves and close with Escape.
+- **Local expiry dates.** Cookie bucket expiry uses the device locale instead of UTC.
+
+## Bug fixes
+
+- **Recovery restore keeps its intent.** Restoring no longer clears the fresh recovery entries created by the restored downloads.
+- **State writes are serialized.** Concurrent completions, follows and recovery writes can no longer overwrite each other.
+- **Failed follow enqueues stay unseen.** A rejected upload is retried on the next check instead of being lost.
+- **Follows see more uploads.** The playlist scan now covers 200 entries per check.
+- **Queue export keeps all options.** Format id, playlist items and output folder survive export and import.
+- **Windows reveal highlights the file.** Explorer now receives `/select,<path>` as one argument.
+- **CSV export resists formulas.** Cells beginning with formula characters are neutralized.
+- **Tool parameters are strings.** Numeric inputs no longer fail deserialization when running a tool.
+- **Tools wait for FFmpeg.** A failed engine check now shows the warning and disables Run.
+- **Settings clicks are serialized.** Rapid rule and toggle clicks no longer fight over stale settings.
+- **Onboarding sees the configured folder.** Step 3 reads the saved output directory.
+- **Engine and diagnostics failures are visible.** Both show a retry instead of an endless spinner or a blank panel.
+
 ## v0.15.0
 
 Deep audit fixes and two new download controls.

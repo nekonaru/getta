@@ -16,12 +16,14 @@
 	let updateError = $state<string | null>(null);
 	let diagnostics = $state<Diagnostics | null>(null);
 	let checkingEngines = $state(false);
+	let diagnosticsError = $state(false);
 
 	onMount(async () => {
 		try {
 			diagnostics = await api.getDiagnostics();
 		} catch {
 			diagnostics = null;
+			diagnosticsError = true;
 		}
 	});
 
@@ -132,7 +134,15 @@
 					<button class="btn btn-sm" onclick={checkForUpdates}>{t("about.updateCheck")}</button>
 				{/if}
 			</div>
-			{#if diagnostics}
+			{#if diagnosticsError}
+				<div class="diagnostics">
+					<p class="muted">{t("about.diagnosticsError")}</p>
+					<button class="btn btn-sm btn-ghost" onclick={async () => {
+						diagnosticsError = false;
+						try { diagnostics = await api.getDiagnostics(); } catch { diagnosticsError = true; }
+					}}>{t("about.retry")}</button>
+				</div>
+			{:else if diagnostics}
 				<div class="diagnostics">
 					<p class="update-title">{t("about.diagnostics")}</p>
 					<dl class="diag-list">
@@ -143,7 +153,7 @@
 						<div><dt>{t("about.pendingRecovery")}</dt><dd class="mono">{diagnostics.recovery_count}</dd></div>
 					</dl>
 					<div class="diag-actions">
-						<button class="btn btn-sm btn-ghost" onclick={verifyEngines} disabled={checkingEngines}>{checkingEngines ? t("about.updateChecking") : t("about.verifyEngines")}</button>
+						<button class="btn btn-sm btn-ghost" onclick={verifyEngines} disabled={checkingEngines}>{checkingEngines ? t("about.checkingEngines") : t("about.verifyEngines")}</button>
 						<button class="btn btn-sm btn-ghost" onclick={openDataFolder}>{t("about.openData")}</button>
 					</div>
 				</div>

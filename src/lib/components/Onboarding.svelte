@@ -12,18 +12,26 @@
 	let step = $state(1);
 	let engine = $state<EngineStatus | null>(null);
 	let installBusy = $state(false);
-	let folder = $state<string>("");
+	let folderOverride = $state<string | null>(null);
+	let dialogEl = $state<HTMLDivElement | null>(null);
+	let engineError = $state(false);
+	const folder = $derived(folderOverride ?? settingsStore.value?.output_dir ?? "");
 
 	onMount(() => {
 		void refreshEngine();
-		folder = settingsStore.value?.output_dir ?? "";
+	});
+
+	$effect(() => {
+		if (show) dialogEl?.focus();
 	});
 
 	async function refreshEngine() {
+		engineError = false;
 		try {
 			engine = await api.engineStatus();
 		} catch {
 			engine = null;
+			engineError = true;
 		}
 	}
 
@@ -61,7 +69,7 @@
 		try {
 			const picked = await open({ directory: true, multiple: false });
 			if (typeof picked === "string" && picked) {
-				folder = picked;
+				folderOverride = picked;
 				await settingsStore.update({ output_dir: picked });
 			}
 		} catch (e) {
@@ -86,8 +94,10 @@
 	}
 </script>
 
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && show) void skip(); }} />
+
 {#if show}
-	<div class="veil" role="dialog" aria-modal="true" aria-label="Getta setup">
+	<div bind:this={dialogEl} class="veil" role="dialog" aria-modal="true" aria-label="Getta setup" tabindex="-1">
 		<div class="modal onboarding">
 			<div class="dots" aria-hidden="true">
 				{#each [1, 2, 3] as dot (dot)}
@@ -133,6 +143,9 @@
 							</li>
 						{/each}
 					</ul>
+				{:else if engineError}
+					<p class="muted">{t("onboarding.engineError")}</p>
+					<button class="btn btn-sm" onclick={() => void refreshEngine()}>{t("onboarding.retry")}</button>
 				{:else}
 					<div class="spinner" role="status"></div>
 				{/if}

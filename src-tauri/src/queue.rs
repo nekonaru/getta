@@ -99,6 +99,8 @@ impl QueueItem {
             quality: Some(self.quality.clone()),
             download_mode: Some(self.download_mode.as_str().to_string()),
             format_id: self.format_id.clone(),
+            playlist_items: self.playlist_items.clone(),
+            output_dir: self.output_dir.clone(),
         }
     }
 }

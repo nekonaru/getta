@@ -284,7 +284,9 @@
 		"finish": "Mulai mengunduh",
 		"skip": "Lewati dulu",
 		"back": "Kembali",
-		"next": "Lanjut"
+		"next": "Lanjut",
+		"engineError": "Status mesin tidak dapat diperiksa.",
+		"retry": "Coba lagi"
 	},
 	"settings": {
 		"title": "Pengaturan",
@@ -364,7 +366,10 @@
 		"proxyHint": "misal http://127.0.0.1:8080 atau socks5://host:1080. Kosong berarti tidak ada.",
 		"notifications": "Beri tahu saat unduhan selesai",
 		"preventSleep": "Jangan tidurkan komputer saat mengunduh",
-		"downloadArchive": "Lewati link yang sudah diunduh (arsip ID)"
+		"downloadArchive": "Lewati link yang sudah diunduh (arsip ID)",
+		"sections": "Bagian pengaturan",
+		"rulePattern": "Pola tautan",
+		"cookieCheckSummary": "{total} cookie · {sites} situs"
 	},
 	"about": {
 		"tagline": "Setiap tautan, terkirim.",
@@ -392,7 +397,11 @@
 		"verifyEngines": "Verifikasi mesin",
 		"openData": "Buka folder data",
 		"enginesOk": "Mesin OK: yt-dlp {ytdlp}, FFmpeg {ffmpeg}",
-		"enginesMissing": "Ada mesin yang hilang. Pasang di Pengaturan, Mesin."
+		"enginesMissing": "Ada mesin yang hilang. Pasang di Pengaturan, Mesin.",
+		"checkingEngines": "Memeriksa mesin...",
+		"diagnosticsError": "Diagnostik tidak dapat dimuat.",
+		"retry": "Coba lagi",
+		"engineError": "Status mesin tidak dapat diperiksa."
 	},
 	"recovery": {
 		"title": "Unduhan belum selesai",
@@ -424,14 +433,16 @@
 		"invalidUrl": "Itu tidak terlihat seperti tautan."
 	},
 	"layout": {
-		"engineBroken": "Mesin unduhan tidak bekerja. Pasang ulang di Pengaturan, Mesin."
+		"engineBroken": "Mesin unduhan tidak bekerja. Pasang ulang di Pengaturan, Mesin.",
+		"dropHint": "Jatuhkan link ke mana saja untuk mengambilnya"
 	},
 	"common": {
 		"ok": "OK",
 		"cancel": "Batal",
 		"delete": "Hapus",
 		"installing": "Memasang…",
-		"queued": "Masuk antrean"
+		"queued": "Masuk antrean",
+		"close": "Tutup"
 	},
 	"time": {
 		"justNow": "baru saja",

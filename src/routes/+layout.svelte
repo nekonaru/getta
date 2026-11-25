@@ -27,6 +27,32 @@
 	let { children }: { children: Snippet } = $props();
 
 	let engineReady = $state<boolean | null>(null);
+	let dragDepth = $state(0);
+
+	function onDragEnter(event: DragEvent) {
+		event.preventDefault();
+		dragDepth += 1;
+	}
+
+	function onDragOver(event: DragEvent) {
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+	}
+
+	function onDragLeave(event: DragEvent) {
+		event.preventDefault();
+		dragDepth = Math.max(0, dragDepth - 1);
+	}
+
+	async function onDrop(event: DragEvent) {
+		event.preventDefault();
+		dragDepth = 0;
+		const text =
+			event.dataTransfer?.getData("text/uri-list") ||
+			event.dataTransfer?.getData("text/plain") ||
+			"";
+		if (text.trim()) await enqueueFromClipboardText(text);
+	}
 
 	const nav = [
 		{ href: "/", key: "home", index: "01" },
@@ -99,7 +125,7 @@
 	});
 </script>
 
-<div class="app-shell">
+<div class="app-shell" class:drop-active={dragDepth > 0} role="group" aria-label={t("layout.dropHint")} ondragenter={onDragEnter} ondragover={onDragOver} ondragleave={onDragLeave} ondrop={onDrop}>
 	<aside class="sidebar">
 		<a class="wordmark" href="/">
 			<LogoMark size={34} />
@@ -148,6 +174,15 @@
 			</a>
 		{/each}
 	</nav>
+
+	{#if dragDepth > 0}
+		<div class="drop-overlay" aria-hidden="true">
+			<div class="drop-card">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 16v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3" /></svg>
+				<span>{t("layout.dropHint")}</span>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <CommandPalette />

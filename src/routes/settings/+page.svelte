@@ -182,11 +182,11 @@
 		try {
 			const report = await api.cookieBucketCheck(bucket.file);
 			if (report.ok) {
-				const parts = [`${report.total} cookies · ${report.sites.length} sites`];
+				const parts = [t("settings.cookieCheckSummary", { total: report.total, sites: report.sites.length })];
 				if (report.soonest_expiry) {
 					parts.push(
 						t("settings.cookieSoonestExpiry", {
-							time: new Date(report.soonest_expiry * 1000).toISOString().slice(0, 10)
+							time: new Date(report.soonest_expiry * 1000).toLocaleDateString()
 						})
 					);
 				}
@@ -238,7 +238,7 @@
 	<div class="page-inner">
 		<h1 class="page-title">{t("settings.title")}</h1>
 		<div class="layout">
-			<nav class="cats" aria-label="Settings sections">
+			<nav class="cats" aria-label={t("settings.sections")}>
 				{#each categories as c (c.id)}
 					<button class="cat-item" class:active={category === c.id} aria-current={category === c.id ? "page" : undefined} onclick={() => (category = c.id)}>
 						{c.label()}
@@ -269,7 +269,7 @@
 						{#each [{ id: "organize_by_platform", label: t("settings.organizeByPlatform"), value: settings.organize_by_platform }, { id: "always_ask_path", label: t("settings.alwaysAsk"), value: settings.always_ask_path }, { id: "skip_existing", label: t("settings.skipExisting"), value: settings.skip_existing }, { id: "download_archive", label: t("settings.downloadArchive"), value: settings.download_archive }] as flag (flag.id)}
 							<div class="row row-switch">
 								<span class="switch-label">{flag.label}</span>
-								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
+								<button disabled={patching} class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
 							</div>
 						{/each}
 					<div class="rules-block">
@@ -280,10 +280,10 @@
 						<p class="hint">{t("settings.downloadRulesHint")}</p>
 						{#each settings.download_rules as rule (rule.id)}
 							<div class="rule-row">
-								<input class="input mono rule-pattern" type="text" placeholder="youtube.com" aria-label="pattern" value={rule.pattern} onchange={(e) => patchRule(rule.id, { pattern: (e.currentTarget as HTMLInputElement).value })} />
-								<input class="input mono rule-dir" type="text" placeholder="D:\Media" aria-label="Output folder" value={rule.dir} onchange={(e) => patchRule(rule.id, { dir: (e.currentTarget as HTMLInputElement).value })} />
-								<button class="btn-icon" title={t("settings.browse")} aria-label={t("settings.browse")} onclick={() => browseRuleDir(rule.id)}><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg></button>
-								<button class="btn-icon danger" title={t("settings.removeRule")} aria-label={t("settings.removeRule")} onclick={() => removeRule(rule.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+								<input class="input mono rule-pattern" type="text" placeholder="youtube.com" aria-label={t("settings.rulePattern")} value={rule.pattern} onchange={(e) => patchRule(rule.id, { pattern: (e.currentTarget as HTMLInputElement).value })} />
+								<input class="input mono rule-dir" type="text" placeholder="D:\Media" aria-label={t("settings.outputDir")} value={rule.dir} onchange={(e) => patchRule(rule.id, { dir: (e.currentTarget as HTMLInputElement).value })} />
+								<button disabled={patching} class="btn-icon" title={t("settings.browse")} aria-label={t("settings.browse")} onclick={() => browseRuleDir(rule.id)}><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg></button>
+								<button disabled={patching} class="btn-icon danger" title={t("settings.removeRule")} aria-label={t("settings.removeRule")} onclick={() => removeRule(rule.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 							</div>
 						{/each}
 					</div>
@@ -323,7 +323,7 @@
 						{#each [{ id: "embed_metadata", label: t("settings.embedMetadata"), value: settings.embed_metadata }, { id: "embed_thumbnail", label: t("settings.embedThumbnail"), value: settings.embed_thumbnail }, { id: "write_subtitles", label: t("settings.writeSubs"), value: settings.write_subtitles }, { id: "sponsorblock", label: t("settings.sponsorblock"), value: settings.sponsorblock }, { id: "split_by_chapters", label: t("settings.splitByChapters"), value: settings.split_by_chapters }, { id: "live_from_start", label: t("settings.liveFromStart"), value: settings.live_from_start }, { id: "notifications", label: t("settings.notifications"), value: settings.notifications }, { id: "prevent_sleep", label: t("settings.preventSleep"), value: settings.prevent_sleep }] as flag (flag.id)}
 							<div class="row row-switch">
 								<span class="switch-label">{flag.label}</span>
-								<button class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
+								<button disabled={patching} class="switch" role="switch" aria-checked={flag.value} aria-label={flag.label} onclick={() => patch({ [flag.id]: !flag.value } as Partial<import("#lib/api").AppSettings>)}></button>
 							</div>
 						{/each}
 						{#if settings.write_subtitles}
@@ -348,9 +348,9 @@
 							<div class="row-text">
 								<span class="field-label">{t("settings.theme")}</span>
 								<div class="segmented" role="group" aria-label={t("settings.theme")}>
-									<button aria-pressed={settings.theme === "system"} onclick={() => patch({ theme: "system" })}>{t("settings.themeSystem")}</button>
-									<button aria-pressed={settings.theme === "light"} onclick={() => patch({ theme: "light" })}>{t("settings.themeLight")}</button>
-									<button aria-pressed={settings.theme === "dark"} onclick={() => patch({ theme: "dark" })}>{t("settings.themeDark")}</button>
+									<button disabled={patching} aria-pressed={settings.theme === "system"} onclick={() => patch({ theme: "system" })}>{t("settings.themeSystem")}</button>
+									<button disabled={patching} aria-pressed={settings.theme === "light"} onclick={() => patch({ theme: "light" })}>{t("settings.themeLight")}</button>
+									<button disabled={patching} aria-pressed={settings.theme === "dark"} onclick={() => patch({ theme: "dark" })}>{t("settings.themeDark")}</button>
 								</div>
 							</div>
 						</div>
@@ -369,11 +369,11 @@
 						</div>
 						<div class="row row-switch">
 							<span class="switch-label">{t("settings.closeToTray")}</span>
-							<button class="switch" role="switch" aria-checked={settings.close_to_tray} aria-label={t("settings.closeToTray")} onclick={() => patch({ close_to_tray: !settings.close_to_tray })}></button>
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.close_to_tray} aria-label={t("settings.closeToTray")} onclick={() => patch({ close_to_tray: !settings.close_to_tray })}></button>
 						</div>
 						<div class="row row-switch">
 							<span class="switch-label">{t("settings.reduceMotion")}</span>
-							<button class="switch" role="switch" aria-checked={settings.reduce_motion} aria-label={t("settings.reduceMotion")} onclick={() => patch({ reduce_motion: !settings.reduce_motion })}></button>
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.reduce_motion} aria-label={t("settings.reduceMotion")} onclick={() => patch({ reduce_motion: !settings.reduce_motion })}></button>
 						</div>
 					</section>
 				{:else if category === "engine"}
@@ -410,7 +410,7 @@
 									<code class="cookie-file-value">{settings.cookie_file || "-"}</code>
 									<button class="btn btn-sm" onclick={pickCookieFile}>{t("settings.cookieFilePick")}</button>
 									{#if settings.cookie_file}
-										<button class="btn btn-sm btn-ghost" onclick={() => patch({ cookie_file: "" })}>{t("settings.cookieFileClear")}</button>
+										<button disabled={patching} class="btn btn-sm btn-ghost" onclick={() => patch({ cookie_file: "" })}>{t("settings.cookieFileClear")}</button>
 									{/if}
 								</div>
 								<p class="hint">{t("settings.cookieFileWarning")}</p>
@@ -427,10 +427,10 @@
                                                 <span class="bucket-file mono" title={bucket.file}>{bucket.file}</span>
                                             </div>
                                             <div class="bucket-actions">
-                                                <button class="btn btn-sm" onclick={() => useBucket(bucket)}>{t("settings.cookieUse")}</button>
+                                                <button disabled={patching} class="btn btn-sm" onclick={() => useBucket(bucket)}>{t("settings.cookieUse")}</button>
                                                 <button class="btn-icon" title={t("settings.cookieCheck")} aria-label={t("settings.cookieCheck")} onclick={() => checkBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg></button>
-                                                <button class="btn-icon" title={t("settings.renameBucket")} aria-label={t("settings.renameBucket")} onclick={() => renameBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /></svg></button>
-                                                <button class="btn-icon danger" title={t("settings.deleteBucket")} aria-label={t("settings.deleteBucket")} onclick={() => deleteBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
+                                                <button disabled={patching} class="btn-icon" title={t("settings.renameBucket")} aria-label={t("settings.renameBucket")} onclick={() => renameBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /></svg></button>
+                                                <button disabled={patching} class="btn-icon danger" title={t("settings.deleteBucket")} aria-label={t("settings.deleteBucket")} onclick={() => deleteBucket(bucket)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
                                             </div>
                                         </div>
                                     {:else}
@@ -446,8 +446,8 @@
                                                 <div class="trash-row">
                                                     <span class="trash-name mono" title={bucket.file}>{bucket.name}</span>
                                                     <div class="trash-actions">
-                                                        <button class="btn btn-sm btn-ghost" onclick={() => restoreBucket(bucket)}>{t("settings.restoreBucket")}</button>
-                                                        <button class="btn-icon danger" title={t("settings.deleteForever")} aria-label={t("settings.deleteForever")} onclick={() => deleteForever(bucket)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
+                                                        <button disabled={patching} class="btn btn-sm btn-ghost" onclick={() => restoreBucket(bucket)}>{t("settings.restoreBucket")}</button>
+                                                        <button disabled={patching} class="btn-icon danger" title={t("settings.deleteForever")} aria-label={t("settings.deleteForever")} onclick={() => deleteForever(bucket)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
                                                     </div>
                                                 </div>
                                             {/each}

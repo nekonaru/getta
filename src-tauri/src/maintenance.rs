@@ -28,6 +28,8 @@ pub struct QueueBackupEntry {
     #[serde(default = "default_quality")]
     pub quality: String,
     #[serde(default)]
+    pub format_id: Option<String>,
+    #[serde(default)]
     pub playlist_items: Option<String>,
     #[serde(default)]
     pub output_dir: Option<String>,
@@ -62,8 +64,9 @@ pub fn export_queue(state: &AppState, path: &Path) -> std::io::Result<()> {
             url: info.url,
             download_mode: info.download_mode.unwrap_or_else(default_mode),
             quality: info.quality.unwrap_or_else(default_quality),
-            playlist_items: None,
-            output_dir: None,
+            format_id: info.format_id,
+            playlist_items: info.playlist_items,
+            output_dir: info.output_dir,
         })
         .collect();
     storage::write_json_atomic(path, &entries)
@@ -81,7 +84,7 @@ pub fn import_queue(app: &AppHandle, state: &AppState, path: &Path) -> Result<us
             url: entry.url.clone(),
             download_mode: crate::models::DownloadMode::parse(&entry.download_mode).as_str().to_string(),
             quality: entry.quality,
-            format_id: None,
+            format_id: entry.format_id,
             playlist_items: entry.playlist_items,
             output_dir: entry.output_dir,
         };

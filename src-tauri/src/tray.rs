@@ -1,7 +1,19 @@
 //! System tray: toggle the window on click, Show/Quit from the menu.
 //! Labels follow the configured UI language.
 
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder};
+
+pub struct TrayMenuHandle(pub Menu<tauri::Wry>);
+
+/// Keep tray text in sync when the UI language changes at runtime.
+pub fn update_labels(app: &tauri::AppHandle, language: &str) {
+    let (show_label, clipboard_label, quit_label) = tray_labels(language);
+    if let Some(menu) = app.try_state::<TrayMenuHandle>() {
+        let _ = menu.0.get_item("show").map(|item| item.set_text(show_label));
+        let _ = menu.0.get_item("clipboard").map(|item| item.set_text(clipboard_label));
+        let _ = menu.0.get_item("quit").map(|item| item.set_text(quit_label));
+    }
+}
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
@@ -68,6 +80,7 @@ pub fn setup(app: &tauri::App, show_label: &str, clipboard_label: &str, quit_lab
         .build(app)?;
 
     // The tray must outlive the setup closure; Tauri keeps it alive for the session.
+    app.manage(TrayMenuHandle(menu));
     std::mem::forget(tray);
     Ok(())
 }

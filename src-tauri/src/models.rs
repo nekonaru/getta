@@ -116,6 +116,8 @@ pub struct QueueItemInfo {
     pub quality: Option<String>,
     pub download_mode: Option<String>,
     pub format_id: Option<String>,
+    pub playlist_items: Option<String>,
+    pub output_dir: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
