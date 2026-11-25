@@ -13,7 +13,6 @@ Another native audit pass, drag-and-drop fetching, and safer state writes.
 
 ## Improvements
 
-- **Tray follows the UI language.** Switching language updates the tray menu without a restart.
 - **Accessible toasts.** The live region is always present, errors use `alert`, and the close label is translated.
 - **Dialogs take focus.** Onboarding and recovery dialogs focus themselves and close with Escape.
 - **Local expiry dates.** Cookie bucket expiry uses the device locale instead of UTC.

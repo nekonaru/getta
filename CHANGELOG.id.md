@@ -13,7 +13,6 @@ Audit native putaran berikutnya, ambil link dengan seret, dan penulisan state ya
 
 ## Peningkatan
 
-- **Tray mengikuti bahasa UI.** Ganti bahasa memperbarui menu tray tanpa restart.
 - **Toast lebih mudah diakses.** Region live selalu hadir, error memakai `alert`, dan tombol tutup diterjemahkan.
 - **Dialog menerima fokus.** Onboarding dan dialog pemulihan memberi fokus diri dan tertutup dengan Escape.
 - **Tanggal kedaluwarsa lokal.** Tanggal cookie memakai lokal perangkat, bukan UTC.

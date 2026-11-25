@@ -415,13 +415,8 @@ pub async fn settings_update(
     }
     let merged: AppSettings = serde_json::from_value(current).map_err(|e| e.to_string())?;
     crate::settings::save(&state.data_dir, &merged).map_err(|e| e.to_string())?;
-    let language_changed = patch.get("language").is_some();
-    let language = merged.language.clone();
     *settings = merged.clone();
     drop(settings);
-    if language_changed {
-        crate::tray::update_labels(&app, &language);
-    }
     if let Some(state) = app.try_state::<AppState>() {
         state.queue.try_start_next(&app);
     }
