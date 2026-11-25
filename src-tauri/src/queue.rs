@@ -231,7 +231,7 @@ impl QueueManager {
             let running = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
             let free = max_concurrent.saturating_sub(running);
             let now = now_secs();
-            let mut queued: Vec<(u64, u64)> = inner
+            let queued: Vec<(u64, u64)> = inner
                 .items
                 .iter()
                 .filter(|i| i.status == QueueStatus::Queued)

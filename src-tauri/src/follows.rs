@@ -13,6 +13,8 @@ use crate::models::{ChannelEntry, FollowChannel};
 use crate::storage;
 
 static STATE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+// Async checks hold this across awaits, so they need a Send-aware guard.
+static ASYNC_STATE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 use crate::ytdlp;
 use crate::AppState;
 
@@ -202,7 +204,7 @@ pub async fn follow_add(app: &AppHandle, url: &str) -> Result<FollowChannel, Str
 static CHECK_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, String> {
-    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = ASYNC_STATE_LOCK.lock().await;
     let _guard = CHECK_LOCK.lock().await;
     let data_dir = app
         .try_state::<AppState>()

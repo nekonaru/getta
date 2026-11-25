@@ -403,7 +403,7 @@ pub fn parse_line(line: &str) -> LineEvent {
     if let Some(rest) = line.strip_prefix("[Merger] Merging") {
         return LineEvent::PostProcess(format!("merging {}", rest.trim()));
     }
-    if let Some(rest) = line.strip_prefix("[EmbedSubtitle]") {
+    if line.starts_with("[EmbedSubtitle]") {
         return LineEvent::PostProcess("embedding subtitles".to_string());
     }
     if line.contains("has already been downloaded") {
