@@ -60,6 +60,8 @@ Getta is an original implementation under the MIT license.
 | **Modes** | Video + audio, audio only (m4a), video only, or subtitles only |
 | **Batch pastes** | Many links at once: Getta queues them all |
 | **Channel following** | Follow any public channel; Getta spots new uploads and queues them. Optional background auto-download |
+| **RSS feeds** | Queue new feed entries automatically with a local seen list |
+| **Clipboard monitor** | Optional automatic enqueue when a new link appears on the clipboard |
 | **Download rules** | Route links to folders by pattern, first match wins |
 | **Site profiles** | Per-link rules also override quality and mode, for example audio only from one site |
 | **Native direct download** | Plain http(s) files stream with resume and per-item speed caps, no yt-dlp needed |
@@ -76,6 +78,7 @@ Getta is an original implementation under the MIT license.
 |---------|-------------|
 | **Pause and resume** | Process-level pause on Windows and Linux/macOS; downloads pick up where they stopped |
 | **Search** | Filter transit, queued, delivered and failed by title, link or site |
+| **Queue stats** | Active, queued, done, failed and transferred bytes above the list |
 | **Copy source URL** | Copy a queued link directly from its row |
 | **Retry with backoff** | Automatic retry for rate limits and transient errors with exponential backoff |
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |

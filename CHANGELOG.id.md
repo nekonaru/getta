@@ -3,6 +3,18 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.20.0
+
+Otomasi lanjutan: feed RSS, interval follow per kanal, monitor clipboard, profil pengaturan, dan filter antrean yang lebih pintar.
+
+## Fitur baru
+
+- **Feed RSS.** Tambahkan URL feed di Pengaturan. Entri baru diurai dan diantrekan otomatis, dengan daftar sudah dilihat dan catatan audit lokal.
+- **Interval follow per kanal.** Pilih 15 menit, 1 jam, 6 jam, atau 1 hari untuk tiap kanal yang diikuti, bukan satu interval enam jam global.
+- **Monitor clipboard.** Saat aktif, Getta memantau clipboard dan mengantrekan link begitu link baru muncul.
+- **Profil pengaturan.** Simpan pengaturan saat ini sebagai profil bernama dan kembalikan ke profil itu kapan saja.
+- **Filter grup dan statistik antrean.** Filter antrean berdasarkan grup dan lihat jumlah aktif, menunggu, selesai, gagal, serta total byte di atas daftar.
+
 ## v0.19.0
 
 Update besar: unduhan langsung native, otomasi antrean, metadata pustaka yang kaya, dan alat data lokal.

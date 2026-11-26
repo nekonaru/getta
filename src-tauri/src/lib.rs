@@ -162,6 +162,16 @@ pub fn run() {
                 crate::follows::poll_auto(poll_app).await;
             });
 
+            // Poll RSS feeds and the clipboard for new links.
+            let rss_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                crate::automation::poll_rss(rss_app).await;
+            });
+            let clipboard_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                crate::automation::poll_clipboard(clipboard_app).await;
+            });
+
             // Watch a folder for text files containing links.
             let watch_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -222,6 +232,9 @@ pub fn run() {
             commands::export_library_html,
             commands::create_backup,
             commands::restore_backup,
+            commands::list_profiles,
+            commands::save_profile,
+            commands::load_profile,
             commands::remove_download,
             commands::clear_finished,
             commands::pause_all,
@@ -238,6 +251,7 @@ pub fn run() {
             commands::follow_remove,
             commands::follow_set_auto,
             commands::follow_check_now,
+            commands::follow_set_interval,
             commands::follow_check_all,
             commands::delete_files,
             commands::get_diagnostics,

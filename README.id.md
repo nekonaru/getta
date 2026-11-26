@@ -76,6 +76,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 |-------|-----------|
 | **Jeda dan lanjut** | Jeda level proses di Windows, Linux, dan macOS; unduhan dilanjutkan dari posisi terakhir |
 | **Cari** | Filter sedang berjalan, menunggu, selesai, dan gagal berdasarkan judul, link, atau situs |
+| **Statistik antrean** | Jumlah aktif, menunggu, selesai, gagal, dan total byte di atas daftar |
 | **Salin URL sumber** | Salin link antrean langsung dari barisnya |
 | **Coba ulang dengan backoff** | Coba ulang otomatis untuk rate limit dan error sementara dengan backoff eksponensial |
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |

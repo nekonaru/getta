@@ -3,6 +3,18 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.20.0
+
+More automation: RSS feeds, per-channel follow intervals, clipboard monitoring, settings profiles and smarter queue filters.
+
+## New features
+
+- **RSS feeds.** Add feed URLs in Settings. New entries are parsed and queued automatically, with a local seen list and an audit record.
+- **Per-channel follow interval.** Choose 15 minutes, 1 hour, 6 hours or 1 day for each followed channel instead of one global six-hour poll.
+- **Clipboard monitor.** When enabled, Getta watches the clipboard and queues a link as soon as a new one appears.
+- **Settings profiles.** Save the current settings as a named profile and switch back to it later.
+- **Group filter and queue stats.** Filter the queue by group and see active, queued, done, failed and transferred bytes above the list.
+
 ## v0.19.0
 
 A major expansion: native direct downloads, queue automation, rich library metadata and local data tools.

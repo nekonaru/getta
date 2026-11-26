@@ -134,7 +134,9 @@
 		"urlCopied": "Source URL copied",
 		"scheduledFor": "Scheduled for {time}",
 		"cancelSchedule": "Cancel schedule",
-		"priority": "Priority"
+		"priority": "Priority",
+		"groupFilter": "Filter by group",
+		"allGroups": "All groups"
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -445,7 +447,16 @@
 		"audit": "Audit log",
 		"loadAudit": "Load log",
 		"accent": "Accent color",
-		"compactMode": "Compact mode"
+		"compactMode": "Compact mode",
+		"rssFeeds": "RSS feeds",
+		"addRss": "Add RSS feed",
+		"newRss": "New feed",
+		"profiles": "Settings profiles",
+		"newProfile": "Profile name",
+		"saveProfile": "Save profile",
+		"loadProfile": "Load",
+		"profileSaved": "Profile saved",
+		"profileLoaded": "Loaded {name}"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",
@@ -515,7 +526,12 @@
 		"none": "No new uploads",
 		"lastChecked": "Checked {time}",
 		"neverChecked": "Not checked yet",
-		"invalidUrl": "That does not look like a link."
+		"invalidUrl": "That does not look like a link.",
+		"interval": "Check interval",
+		"interval15m": "Every 15 minutes",
+		"interval1h": "Every hour",
+		"interval6h": "Every 6 hours",
+		"interval1d": "Every day"
 	},
 	"layout": {
 		"engineBroken": "The download engine is not working. Reinstall it in Settings, Engine.",

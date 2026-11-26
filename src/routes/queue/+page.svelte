@@ -11,6 +11,7 @@
 	type Tab = "queue" | "history";
 	let tab = $state<Tab>("queue");
 	let query = $state("");
+	let groupFilter = $state("");
 	let dragId = $state<number | null>(null);
 	let dropIndex = $state<number | null>(null);
 	const reorderAllowed = $derived(query.trim().length === 0);
@@ -75,14 +76,31 @@
 	});
 
 	const matchesQuery = (item: QueueItemInfo) => {
+		if (groupFilter && item.group_id !== groupFilter) return false;
 		const needle = query.trim().toLowerCase();
 		if (!needle) return true;
 		return (
 			item.title.toLowerCase().includes(needle) ||
 			item.url.toLowerCase().includes(needle) ||
-			item.platform.toLowerCase().includes(needle)
+			item.platform.toLowerCase().includes(needle) ||
+			(item.group_id ?? "").toLowerCase().includes(needle)
 		);
 	};
+
+	const groups = $derived(
+		[...new Set(downloadsStore.items.map((i) => i.group_id).filter((g): g is string => !!g))].sort()
+	);
+
+	const queueStats = $derived.by(() => {
+		const items = downloadsStore.items;
+		return {
+			active: items.filter((i) => i.status === "active").length,
+			queued: items.filter((i) => i.status === "queued").length,
+			done: items.filter((i) => i.status === "done").length,
+			failed: items.filter((i) => i.status === "error").length,
+			bytes: items.reduce((sum, i) => sum + i.downloaded_bytes, 0)
+		};
+	});
 
 	const transit = $derived(
 		[...downloadsStore.items]
@@ -328,6 +346,13 @@
 				aria-label={t("queue.search")}
 				spellcheck="false"
 			/>
+			{#if groups.length > 0}
+				<select class="input queue-group" bind:value={groupFilter} aria-label={t("queue.groupFilter")}>
+					<option value="">{t("queue.allGroups")}</option>
+					{#each groups as group (group)}<option value={group}>{group}</option>{/each}
+				</select>
+			{/if}
+			<span class="pill mono queue-stats">{queueStats.active} / {queueStats.queued} / {queueStats.done} / {queueStats.failed} · {formatBytes(queueStats.bytes)}</span>
 			{#if query.trim()}
 				<span class="pill mono queue-search-count">{transit.length + queued.length + delivered.length + failed.length}</span>
 				<button class="btn btn-sm btn-ghost" onclick={() => (query = "")}>{t("library.dismiss")}</button>

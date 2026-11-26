@@ -272,3 +272,46 @@ pub fn restore_backup(data_dir: &Path, source: &Path) -> Result<usize, String> {
     }
     Ok(restored)
 }
+
+
+fn profile_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join("profiles")
+}
+
+pub fn list_profiles(data_dir: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(profile_dir(data_dir)) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|e| e.path().extension().and_then(|x| x.to_str()).filter(|x| *x == "json").map(|_| {
+            e.path().file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string()
+        }))
+        .filter(|s| !s.is_empty())
+        .collect();
+    names.sort();
+    names
+}
+
+pub fn save_profile(data_dir: &Path, name: &str, settings: &crate::settings::AppSettings) -> Result<(), String> {
+    let safe: String = name
+        .chars()
+        .map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '-' | '_') { c } else { '_' })
+        .collect();
+    if safe.trim().is_empty() {
+        return Err("Profile name is empty.".to_string());
+    }
+    let dir = profile_dir(data_dir);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    storage::write_json_atomic(&dir.join(format!("{safe}.json")), settings)
+        .map_err(|e| e.to_string())
+}
+
+pub fn load_profile(data_dir: &Path, name: &str) -> Result<crate::settings::AppSettings, String> {
+    let safe: String = name
+        .chars()
+        .map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '-' | '_') { c } else { '_' })
+        .collect();
+    storage::read_json(&profile_dir(data_dir).join(format!("{safe}.json")))
+        .map_err(|e| format!("Could not load profile: {e}"))
+}

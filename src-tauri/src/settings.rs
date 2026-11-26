@@ -125,6 +125,29 @@ impl Default for DownloadPreset {
     }
 }
 
+/// An RSS feed whose new entries are queued automatically.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RssFeed {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+    pub seen: Vec<String>,
+    pub last_checked_at: i64,
+}
+
+impl Default for RssFeed {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            url: String::new(),
+            title: String::new(),
+            seen: Vec::new(),
+            last_checked_at: 0,
+        }
+    }
+}
+
 /// A saved search that appears as a smart folder in the Library sidebar.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -245,6 +268,10 @@ pub struct AppSettings {
     pub compact_mode: bool,
     #[serde(default)]
     pub shortcuts: std::collections::HashMap<String, String>,
+    #[serde(default)]
+    pub rss_feeds: Vec<RssFeed>,
+    #[serde(default)]
+    pub active_profile: String,
 }
 
 impl Default for AppSettings {
@@ -303,6 +330,8 @@ impl Default for AppSettings {
             accent: "#00C896".to_string(),
             compact_mode: false,
             shortcuts: std::collections::HashMap::new(),
+            rss_feeds: Vec::new(),
+            active_profile: String::new(),
         }
     }
 }

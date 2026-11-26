@@ -174,6 +174,16 @@
 								<span class="auto-label muted">{t("follows.auto")}</span>
 								<button class="switch" role="switch" aria-checked={follow.auto_download} aria-label={t("follows.auto")} onclick={() => toggleAuto(follow)}></button>
 							</label>
+							<select class="input interval-select" aria-label={t("follows.interval")} value={follow.check_interval_secs ?? 21600} onchange={async (e) => {
+								const secs = Number((e.currentTarget as HTMLSelectElement).value);
+								await api.followSetInterval(follow.id, secs);
+								follows = follows.map((f) => (f.id === follow.id ? { ...f, check_interval_secs: secs } : f));
+							}}>
+								<option value={900}>{t("follows.interval15m")}</option>
+								<option value={3600}>{t("follows.interval1h")}</option>
+								<option value={21600}>{t("follows.interval6h")}</option>
+								<option value={86400}>{t("follows.interval1d")}</option>
+							</select>
 							<button class="btn btn-sm" disabled={checking === follow.id} onclick={() => checkNow(follow)}>
 								{checking === follow.id ? t("follows.checking") : t("follows.checkNow")}
 							</button>

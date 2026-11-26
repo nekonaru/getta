@@ -88,6 +88,7 @@ export interface FollowChannel {
 	last_checked_at: number | null;
 	auto_download: boolean;
 	seen_ids: string[];
+	check_interval_secs?: number | null;
 }
 
 export interface RecoveryEntry {
@@ -171,6 +172,16 @@ export interface AppSettings {
 	accent: string;
 	compact_mode: boolean;
 	shortcuts: Record<string, string>;
+	rss_feeds: RssFeed[];
+	active_profile: string;
+}
+
+export interface RssFeed {
+	id: string;
+	url: string;
+	title: string;
+	seen: string[];
+	last_checked_at: number;
 }
 
 export interface DownloadPreset {
@@ -352,6 +363,8 @@ export const api = {
 	followRemove: (id: string) => call(() => invoke<boolean>("follow_remove", { id })),
 	followSetAuto: (id: string, auto: boolean) => call(() => invoke<boolean>("follow_set_auto", { id, auto })),
 	followCheckNow: (id: string) => call(() => invoke<number>("follow_check_now", { id })),
+	followSetInterval: (id: string, secs: number | null) =>
+		call(() => invoke<boolean>("follow_set_interval", { id, secs })),
 	followCheckAll: () => call(() => invoke<number>("follow_check_all")),
 	deleteFiles: (paths: string[]) => call(() => invoke<string[]>("delete_files", { paths })),
 	getDiagnostics: () => call(() => invoke<Diagnostics>("get_diagnostics")),
@@ -387,7 +400,10 @@ export const api = {
 	exportLibraryHtml: (path: string) =>
 		call(() => invoke<void>("export_library_html", { path })),
 	createBackup: (path: string) => call(() => invoke<void>("create_backup", { path })),
-	restoreBackup: (path: string) => call(() => invoke<number>("restore_backup", { path }))
+	restoreBackup: (path: string) => call(() => invoke<number>("restore_backup", { path })),
+	listProfiles: () => call(() => invoke<string[]>("list_profiles")),
+	saveProfile: (name: string) => call(() => invoke<void>("save_profile", { name })),
+	loadProfile: (name: string) => call(() => invoke<AppSettings>("load_profile", { name }))
 };
 
 export function onQueueChanged(callback: (items: QueueItemInfo[]) => void): Promise<UnlistenFn> {

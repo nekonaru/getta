@@ -287,6 +287,15 @@ pub async fn follow_set_auto(state: State<'_, AppState>, id: String, auto: bool)
 }
 
 #[tauri::command]
+pub async fn follow_set_interval(
+    state: State<'_, AppState>,
+    id: String,
+    secs: Option<i64>,
+) -> Result<bool, String> {
+    crate::follows::set_interval(&state.data_dir, &id, secs).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn follow_check_now(app: AppHandle, id: String) -> Result<usize, String> {
     crate::follows::check_and_enqueue(&app, &id).await
 }
@@ -573,6 +582,43 @@ pub async fn restore_backup(
     let count = crate::features::restore_backup(&state.data_dir, std::path::Path::new(&path))?;
     crate::features::audit(&state.data_dir, "restore", &count.to_string());
     Ok(count)
+}
+
+#[tauri::command]
+pub async fn list_profiles(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    Ok(crate::features::list_profiles(&state.data_dir))
+}
+
+#[tauri::command]
+pub async fn save_profile(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<(), String> {
+    let settings = state
+        .settings
+        .lock()
+        .map_err(|_| "settings locked".to_string())?
+        .clone();
+    crate::features::save_profile(&state.data_dir, &name, &settings)
+}
+
+#[tauri::command]
+pub async fn load_profile(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<AppSettings, String> {
+    let loaded = crate::features::load_profile(&state.data_dir, &name)?;
+    crate::settings::save(&state.data_dir, &loaded).map_err(|e| e.to_string())?;
+    {
+        let mut current = state
+            .settings
+            .lock()
+            .map_err(|_| "settings locked".to_string())?;
+        *current = loaded.clone();
+    }
+    crate::tray::rebuild(&app, &loaded.language);
+    Ok(loaded)
 }
 
 #[tauri::command]

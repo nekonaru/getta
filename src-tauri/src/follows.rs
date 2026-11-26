@@ -68,6 +68,22 @@ pub fn set_auto(data_dir: &Path, id: &str, auto_download: bool) -> std::io::Resu
     Ok(found)
 }
 
+pub fn set_interval(data_dir: &Path, id: &str, secs: Option<i64>) -> std::io::Result<bool> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut follows = list(data_dir);
+    let mut found = false;
+    for follow in follows.iter_mut() {
+        if follow.id == id {
+            follow.check_interval_secs = secs.filter(|v| *v >= 300);
+            found = true;
+        }
+    }
+    if found {
+        save(data_dir, &follows)?;
+    }
+    Ok(found)
+}
+
 /// YouTube channel home pages resolve to the uploads playlist. Any other
 /// URL is passed to yt-dlp unchanged.
 fn channel_target(url: &str) -> String {
@@ -286,18 +302,31 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
     Ok(enqueued)
 }
 
-/// Background poll for channels with auto-download enabled.
+/// Background poll for channels with auto-download enabled. Each channel
+/// can define its own interval; the loop wakes often enough to honour it.
 pub async fn poll_auto(app: AppHandle) {
     tokio::time::sleep(std::time::Duration::from_secs(90)).await;
     loop {
         let data_dir = app.try_state::<AppState>().map(|s| s.data_dir.clone());
         if let Some(dir) = data_dir {
+            let now = now_secs();
             for follow in list(&dir) {
-                if follow.auto_download {
+                if !follow.auto_download {
+                    continue;
+                }
+                let interval = follow
+                    .check_interval_secs
+                    .filter(|v| *v >= 300)
+                    .unwrap_or(6 * 3600);
+                let due = follow
+                    .last_checked_at
+                    .map(|at| now.saturating_sub(at) >= interval)
+                    .unwrap_or(true);
+                if due {
                     let _ = check_and_enqueue(&app, &follow.id).await;
                 }
             }
         }
-        tokio::time::sleep(std::time::Duration::from_secs(6 * 3600)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(300)).await;
     }
 }

@@ -131,3 +131,160 @@ pub async fn poll_watch_folder(app: tauri::AppHandle) {
         }
     }
 }
+
+
+/// Poll RSS feeds and enqueue links from entries not seen before. XML is
+/// parsed with simple tag scanning so no extra dependency is needed.
+pub async fn poll_rss(app: tauri::AppHandle) {
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(300)).await;
+        let feeds = app
+            .try_state::<crate::AppState>()
+            .and_then(|state| state.settings.lock().ok().map(|s| s.rss_feeds.clone()))
+            .unwrap_or_default();
+        for feed in feeds {
+            let Some(text) = fetch_text(&feed.url).await else { continue };
+            let links = extract_rss_links(&text);
+            let mut new_seen = feed.seen.clone();
+            let mut queued = 0usize;
+            for link in links {
+                if new_seen.contains(&link) {
+                    continue;
+                }
+                let options = crate::models::StartOptions {
+                    url: link.clone(),
+                    download_mode: "auto".to_string(),
+                    quality: "best".to_string(),
+                    format_id: None,
+                    playlist_items: None,
+                    output_dir: None,
+                    start_at: None,
+                    priority: 0,
+                    speed_limit_mbps: 0,
+                    expected_sha256: None,
+                    group_id: None,
+                    after_id: None,
+                    preset_id: None,
+                    direct: false,
+                };
+                if let Some(state) = app.try_state::<crate::AppState>() {
+                    if state
+                        .queue
+                        .start_counted(&app, &options.url, &options)
+                        .map(|(_, inserted)| inserted)
+                        .unwrap_or(false)
+                    {
+                        queued += 1;
+                        new_seen.push(link);
+                    }
+                }
+            }
+            if new_seen.len() > 500 {
+                new_seen = new_seen.split_off(new_seen.len() - 500);
+            }
+            if queued > 0 || new_seen != feed.seen {
+                let label = format!("{}: {queued} new", feed.url);
+                if let Some(state) = app.try_state::<crate::AppState>() {
+                    crate::features::audit(&state.data_dir, "rss", &label);
+                    let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
+                    if let Some(row) = settings.rss_feeds.iter_mut().find(|f| f.id == feed.id) {
+                        row.seen = new_seen;
+                        row.last_checked_at = crate::queue::now_secs();
+                    }
+                    let _ = crate::settings::save(&state.data_dir, &settings);
+                }
+            }
+        }
+    }
+}
+
+async fn fetch_text(url: &str) -> Option<String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .ok()?;
+    client.get(url).send().await.ok()?.text().await.ok()
+}
+
+fn extract_rss_links(xml: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let mut rest = xml;
+    while let Some(start) = rest.find("<link") {
+        rest = &rest[start + 5..];
+        let Some(gt) = rest.find('>') else { break };
+        rest = &rest[gt + 1..];
+        let Some(end) = rest.find("</link>") else { break };
+        let value = rest[..end].trim();
+        let value = value
+            .trim_start_matches("<![CDATA[")
+            .trim_end_matches("]]>")
+            .trim();
+        if (value.starts_with("http://") || value.starts_with("https://"))
+            && !links.iter().any(|l| l == value)
+        {
+            links.push(value.to_string());
+        }
+        rest = &rest[end + 7..];
+    }
+    links.truncate(50);
+    links
+}
+
+/// Poll the clipboard and enqueue a link when it changes. Only known link
+/// schemes are accepted, and the last text is kept to avoid duplicates.
+pub async fn poll_clipboard(app: tauri::AppHandle) {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    let mut last = String::new();
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        let enabled = app
+            .try_state::<crate::AppState>()
+            .and_then(|state| state.settings.lock().ok().map(|s| s.clipboard_monitor))
+            .unwrap_or(false);
+        if !enabled {
+            last.clear();
+            continue;
+        }
+        let Ok(text) = app.clipboard().read_text() else { continue };
+        let trimmed = text.trim().to_string();
+        if trimmed.is_empty() || trimmed == last {
+            continue;
+        }
+        last = trimmed.clone();
+        let Some(state) = app.try_state::<crate::AppState>() else { continue };
+        let options = crate::models::StartOptions {
+            url: trimmed.clone(),
+            download_mode: "auto".to_string(),
+            quality: state.settings.lock().map(|s| s.video_quality.clone()).unwrap_or_else(|_| "best".to_string()),
+            format_id: None,
+            playlist_items: None,
+            output_dir: None,
+            start_at: None,
+            priority: 0,
+            speed_limit_mbps: 0,
+            expected_sha256: None,
+            group_id: None,
+            after_id: None,
+            preset_id: None,
+            direct: false,
+        };
+        let _ = state.queue.start(&app, &options.url, &options);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_rss_links_reads_items() {
+        let xml = "<rss><item><link>https://example.com/a.mp4</link></item><item><link><![CDATA[https://example.com/b.mp4]]></link></item></rss>";
+        assert_eq!(
+            extract_rss_links(xml),
+            vec![
+                "https://example.com/a.mp4".to_string(),
+                "https://example.com/b.mp4".to_string()
+            ]
+        );
+    }
+}

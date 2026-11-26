@@ -147,6 +147,8 @@ pub struct FollowChannel {
     pub auto_download: bool,
     #[serde(default)]
     pub seen_ids: Vec<String>,
+    #[serde(default)]
+    pub check_interval_secs: Option<i64>,
 }
 
 #[derive(Clone, Debug, Serialize)]

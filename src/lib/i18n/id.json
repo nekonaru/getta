@@ -134,7 +134,9 @@
 		"urlCopied": "URL sumber disalin",
 		"scheduledFor": "Dijadwalkan {time}",
 		"cancelSchedule": "Batalkan jadwal",
-		"priority": "Prioritas"
+		"priority": "Prioritas",
+		"groupFilter": "Filter berdasarkan grup",
+		"allGroups": "Semua grup"
 	},
 	"library": {
 		"kicker": "Barang tersimpan",
@@ -445,7 +447,16 @@
 		"audit": "Log audit",
 		"loadAudit": "Muat log",
 		"accent": "Warna aksen",
-		"compactMode": "Mode ringkas"
+		"compactMode": "Mode ringkas",
+		"rssFeeds": "Feed RSS",
+		"addRss": "Tambah feed RSS",
+		"newRss": "Feed baru",
+		"profiles": "Profil pengaturan",
+		"newProfile": "Nama profil",
+		"saveProfile": "Simpan profil",
+		"loadProfile": "Muat",
+		"profileSaved": "Profil disimpan",
+		"profileLoaded": "{name} dimuat"
 	},
 	"about": {
 		"tagline": "Setiap tautan, terkirim.",
@@ -515,7 +526,12 @@
 		"none": "Tidak ada unggahan baru",
 		"lastChecked": "Diperiksa {time}",
 		"neverChecked": "Belum pernah diperiksa",
-		"invalidUrl": "Itu tidak terlihat seperti tautan."
+		"invalidUrl": "Itu tidak terlihat seperti tautan.",
+		"interval": "Interval cek",
+		"interval15m": "Tiap 15 menit",
+		"interval1h": "Tiap jam",
+		"interval6h": "Tiap 6 jam",
+		"interval1d": "Tiap hari"
 	},
 	"layout": {
 		"engineBroken": "Mesin unduhan tidak bekerja. Pasang ulang di Pengaturan, Mesin.",

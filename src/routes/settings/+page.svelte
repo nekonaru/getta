@@ -16,6 +16,8 @@
 	let updateChain = Promise.resolve();
 	let autostartEnabled = $state(false);
 	let auditLines = $state<string[]>([]);
+	let profiles = $state<string[]>([]);
+	let newProfileName = $state("");
 
 	function beginPatch() {
 		inFlight += 1;
@@ -31,6 +33,7 @@
 
 	onMount(async () => {
 		await refreshEngine();
+		void refreshProfiles();
 		try {
 			autostartEnabled = await isEnabled();
 		} catch {
@@ -317,6 +320,50 @@
 			const count = await api.restoreBackup(path);
 			toastStore.push(t("settings.restoreDone", { count }), "info");
 			await settingsStore.load();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	function addRssFeed() {
+		void enqueueUpdate((current) => ({
+			rss_feeds: [
+				...(current?.rss_feeds ?? []),
+				{ id: crypto.randomUUID(), url: "", title: t("settings.newRss"), seen: [], last_checked_at: 0 }
+			]
+		}));
+	}
+
+	function patchRssFeed(id: string, patch: Partial<import("#lib/api").RssFeed>) {
+		void enqueueUpdate((current) => ({
+			rss_feeds: (current?.rss_feeds ?? []).map((f) => (f.id === id ? { ...f, ...patch } : f))
+		}));
+	}
+
+	async function refreshProfiles() {
+		try {
+			profiles = await api.listProfiles();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function doSaveProfile() {
+		try {
+			await api.saveProfile(newProfileName.trim());
+			newProfileName = "";
+			await refreshProfiles();
+			toastStore.push(t("settings.profileSaved"), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function doLoadProfile(name: string) {
+		try {
+			await api.loadProfile(name);
+			await settingsStore.load();
+			toastStore.push(t("settings.profileLoaded", { name }), "info");
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -648,6 +695,19 @@
 					</section>
 
 					<section class="card group">
+						<h2 class="section-title">{t("settings.rssFeeds")}</h2>
+						<div class="row">
+							<button class="btn btn-sm" onclick={addRssFeed} disabled={patching}>{t("settings.addRss")}</button>
+						</div>
+						{#each settings.rss_feeds as feed (feed.id)}
+							<div class="preset-row">
+								<input class="input" value={feed.url} placeholder="https://example.com/feed.xml" aria-label={t("settings.rssFeeds")} onchange={(e) => patchRssFeed(feed.id, { url: e.currentTarget.value })} />
+								<input class="input" value={feed.title} aria-label={t("settings.smartName")} onchange={(e) => patchRssFeed(feed.id, { title: e.currentTarget.value })} />
+							</div>
+						{/each}
+					</section>
+
+					<section class="card group">
 						<h2 class="section-title">{t("settings.webhook")}</h2>
 						<div class="row">
 							<input class="input" value={settings.webhook_url} placeholder="http://127.0.0.1:8080/hook" aria-label={t("settings.webhook")} onchange={(e) => patch({ webhook_url: e.currentTarget.value })} />
@@ -668,6 +728,19 @@
 							<button class="btn btn-sm" onclick={doRestore}>{t("settings.restoreBackup")}</button>
 						</div>
 						<p class="muted">{t("settings.backupHint")}</p>
+					</section>
+					<section class="card group">
+						<h2 class="section-title">{t("settings.profiles")}</h2>
+						<div class="row">
+							<input class="input" bind:value={newProfileName} placeholder={t("settings.newProfile")} aria-label={t("settings.newProfile")} />
+							<button class="btn btn-sm" onclick={doSaveProfile}>{t("settings.saveProfile")}</button>
+						</div>
+						{#each profiles as profile (profile)}
+							<div class="row">
+								<span class="mono">{profile}</span>
+								<button class="btn btn-sm btn-ghost" onclick={() => doLoadProfile(profile)}>{t("settings.loadProfile")}</button>
+							</div>
+						{/each}
 					</section>
 					<section class="card group">
 						<h2 class="section-title">{t("settings.audit")}</h2>
