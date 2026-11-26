@@ -88,6 +88,13 @@ pub fn import_queue(app: &AppHandle, state: &AppState, path: &Path) -> Result<us
             playlist_items: entry.playlist_items,
             output_dir: entry.output_dir,
             start_at: None,
+            priority: 0,
+            speed_limit_mbps: 0,
+            expected_sha256: None,
+            group_id: None,
+            after_id: None,
+            preset_id: None,
+            direct: false,
         };
         if state
             .queue

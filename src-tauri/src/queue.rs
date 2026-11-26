@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use chrono::Timelike;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -75,6 +76,14 @@ struct QueueItem {
     not_before: Option<i64>,
     output_dir: Option<String>,
     playlist_items: Option<String>,
+    priority: i32,
+    speed_limit_mbps: u32,
+    expected_sha256: Option<String>,
+    group_id: Option<String>,
+    after_id: Option<u64>,
+    preset_id: Option<String>,
+    direct: bool,
+    post_done: bool,
 }
 
 impl QueueItem {
@@ -104,6 +113,10 @@ impl QueueItem {
             playlist_items: self.playlist_items.clone(),
             output_dir: self.output_dir.clone(),
             scheduled_at: self.not_before,
+            priority: self.priority,
+            speed_limit_mbps: self.speed_limit_mbps,
+            group_id: self.group_id.clone(),
+            after_id: self.after_id,
         }
     }
 }
@@ -230,6 +243,14 @@ impl QueueManager {
                 .clone()
                 .filter(|s| !s.trim().is_empty())
                 .filter(|s| s.chars().all(|c| c.is_ascii_digit() || matches!(c, ',' | '-' | ' '))),
+            priority: options.priority,
+            speed_limit_mbps: options.speed_limit_mbps,
+            expected_sha256: options.expected_sha256.clone().filter(|s| !s.trim().is_empty()),
+            group_id: options.group_id.clone().filter(|s| !s.trim().is_empty()),
+            after_id: options.after_id,
+            preset_id: options.preset_id.clone().filter(|s| !s.trim().is_empty()),
+            direct: options.direct,
+            post_done: false,
         };
         // Coalesce a double click or repeated enqueue of the same link while
         // it is still active or queued. Two jobs writing the same file is a
@@ -279,29 +300,45 @@ impl QueueManager {
     }
 
     pub fn try_start_next(&self, app: &tauri::AppHandle) {
-        let max_concurrent = app
+        let (max_concurrent, quiet) = app
             .try_state::<AppState>()
-            .and_then(|state| state.settings.lock().ok().map(|s| s.max_concurrent))
-            .unwrap_or(2)
-            .max(1);
+            .and_then(|state| {
+                state.settings.lock().ok().map(|s| {
+                    (
+                        s.max_concurrent.max(1),
+                        s.quiet_hours_enabled && in_quiet_hours(s.quiet_start_hour, s.quiet_end_hour),
+                    )
+                })
+            })
+            .unwrap_or((2, false));
+        if quiet {
+            return;
+        }
         let mut to_spawn: Vec<(u64, u64)> = Vec::new();
         {
             let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let running = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
             let free = max_concurrent.saturating_sub(running);
             let now = now_secs();
-            let queued: Vec<(u64, u64)> = inner
+            let finished: std::collections::HashSet<u64> = inner
+                .items
+                .iter()
+                .filter(|i| matches!(i.status, QueueStatus::Done | QueueStatus::Error))
+                .map(|i| i.id)
+                .collect();
+            let mut queued: Vec<(i32, u64, u64)> = inner
                 .items
                 .iter()
                 .filter(|i| i.status == QueueStatus::Queued)
-                // A retrying item must wait for its own backoff deadline,
-                // even if other queue activity calls try_start_next.
                 .filter(|i| i.next_attempt_at.map_or(true, |at| at <= now))
                 .filter(|i| i.not_before.map_or(true, |at| at <= now))
-                .map(|i| (i.id, i.generation))
+                .filter(|i| i.after_id.map_or(true, |id| finished.contains(&id)))
+                .map(|i| (i.priority, i.id, i.generation))
                 .collect();
-            // Keep the user's manual order (drag / move up/down): spawn in Vec order.
-            for (id, generation) in queued.into_iter().take(free as usize) {
+            // Higher priority first, stable within the same priority so the
+            // user's manual order survives.
+            queued.sort_by(|a, b| b.0.cmp(&a.0));
+            for (_, id, generation) in queued.into_iter().take(free as usize) {
                 if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
                     item.status = QueueStatus::Active;
                     item.phase = Some("starting".to_string());
@@ -317,9 +354,6 @@ impl QueueManager {
         sync_prevent_sleep(app);
     }
 
-    /// Wake the scheduler when a scheduled item becomes due. Called by a
-    /// lightweight background tick so scheduled jobs start without any UI
-    /// interaction. Does nothing when nothing is due.
     /// Turn a scheduled item into an ordinary queued item.
     pub fn clear_schedule(&self, app: &tauri::AppHandle, id: u64) {
         let changed = {
@@ -761,7 +795,45 @@ fn title_from_url(url: &str) -> String {
     url.chars().take(80).collect()
 }
 
-fn now_secs() -> i64 {
+/// Fire an opt-in webhook for a queue event. The request is spawned and
+/// never blocks a download. Failures are ignored by design.
+fn notify_webhook(app: &tauri::AppHandle, event: &str, title: &str, url: &str, error: Option<&str>) {
+    let (enabled, endpoint, events) = app
+        .try_state::<AppState>()
+        .and_then(|state| {
+            state.settings.lock().ok().map(|s| {
+                (s.webhook_url.trim().to_string(), s.webhook_events.clone(), s.webhook_url.trim().len() > 0)
+            })
+        })
+        .unwrap_or_default();
+    if !enabled || !events.split(',').any(|e| e.trim() == event) {
+        return;
+    }
+    let payload = serde_json::json!({
+        "event": event,
+        "title": title,
+        "url": url,
+        "error": error,
+        "at": now_secs(),
+    });
+    tauri::async_runtime::spawn(async move {
+        let _ = reqwest::Client::new().post(&endpoint).json(&payload).send().await;
+    });
+}
+
+fn in_quiet_hours(start: u32, end: u32) -> bool {
+    let hour = chrono::Local::now().hour();
+    if start == end {
+        return false;
+    }
+    if start < end {
+        hour >= start && hour < end
+    } else {
+        hour >= start || hour < end
+    }
+}
+
+pub(crate) fn now_secs() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -936,17 +1008,206 @@ fn is_current(app: &tauri::AppHandle, id: u64, generation: u64) -> bool {
 
 fn spawn_job(app: tauri::AppHandle, id: u64, generation: u64) {
     tauri::async_runtime::spawn(async move {
-        run_job(app, id, generation).await;
+        let direct = app
+            .try_state::<AppState>()
+            .and_then(|state| {
+                state
+                    .queue
+                    .inner
+                    .lock()
+                    .ok()
+                    .and_then(|inner| inner.items.iter().find(|i| i.id == id).map(|i| i.direct))
+            })
+            .unwrap_or(false);
+        if direct {
+            run_direct_job(app, id, generation).await;
+        } else {
+            run_job(app, id, generation).await;
+        }
     });
+}
+
+/// Native http(s) downloader for direct file links. Streams to a `.part`
+/// file, resumes an existing partial file with a Range request, and reports
+/// progress through the same queue snapshot as yt-dlp jobs.
+async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
+    let (url, output_dir, limit) = {
+        let Some(state) = app.try_state::<AppState>() else { return };
+        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        let Some(item) = state
+            .queue
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .items
+            .iter()
+            .find(|i| i.id == id)
+            .cloned()
+        else {
+            return;
+        };
+        let dir = item.output_dir.clone().unwrap_or_else(|| settings.output_dir.clone());
+        (item.url, dir, if item.speed_limit_mbps > 0 { item.speed_limit_mbps } else { settings.speed_limit_mbps })
+    };
+    if std::fs::create_dir_all(&output_dir).is_err() {
+        finalize_error(&app, id, "The download folder cannot be created.", false);
+        return;
+    }
+    let name = crate::direct::filename_from_url(&url);
+    let final_path = std::path::PathBuf::from(&output_dir).join(name);
+    let part_path = final_path.with_extension(format!(
+        "{}.part",
+        final_path.extension().and_then(|e| e.to_str()).unwrap_or("")
+    ));
+    let existing = std::fs::metadata(&part_path).ok().map(|m| m.len()).unwrap_or(0);
+    let mut request = reqwest::Client::new().get(&url);
+    if existing > 0 {
+        request = request.header("Range", format!("bytes={existing}-"));
+    }
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(e) => {
+            finalize_maybe_retry(&app, id, &format!("Network error: {e}"));
+            return;
+        }
+    };
+    if !response.status().is_success() && response.status().as_u16() != 206 {
+        finalize_error(
+            &app,
+            id,
+            &format!("Server returned HTTP {}", response.status().as_u16()),
+            false,
+        );
+        return;
+    }
+    let resumed = response.status().as_u16() == 206 && existing > 0;
+    let total = response
+        .content_length()
+        .map(|n| if resumed { n + existing } else { n });
+    let mut file = match std::fs::OpenOptions::new()
+        .create(true)
+        .append(resumed)
+        .truncate(!resumed)
+        .open(&part_path)
+    {
+        Ok(file) => file,
+        Err(e) => {
+            finalize_error(&app, id, &format!("Cannot write file: {e}"), false);
+            return;
+        }
+    };
+    let mut stream = response.bytes_stream();
+    let mut downloaded = if resumed { existing } else { 0u64 };
+    let mut last_emit = std::time::Instant::now();
+    while let Some(chunk) = futures::StreamExt::next(&mut stream).await {
+        if !is_current(&app, id, generation) {
+            return;
+        }
+        let Ok(bytes) = chunk else {
+            finalize_maybe_retry(&app, id, "The connection was interrupted.");
+            return;
+        };
+        if std::io::Write::write_all(&mut file, &bytes).is_err() {
+            finalize_error(&app, id, "Could not write the downloaded file.", false);
+            return;
+        }
+        downloaded = downloaded.saturating_add(bytes.len() as u64);
+        if limit > 0 {
+            let delay = Duration::from_millis((bytes.len() as f64 / (limit as f64 * 1_048_576.0) * 1000.0).ceil() as u64);
+            if delay > Duration::from_millis(1) {
+                tokio::time::sleep(delay).await;
+            }
+        }
+        if last_emit.elapsed() >= Duration::from_millis(250) {
+            last_emit = std::time::Instant::now();
+            if let Some(state) = app.try_state::<AppState>() {
+                let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+                if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                    item.downloaded_bytes = downloaded;
+                    item.total_bytes = total;
+                    item.percent = total
+                        .map(|t| if t > 0 { ((downloaded as f64 / t as f64) * 100.0).min(100.0) } else { 0.0 })
+                        .unwrap_or(0.0);
+                    item.phase = Some("downloading".to_string());
+                }
+            }
+            emit_queue(&app);
+        }
+    }
+    drop(file);
+    if std::fs::rename(&part_path, &final_path).is_err() {
+        finalize_error(&app, id, "Could not finalize the downloaded file.", false);
+        return;
+    }
+    let size = std::fs::metadata(&final_path).ok().map(|m| m.len());
+    let (title, platform, thumbnail, quality) = {
+        let Some(state) = app.try_state::<AppState>() else { return };
+        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+        let Some(item) = inner.items.iter_mut().find(|i| i.id == id) else { return };
+        item.status = QueueStatus::Done;
+        item.percent = 100.0;
+        item.downloaded_bytes = size.unwrap_or(downloaded);
+        item.total_bytes = size.or(total);
+        item.speed_bps = 0;
+        item.eta_seconds = None;
+        item.phase = None;
+        item.pid = None;
+        (
+            item.title.clone(),
+            item.platform.clone(),
+            item.thumbnail_url.clone(),
+            item.quality.clone(),
+        )
+    };
+    if let Some(state) = app.try_state::<AppState>() {
+        let _ = app.asset_protocol_scope().allow_file(&final_path);
+        history::push(
+            &state.data_dir,
+            crate::models::HistoryEntry {
+                id: uuid::Uuid::new_v4().to_string(),
+                url: url.clone(),
+                platform,
+                title: title.clone(),
+                file_path: Some(final_path.to_string_lossy().into_owned()),
+                file_size_bytes: size,
+                success: true,
+                error: None,
+                completed_at: now_secs(),
+                thumbnail_url: thumbnail,
+                quality: Some(quality),
+                download_mode: Some("auto".to_string()),
+                tags: Vec::new(),
+                rating: 0,
+                note: String::new(),
+                favorite: false,
+                watch_later: false,
+            },
+        );
+        let _ = recovery::remove(&state.data_dir, id);
+        crate::features::audit(&state.data_dir, "direct_download", &url);
+    }
+    emit_queue(&app);
+    notify_webhook(&app, "done", &title, &url, None);
+    state_queue_start(&app);
+}
+
+fn state_queue_start(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        state.queue.try_start_next(app);
+    }
 }
 
 async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
     let (output_dir, args, ytdlp_path) = {
         let Some(state) = app.try_state::<AppState>() else { return };
-        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner()).clone();
         let Some(item) = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner()).items.iter().find(|i| i.id == id).cloned() else {
             return;
         };
+        // A per-item cap overrides the global one without mutating settings.
+        if item.speed_limit_mbps > 0 {
+            settings.speed_limit_mbps = item.speed_limit_mbps;
+        }
         // Rules redirect the folder only when the user did not pick one for this item.
         let output_dir = item
             .output_dir
@@ -1123,7 +1384,7 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
 
     match exit {
         Ok(status) if status.success() => {
-            let (title, url, file_paths, fallback_path, file_size, platform, thumbnail_url, quality, mode) = {
+            let (title, url, file_paths, fallback_path, file_size, platform, thumbnail_url, quality, mode, expected_sha256) = {
                 let Some(state) = app.try_state::<AppState>() else { return };
                 let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                 let Some(item) = inner.items.iter_mut().find(|i| i.id == id) else { return };
@@ -1152,8 +1413,30 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                     item.thumbnail_url.clone(),
                     item.quality.clone(),
                     item.download_mode.as_str().to_string(),
+                    item.expected_sha256.clone(),
                 )
             };
+            if let Some(expected) = expected_sha256.as_ref() {
+                let target = file_paths.first().or(fallback_path.as_ref());
+                let actual = target
+                    .and_then(|path| std::fs::read(path).ok())
+                    .map(|bytes| hex::encode(sha2::Sha256::digest(&bytes)));
+                let matched = actual
+                    .as_deref()
+                    .map(|digest| digest.eq_ignore_ascii_case(expected.trim()))
+                    .unwrap_or(false);
+                if !matched {
+                    let message = format!(
+                        "Checksum mismatch. Expected {}, got {}.",
+                        expected,
+                        actual.unwrap_or_else(|| "no readable file".to_string())
+                    );
+                    finalize_error(&app, id, &message, false);
+                    finalize_maybe_retry(&app, id, &message);
+                    emit_queue(&app);
+                    return;
+                }
+            }
             if let Some(state) = app.try_state::<AppState>() {
                 // A playlist can produce several files. Record all of them so
                 // "remove and delete file" cleans up the whole download.
@@ -1180,14 +1463,19 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                             thumbnail_url: thumbnail_url.clone(),
                             quality: Some(quality.clone()),
                             download_mode: Some(mode.clone()),
+                            tags: Vec::new(),
+                            rating: 0,
+                            note: String::new(),
+                            favorite: false,
+                            watch_later: false,
                         },
                     );
                 }
-                for path in paths {
-                    if std::path::Path::new(&path).is_file() {
-                        let _ = app.asset_protocol_scope().allow_file(&path);
+                for path in &paths {
+                    if std::path::Path::new(path).is_file() {
+                        let _ = app.asset_protocol_scope().allow_file(path);
                     }
-                    let size = std::fs::metadata(&path).ok().map(|m| m.len());
+                    let size = std::fs::metadata(path).ok().map(|m| m.len());
                     history::push(
                         &state.data_dir,
                         crate::models::HistoryEntry {
@@ -1195,7 +1483,7 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                             url: url.clone(),
                             platform: platform.clone(),
                             title: title.clone(),
-                            file_path: Some(path),
+                            file_path: Some(path.clone()),
                             file_size_bytes: size.or(file_size),
                             success: true,
                             error: None,
@@ -1203,12 +1491,46 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                             thumbnail_url: thumbnail_url.clone(),
                             quality: Some(quality.clone()),
                             download_mode: Some(mode.clone()),
+                            tags: Vec::new(),
+                            rating: 0,
+                            note: String::new(),
+                            favorite: false,
+                            watch_later: false,
                         },
                     );
+                }
+                // Optional post-download move or copy. The history row still
+                // points at the original path so removal stays predictable.
+                let (post_action, post_dir) = state
+                    .settings
+                    .lock()
+                    .map(|s| (s.post_action.clone(), s.post_action_dir.clone()))
+                    .unwrap_or_default();
+                if matches!(post_action.as_str(), "move" | "copy") && !post_dir.trim().is_empty() {
+                    let base = std::path::PathBuf::from(post_dir.trim());
+                    if std::fs::create_dir_all(&base).is_ok() {
+                        for path in &paths {
+                            let source = std::path::PathBuf::from(path);
+                            let Some(name) = source.file_name() else { continue };
+                            let target = base.join(name);
+                            if target == source {
+                                continue;
+                            }
+                            let result = if post_action == "move" {
+                                std::fs::rename(&source, &target)
+                            } else {
+                                std::fs::copy(&source, &target).map(|_| ())
+                            };
+                            if result.is_ok() {
+                                let _ = app.asset_protocol_scope().allow_file(&target);
+                            }
+                        }
+                    }
                 }
                 let _ = recovery::remove(&state.data_dir, id);
             }
             emit_queue(&app);
+            notify_webhook(&app, "done", &title, &url, None);
             if let Some(state) = app.try_state::<AppState>() {
                 state.queue.try_start_next(&app);
             }
@@ -1233,10 +1555,14 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
 }
 
 fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
-    let max_retries = app
+    let (max_retries, base_delay, multiplier) = app
         .try_state::<AppState>()
-        .and_then(|state| state.settings.lock().ok().map(|s| s.max_retries))
-        .unwrap_or(3);
+        .and_then(|state| {
+            state.settings.lock().ok().map(|s| {
+                (s.max_retries, s.retry_delay_secs.max(1), s.retry_multiplier.max(1.0))
+            })
+        })
+        .unwrap_or((3, 2, 2.0));
 
     let (category, retryable) = ytdlp::classify_error(message);
     let retry_count = {
@@ -1252,7 +1578,10 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
         && retry_count < max_retries;
 
     if can_retry {
-        let delay_secs = 2u64.pow(retry_count.saturating_add(1).min(6)).min(30);
+        let delay_secs = ((base_delay as f64) * multiplier.powi(retry_count.min(6) as i32))
+            .round()
+            .max(1.0)
+            .min(600.0) as u64;
         if let Some(state) = app.try_state::<AppState>() {
             let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
@@ -1304,6 +1633,7 @@ fn finalize_error(app: &tauri::AppHandle, id: u64, message: &str, retryable: boo
             item.download_mode.as_str().to_string(),
         )
     };
+    notify_webhook(app, "error", &title, &url, Some(message));
     if let Some(state) = app.try_state::<AppState>() {
         history::push(
             &state.data_dir,
@@ -1320,6 +1650,11 @@ fn finalize_error(app: &tauri::AppHandle, id: u64, message: &str, retryable: boo
                 thumbnail_url: None,
                 quality: Some(quality),
                 download_mode: Some(mode),
+                tags: Vec::new(),
+                rating: 0,
+                note: String::new(),
+                favorite: false,
+                watch_later: false,
             },
         );
         let _ = recovery::remove(&state.data_dir, id);

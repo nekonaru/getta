@@ -130,6 +130,13 @@ pub async fn restore_recovery(app: AppHandle, state: State<'_, AppState>) -> Res
             playlist_items: entry.playlist_items.clone(),
             output_dir: entry.output_dir.clone(),
             start_at: entry.start_at,
+            priority: 0,
+            speed_limit_mbps: 0,
+            expected_sha256: None,
+            group_id: None,
+            after_id: None,
+            preset_id: None,
+            direct: false,
         };
         if state
             .queue
@@ -202,6 +209,13 @@ pub async fn import_links_file(
             playlist_items: None,
             output_dir: None,
             start_at: None,
+            priority: 0,
+            speed_limit_mbps: 0,
+            expected_sha256: None,
+            group_id: None,
+            after_id: None,
+            preset_id: None,
+            direct: false,
         };
         if state
             .queue
@@ -465,6 +479,86 @@ pub async fn history_clear(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub async fn history_remove(state: State<'_, AppState>, id: String) -> Result<bool, String> {
     history::remove(&state.data_dir, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn history_patch(
+    state: State<'_, AppState>,
+    id: String,
+    tags: Option<Vec<String>>,
+    rating: Option<u8>,
+    note: Option<String>,
+    favorite: Option<bool>,
+    watch_later: Option<bool>,
+) -> Result<bool, String> {
+    let ok = crate::features::patch_history(
+        &state.data_dir, &id, tags, rating, note, favorite, watch_later,
+    )?;
+    if ok {
+        crate::features::audit(&state.data_dir, "history_patch", &id);
+    }
+    Ok(ok)
+}
+
+#[tauri::command]
+pub async fn batch_rename(
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+    template: String,
+) -> Result<usize, String> {
+    let count = crate::features::batch_rename(&state.data_dir, &ids, &template)?;
+    crate::features::audit(&state.data_dir, "batch_rename", &count.to_string());
+    Ok(count)
+}
+
+#[tauri::command]
+pub async fn get_health(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    needed_bytes: u64,
+) -> Result<crate::features::HealthReport, String> {
+    let output = state
+        .settings
+        .lock()
+        .map(|s| std::path::PathBuf::from(&s.output_dir))
+        .unwrap_or_else(|_| crate::storage::data_dir());
+    let _ = &app;
+    Ok(crate::features::health(&state.data_dir, &output, needed_bytes))
+}
+
+#[tauri::command]
+pub async fn read_audit(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    Ok(crate::features::read_audit(&state.data_dir))
+}
+
+#[tauri::command]
+pub async fn export_library_html(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    crate::features::export_library_html(&state.data_dir, std::path::Path::new(&path))
+}
+
+#[tauri::command]
+pub async fn create_backup(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    let result = crate::features::create_backup(&state.data_dir, std::path::Path::new(&path));
+    if result.is_ok() {
+        crate::features::audit(&state.data_dir, "backup", &path);
+    }
+    result
+}
+
+#[tauri::command]
+pub async fn restore_backup(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<usize, String> {
+    let count = crate::features::restore_backup(&state.data_dir, std::path::Path::new(&path))?;
+    crate::features::audit(&state.data_dir, "restore", &count.to_string());
+    Ok(count)
 }
 
 #[tauri::command]

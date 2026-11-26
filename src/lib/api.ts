@@ -54,6 +54,10 @@ export interface QueueItemInfo {
 	download_mode: DownloadMode | null;
 	format_id: string | null;
 	scheduled_at?: number | null;
+	priority?: number;
+	speed_limit_mbps?: number;
+	group_id?: string | null;
+	after_id?: number | null;
 }
 
 export interface HistoryEntry {
@@ -69,6 +73,11 @@ export interface HistoryEntry {
 	thumbnail_url: string | null;
 	quality: string | null;
 	download_mode: DownloadMode | null;
+	tags?: string[];
+	rating?: number;
+	note?: string;
+	favorite?: boolean;
+	watch_later?: boolean;
 }
 
 export interface FollowChannel {
@@ -143,6 +152,43 @@ export interface AppSettings {
 	download_rules: DownloadRule[];
 	cookie_buckets: CookieBucket[];
 	cookie_trash: CookieBucket[];
+	presets: DownloadPreset[];
+	smart_folders: SmartFolder[];
+	retry_delay_secs: number;
+	retry_multiplier: number;
+	quiet_hours_enabled: boolean;
+	quiet_start_hour: number;
+	quiet_end_hour: number;
+	post_action: string;
+	post_action_dir: string;
+	webhook_url: string;
+	webhook_events: string;
+	api_enabled: boolean;
+	api_token: string;
+	watch_folder: string;
+	clipboard_monitor: boolean;
+	resolve_shortlinks: boolean;
+	accent: string;
+	compact_mode: boolean;
+	shortcuts: Record<string, string>;
+}
+
+export interface DownloadPreset {
+	id: string;
+	name: string;
+	quality: string;
+	mode: string;
+	dir: string;
+	template: string;
+	priority: number;
+	speed_limit_mbps: number;
+}
+
+export interface SmartFolder {
+	id: string;
+	name: string;
+	query: string;
+	kind: string;
 }
 
 export interface CookieReport {
@@ -165,6 +211,17 @@ export interface Diagnostics {
 	close_to_tray: boolean;
 	proxy_configured: boolean;
 	cookies_configured: boolean;
+}
+
+export interface HealthReport {
+	data_dir: string;
+	output_dir: string;
+	disk_free_bytes: number;
+	disk_total_bytes: number;
+	enough_space: boolean;
+	output_writable: boolean;
+	history_count: number;
+	audit_count: number;
 }
 
 export interface ChapterMarker {
@@ -194,6 +251,13 @@ export interface StartOptions {
 	playlist_items: string | null;
 	output_dir: string | null;
 	start_at?: number | null;
+	priority?: number;
+	speed_limit_mbps?: number;
+	expected_sha256?: string | null;
+	group_id?: string | null;
+	after_id?: number | null;
+	preset_id?: string | null;
+	direct?: boolean;
 }
 
 export type ToolName =
@@ -312,7 +376,18 @@ export const api = {
 		call(() => invoke<void>("engine_install", { name })),
 	revealInFolder: (path: string) => call(() => invoke<void>("reveal_in_folder", { path })),
 	openWithDefault: (path: string) => call(() => invoke<void>("open_with_default", { path })),
-	defaultOutputDir: () => call(() => invoke<string>("default_output_dir"))
+	defaultOutputDir: () => call(() => invoke<string>("default_output_dir")),
+	historyPatch: (id: string, patch: { tags?: string[]; rating?: number; note?: string; favorite?: boolean; watch_later?: boolean }) =>
+		call(() => invoke<boolean>("history_patch", { id, ...patch })),
+	batchRename: (ids: string[], template: string) =>
+		call(() => invoke<number>("batch_rename", { ids, template })),
+	getHealth: (neededBytes: number) =>
+		call(() => invoke<HealthReport>("get_health", { neededBytes })),
+	readAudit: () => call(() => invoke<string[]>("read_audit")),
+	exportLibraryHtml: (path: string) =>
+		call(() => invoke<void>("export_library_html", { path })),
+	createBackup: (path: string) => call(() => invoke<void>("create_backup", { path })),
+	restoreBackup: (path: string) => call(() => invoke<number>("restore_backup", { path }))
 };
 
 export function onQueueChanged(callback: (items: QueueItemInfo[]) => void): Promise<UnlistenFn> {

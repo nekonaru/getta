@@ -35,6 +35,14 @@ fn default_language() -> String {
     "en".to_string()
 }
 
+fn default_retry_multiplier() -> f64 {
+    2.0
+}
+
+fn default_compact() -> bool {
+    false
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CookieBucket {
@@ -68,6 +76,10 @@ pub struct DownloadRule {
     pub quality: String,
     #[serde(default)]
     pub mode: String,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub preset_id: String,
 }
 
 impl Default for DownloadRule {
@@ -78,6 +90,58 @@ impl Default for DownloadRule {
             dir: String::new(),
             quality: String::new(),
             mode: String::new(),
+            priority: 0,
+            preset_id: String::new(),
+        }
+    }
+}
+
+/// A reusable download configuration the user can apply from Home.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DownloadPreset {
+    pub id: String,
+    pub name: String,
+    pub quality: String,
+    pub mode: String,
+    pub dir: String,
+    pub template: String,
+    pub priority: i32,
+    pub speed_limit_mbps: u32,
+}
+
+impl Default for DownloadPreset {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: String::new(),
+            quality: "best".to_string(),
+            mode: "auto".to_string(),
+            dir: String::new(),
+            template: String::new(),
+            priority: 0,
+            speed_limit_mbps: 0,
+        }
+    }
+}
+
+/// A saved search that appears as a smart folder in the Library sidebar.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SmartFolder {
+    pub id: String,
+    pub name: String,
+    pub query: String,
+    pub kind: String,
+}
+
+impl Default for SmartFolder {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: String::new(),
+            query: String::new(),
+            kind: "all".to_string(),
         }
     }
 }
@@ -143,6 +207,44 @@ pub struct AppSettings {
     pub download_rules: Vec<DownloadRule>,
     pub cookie_buckets: Vec<CookieBucket>,
     pub cookie_trash: Vec<CookieBucket>,
+    #[serde(default)]
+    pub presets: Vec<DownloadPreset>,
+    #[serde(default)]
+    pub smart_folders: Vec<SmartFolder>,
+    #[serde(default)]
+    pub retry_delay_secs: u64,
+    #[serde(default = "default_retry_multiplier")]
+    pub retry_multiplier: f64,
+    #[serde(default)]
+    pub quiet_hours_enabled: bool,
+    #[serde(default)]
+    pub quiet_start_hour: u32,
+    #[serde(default)]
+    pub quiet_end_hour: u32,
+    #[serde(default)]
+    pub post_action: String,
+    #[serde(default)]
+    pub post_action_dir: String,
+    #[serde(default)]
+    pub webhook_url: String,
+    #[serde(default)]
+    pub webhook_events: String,
+    #[serde(default)]
+    pub api_enabled: bool,
+    #[serde(default)]
+    pub api_token: String,
+    #[serde(default)]
+    pub watch_folder: String,
+    #[serde(default)]
+    pub clipboard_monitor: bool,
+    #[serde(default)]
+    pub resolve_shortlinks: bool,
+    #[serde(default)]
+    pub accent: String,
+    #[serde(default = "default_compact")]
+    pub compact_mode: bool,
+    #[serde(default)]
+    pub shortcuts: std::collections::HashMap<String, String>,
 }
 
 impl Default for AppSettings {
@@ -182,6 +284,25 @@ impl Default for AppSettings {
             download_rules: Vec::new(),
             cookie_buckets: Vec::new(),
             cookie_trash: Vec::new(),
+            presets: Vec::new(),
+            smart_folders: Vec::new(),
+            retry_delay_secs: 2,
+            retry_multiplier: 2.0,
+            quiet_hours_enabled: false,
+            quiet_start_hour: 23,
+            quiet_end_hour: 7,
+            post_action: "none".to_string(),
+            post_action_dir: String::new(),
+            webhook_url: String::new(),
+            webhook_events: "done,error".to_string(),
+            api_enabled: false,
+            api_token: String::new(),
+            watch_folder: String::new(),
+            clipboard_monitor: false,
+            resolve_shortlinks: true,
+            accent: "#00C896".to_string(),
+            compact_mode: false,
+            shortcuts: std::collections::HashMap::new(),
         }
     }
 }

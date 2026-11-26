@@ -5,6 +5,8 @@
 
 mod commands;
 mod cookies;
+mod direct;
+mod features;
 mod follows;
 mod history;
 mod maintenance;
@@ -206,6 +208,13 @@ pub fn run() {
             commands::cancel_download,
             commands::retry_download,
             commands::clear_schedule,
+            commands::history_patch,
+            commands::batch_rename,
+            commands::get_health,
+            commands::read_audit,
+            commands::export_library_html,
+            commands::create_backup,
+            commands::restore_backup,
             commands::remove_download,
             commands::clear_finished,
             commands::pause_all,

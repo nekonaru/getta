@@ -12,6 +12,11 @@ fn history_path(data_dir: &Path) -> PathBuf {
     data_dir.join("history.json")
 }
 
+/// Guard for callers that replace the whole history file.
+pub fn lock() -> std::sync::MutexGuard<'static, ()> {
+    STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 pub fn list(data_dir: &Path) -> Vec<HistoryEntry> {
     storage::read_json_or_default(&history_path(data_dir))
 }

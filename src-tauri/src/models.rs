@@ -120,6 +120,14 @@ pub struct QueueItemInfo {
     pub output_dir: Option<String>,
     #[serde(default)]
     pub scheduled_at: Option<i64>,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub speed_limit_mbps: u32,
+    #[serde(default)]
+    pub group_id: Option<String>,
+    #[serde(default)]
+    pub after_id: Option<u64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -181,6 +189,16 @@ pub struct HistoryEntry {
     pub thumbnail_url: Option<String>,
     pub quality: Option<String>,
     pub download_mode: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub rating: u8,
+    #[serde(default)]
+    pub note: String,
+    #[serde(default)]
+    pub favorite: bool,
+    #[serde(default)]
+    pub watch_later: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -212,6 +230,20 @@ pub struct StartOptions {
     /// Unix seconds. When in the future the item waits in the queue.
     #[serde(default)]
     pub start_at: Option<i64>,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub speed_limit_mbps: u32,
+    #[serde(default)]
+    pub expected_sha256: Option<String>,
+    #[serde(default)]
+    pub group_id: Option<String>,
+    #[serde(default)]
+    pub after_id: Option<u64>,
+    #[serde(default)]
+    pub preset_id: Option<String>,
+    #[serde(default)]
+    pub direct: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]

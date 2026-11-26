@@ -250,6 +250,13 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
             playlist_items: None,
             output_dir: None,
             start_at: None,
+            priority: 0,
+            speed_limit_mbps: 0,
+            expected_sha256: None,
+            group_id: None,
+            after_id: None,
+            preset_id: None,
+            direct: false,
         };
         let started = app
             .try_state::<AppState>()
