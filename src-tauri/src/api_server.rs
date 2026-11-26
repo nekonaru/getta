@@ -58,7 +58,7 @@ async fn handle(app: &tauri::AppHandle, stream: &mut tokio::net::TcpStream, toke
             .ok()
             .and_then(|value| value.get("url").and_then(|u| u.as_str()).map(str::to_string));
         let Some(url) = url else {
-            (400, "{\"error\":\"missing url\"}".to_string())
+            return respond(stream, 400, "{\"error\":\"missing url\"}").await;
         };
         let options = StartOptions {
             url: url.clone(),
@@ -94,7 +94,16 @@ async fn handle(app: &tauri::AppHandle, stream: &mut tokio::net::TcpStream, toke
     } else {
         (404, "{\"error\":\"not found\"}".to_string())
     };
-    let reason = if status == 200 { "OK" } else { "Unauthorized" };
+    respond(stream, status, &body).await;
+}
+
+async fn respond(stream: &mut tokio::net::TcpStream, status: u16, body: &str) {
+    use tokio::io::AsyncWriteExt;
+    let reason = if status == 200 {
+        "OK"
+    } else {
+        "Unauthorized"
+    };
     let response = format!(
         "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
         body.len()
