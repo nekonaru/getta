@@ -3,6 +3,16 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.0.0
+
+Titik stabil: API lokal, perintah CLI, dan integrasi akhir.
+
+## Fitur baru
+
+- **API lokal.** Server opsional hanya loopback pada port 17842 dengan token yang dihasilkan otomatis. Menerima `POST /add` dengan `{"url":"..."}` dan `GET /status`, serta tidak pernah membuka antarmuka publik.
+- **Perintah CLI.** `getta <url>` atau `getta add <url>` mengantrekan link ke aplikasi yang berjalan. `getta pause` dan `getta resume` mengendalikan semua unduhan.
+- **Jembatan pintasan keyboard.** Perintah CLI pause dan resume dikirim ke antarmuka lewat event, sehingga jendela yang berjalan tetap menjadi sumber kebenaran.
+
 ## v0.20.0
 
 Otomasi lanjutan: feed RSS, interval follow per kanal, monitor clipboard, profil pengaturan, dan filter antrean yang lebih pintar.

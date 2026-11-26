@@ -695,6 +695,19 @@
 					</section>
 
 					<section class="card group">
+						<h2 class="section-title">{t("settings.localApi")}</h2>
+						<div class="row">
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.api_enabled} aria-label={t("settings.localApi")} onclick={() => patch({ api_enabled: !settings.api_enabled })}></button>
+							<span>{t("settings.localApi")}</span>
+						</div>
+						<p class="muted">{t("settings.apiHint")}</p>
+						{#if settings.api_token}
+							<p class="mono api-token">{settings.api_token}</p>
+						{:else}
+							<button class="btn btn-sm" onclick={() => patch({ api_token: crypto.randomUUID() })}>{t("settings.generateToken")}</button>
+						{/if}
+					</section>
+					<section class="card group">
 						<h2 class="section-title">{t("settings.rssFeeds")}</h2>
 						<div class="row">
 							<button class="btn btn-sm" onclick={addRssFeed} disabled={patching}>{t("settings.addRss")}</button>

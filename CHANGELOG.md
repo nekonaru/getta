@@ -3,6 +3,16 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.0.0
+
+Stable milestone: local API, CLI verbs and final integrations.
+
+## New features
+
+- **Local API.** An optional loopback-only server on port 17842 with a generated token. It accepts `POST /add` with `{"url":"..."}` and `GET /status`, and never binds to a public interface.
+- **CLI verbs.** `getta <url>` or `getta add <url>` queues a link in the running app. `getta pause` and `getta resume` control all downloads.
+- **Keyboard shortcut bridge.** CLI pause and resume are delivered to the UI through events, so the running window stays authoritative.
+
 ## v0.20.0
 
 More automation: RSS feeds, per-channel follow intervals, clipboard monitoring, settings profiles and smarter queue filters.

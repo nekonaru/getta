@@ -3,6 +3,7 @@
 //! Getta is an original implementation. Nothing in this crate is derived
 //! from any other downloader project.
 
+mod api_server;
 mod automation;
 mod commands;
 mod cookies;
@@ -100,6 +101,14 @@ pub fn run() {
             for url in urls {
                 let _ = app.emit("deep-link-request", url);
             }
+            // Simple CLI verbs from a second instance. `getta <url>` and
+            // `getta add <url>` are handled by the URL forwarding above.
+            if argv.iter().any(|arg| arg.eq_ignore_ascii_case("pause")) {
+                let _ = app.emit("cli-pause", ());
+            }
+            if argv.iter().any(|arg| arg.eq_ignore_ascii_case("resume")) {
+                let _ = app.emit("cli-resume", ());
+            }
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -161,6 +170,26 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 crate::follows::poll_auto(poll_app).await;
             });
+
+            // Optional loopback API. The token is generated once and shown
+            // in Settings. Nothing is exposed outside 127.0.0.1.
+            let api_app = app.handle().clone();
+            let (api_enabled, api_token) = app
+                .try_state::<AppState>()
+                .and_then(|state| {
+                    state.settings.lock().ok().map(|s| (s.api_enabled, s.api_token.clone()))
+                })
+                .unwrap_or((false, String::new()));
+            if api_enabled {
+                let token = if api_token.trim().is_empty() {
+                    uuid::Uuid::new_v4().to_string()
+                } else {
+                    api_token
+                };
+                tauri::async_runtime::spawn(async move {
+                    crate::api_server::serve(api_app, 17842, token).await;
+                });
+            }
 
             // Poll RSS feeds and the clipboard for new links.
             let rss_app = app.handle().clone();

@@ -101,6 +101,7 @@ Getta is an original implementation under the MIT license.
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |
 | **Tray download** | Right-click the tray icon to download from the clipboard without opening the window |
 | **Deep links** | `getta://<url>` opens Getta and queues the link |
+| **CLI and local API** | Queue links from a second instance or an authenticated loopback server |
 | **Onboarding** | First-run wizard: language, theme, engine install, download folder |
 
 ### Made to be used

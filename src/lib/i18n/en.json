@@ -456,7 +456,10 @@
 		"saveProfile": "Save profile",
 		"loadProfile": "Load",
 		"profileSaved": "Profile saved",
-		"profileLoaded": "Loaded {name}"
+		"profileLoaded": "Loaded {name}",
+		"localApi": "Local API",
+		"apiHint": "Loopback only, port 17842. Requires the token as Authorization header.",
+		"generateToken": "Generate token"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",

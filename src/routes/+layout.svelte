@@ -120,6 +120,12 @@
 		const unlistenEngineBroken = listen("engine-broken", () => {
 			toastStore.push(t("layout.engineBroken"), "error");
 		});
+		const unlistenCliPause = listen("cli-pause", () => {
+			void api.pauseAll().then(() => downloadsStore.start());
+		});
+		const unlistenCliResume = listen("cli-resume", () => {
+			void api.resumeAll().then(() => downloadsStore.start());
+		});
 
 		// getta://<url> links land here from the OS.
 		void getCurrent().then((urls) => {
@@ -133,6 +139,8 @@
 			void unlistenGlobalShortcut.then((fn) => fn?.()).catch(() => {});
 			void unlistenDeepLinkRequest.then((fn) => fn?.()).catch(() => {});
 			void unlistenEngineBroken.then((fn) => fn?.()).catch(() => {});
+			void unlistenCliPause.then((fn) => fn?.()).catch(() => {});
+			void unlistenCliResume.then((fn) => fn?.()).catch(() => {});
 			void unlisten.then((fn) => fn?.()).catch(() => {});
 		};
 	});

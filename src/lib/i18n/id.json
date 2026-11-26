@@ -456,7 +456,10 @@
 		"saveProfile": "Simpan profil",
 		"loadProfile": "Muat",
 		"profileSaved": "Profil disimpan",
-		"profileLoaded": "{name} dimuat"
+		"profileLoaded": "{name} dimuat",
+		"localApi": "API lokal",
+		"apiHint": "Hanya loopback, port 17842. Memerlukan token sebagai header Authorization.",
+		"generateToken": "Buat token"
 	},
 	"about": {
 		"tagline": "Setiap tautan, terkirim.",
