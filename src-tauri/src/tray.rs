@@ -95,7 +95,7 @@ pub fn rebuild(app: &AppHandle, language: &str) {
     let Ok(menu) = MenuBuilder::new(app).item(&show).item(&clipboard).item(&quit).build() else {
         return;
     };
-    let _ = tray.set_menu(&menu);
+    let _ = tray.set_menu(Some(menu));
 }
 
 fn show_window(app: &AppHandle) {

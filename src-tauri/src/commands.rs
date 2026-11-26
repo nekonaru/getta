@@ -493,7 +493,7 @@ pub async fn settings_update(
     drop(settings);
     // Keep the OS autostart entry in step with the persisted setting.
     if patch.get("autostart").is_some() {
-        use tauri_plugin_autostart::AutoLaunchManager;
+        use tauri_plugin_autostart::ManagerExt;
         if merged.autostart {
             let _ = app.autolaunch().enable();
         } else {
@@ -514,7 +514,7 @@ pub async fn settings_reset(app: AppHandle, state: State<'_, AppState>) -> Resul
         let mut settings = state.settings.lock().map_err(|_| "settings locked".to_string())?;
         *settings = fresh.clone();
     }
-    use tauri_plugin_autostart::AutoLaunchManager;
+    use tauri_plugin_autostart::ManagerExt;
     if fresh.autostart {
         let _ = app.autolaunch().enable();
     } else {
