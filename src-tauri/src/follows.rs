@@ -221,6 +221,7 @@ pub async fn follow_add(app: &AppHandle, url: &str) -> Result<FollowChannel, Str
         last_checked_at: Some(now_secs()),
         auto_download: false,
         seen_ids: entries.into_iter().map(|e| e.id).collect(),
+        check_interval_secs: None,
     };
     add(&data_dir, follow.clone()).map_err(|e| e.to_string())?;
     Ok(follow)
