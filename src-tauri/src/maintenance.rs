@@ -1,7 +1,7 @@
 //! Diagnostics and queue import/export, added in v0.14.0.
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 use std::path::Path;
 
 use crate::{history, storage, AppState, recovery, follows};

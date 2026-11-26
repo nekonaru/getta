@@ -83,7 +83,7 @@ impl Default for DownloadRule {
 }
 
 /// First matching rule wins. An empty field means no override.
-pub fn resolve_profile(settings: &AppSettings, url: &str) -> Option<&DownloadRule> {
+pub fn resolve_profile<'a>(settings: &'a AppSettings, url: &str) -> Option<&'a DownloadRule> {
     let lower = url.to_ascii_lowercase();
     settings.download_rules.iter().find(|rule| {
         let pattern = rule.pattern.trim().to_ascii_lowercase();
