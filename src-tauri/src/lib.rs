@@ -3,6 +3,7 @@
 //! Getta is an original implementation. Nothing in this crate is derived
 //! from any other downloader project.
 
+mod automation;
 mod commands;
 mod cookies;
 mod direct;
@@ -159,6 +160,12 @@ pub fn run() {
             let poll_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 crate::follows::poll_auto(poll_app).await;
+            });
+
+            // Watch a folder for text files containing links.
+            let watch_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                crate::automation::poll_watch_folder(watch_app).await;
             });
 
             // Release scheduled downloads even when the UI is idle.

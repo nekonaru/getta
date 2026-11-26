@@ -414,6 +414,8 @@
 													{#if item.status === "active" && item.eta_seconds != null}<span>· {t("queue.eta", { time: formatEta(item.eta_seconds) })}</span>{/if}
 									{#if (item.status === "active" || item.status === "queued") && item.phase && item.phase !== "downloading"}<span class="phase-chip mono">{item.phase}</span>{/if}
 									{#if item.status === "queued" && item.scheduled_at}<span class="phase-chip mono">{t("queue.scheduledFor", { time: formatSchedule(item.scheduled_at) })}</span>{/if}
+									{#if (item.priority ?? 0) > 0}<span class="phase-chip mono">{t("queue.priority")}: {item.priority}</span>{/if}
+									{#if item.group_id}<span class="phase-chip mono">{item.group_id}</span>{/if}
 												</div>
 												{#if item.error_message}
 													<div class="error-box">{item.error_message}</div>

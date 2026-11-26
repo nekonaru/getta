@@ -50,6 +50,12 @@ function applyAppearance(settings: AppSettings): void {
 	}
 	document.documentElement.dataset.theme = settings.theme;
 	document.documentElement.dataset.reduceMotion = settings.reduce_motion ? "true" : "false";
+	document.documentElement.dataset.compact = settings.compact_mode ? "true" : "false";
+	try {
+		document.documentElement.style.setProperty("--accent", settings.accent || "#00C896");
+	} catch {
+		/* theme variable is cosmetic */
+	}
 	setLocale(settings.language);
 }
 

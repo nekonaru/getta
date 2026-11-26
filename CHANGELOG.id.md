@@ -3,6 +3,32 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.19.0
+
+Update besar: unduhan langsung native, otomasi antrean, metadata pustaka yang kaya, dan alat data lokal.
+
+## Fitur baru
+
+- **Unduhan langsung native.** Link file http(s) kini mengalir lewat Getta sendiri, dengan resume `.part`, batas kecepatan per item, dan progres nyata. yt-dlp tidak diperlukan untuk file biasa.
+- **Prioritas dan jam hening.** Beri item prioritas Rendah sampai Segera. Penjadwal memulai prioritas lebih tinggi dulu dan bisa menahan unduhan baru pada jam hening yang diatur.
+- **Preset unduhan.** Simpan kualitas, mode, folder, template, prioritas, dan kecepatan sebagai preset, lalu pakai dari Beranda dalam satu klik.
+- **Kebijakan retry yang bisa diatur.** Atur jeda awal dan pengali, bukan backoff eksponensial tetap.
+- **Verifikasi checksum.** Masukkan SHA-256 yang diharapkan dan Getta memeriksa file selesai sebelum menandainya berhasil.
+- **Notifikasi webhook.** Kirim peristiwa JSON ke endpoint lokal atau self-hosted saat unduhan selesai atau gagal.
+- **Aksi setelah unduhan.** Otomatis memindahkan atau menyalin file selesai ke folder kedua.
+- **Metadata pustaka.** Tambahkan tag, peringkat 1 sampai 5, catatan, favorit, dan penanda tonton nanti pada item selesai.
+- **Ganti nama massal.** Ubah nama file terpilih dengan template yang memakai judul, situs, id, dan nama lama, aman dari benturan.
+- **Analitik penyimpanan.** Lihat total byte terunduh dan rincian per situs di Pustaka.
+- **Folder pintar.** Simpan pencarian pustaka sebagai definisi folder bernama di Pengaturan.
+- **Cadangkan dan pulihkan.** Buat satu ZIP berisi pengaturan, riwayat, follow, dan pemulihan, lalu pulihkan kemudian.
+- **Log audit.** Catatan lokal appended untuk enqueue, ganti nama, cadangan, dan aktivitas watch folder.
+- **Pemeriksaan kesehatan.** Cek ruang disk dan apakah folder keluaran bisa ditulis dari Tentang.
+- **Ekspor pustaka offline.** Ekspor entri selesai ke galeri HTML mandiri.
+- **Warna aksen dan mode ringkas.** Pilih aksen kustom dan aktifkan tata letak lebih padat.
+- **Watch folder.** Letakkan file `.txt` berisi link ke sebuah folder dan Getta mengantrekannya otomatis.
+- **Pemendek tautan.** Shortener yang dikenal dibuka dulu sebelum analisis dan enqueue.
+- **Aturan bersyarat.** Aturan unduhan kini juga bisa menetapkan prioritas atau memakai preset.
+
 ## v0.18.0
 
 Unduhan terjadwal, impor link dari file, dan audit native putaran ketiga.

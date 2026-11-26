@@ -2,7 +2,7 @@
 	import LogoMark from "#lib/components/LogoMark.svelte";
 	import { t } from "#lib/i18n.svelte";
 	import { openExternal } from "#lib/external";
-	import { api, type Diagnostics } from "#lib/api";
+	import { api, type Diagnostics, type HealthReport } from "#lib/api";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { onMount } from "svelte";
 	import { check } from "@tauri-apps/plugin-updater";
@@ -17,6 +17,7 @@
 	let diagnostics = $state<Diagnostics | null>(null);
 	let checkingEngines = $state(false);
 	let diagnosticsError = $state(false);
+	let health = $state<HealthReport | null>(null);
 
 	onMount(async () => {
 		try {
@@ -49,6 +50,14 @@
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		} finally {
 			checkingEngines = false;
+		}
+	}
+
+	async function runHealth() {
+		try {
+			health = await api.getHealth(0);
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
 	}
 
@@ -120,6 +129,14 @@
 				<button class="text-link" onclick={() => openExternal("https://github.com/nekonaru/getta/issues/new")}>{t("about.report")}</button>
 				<a class="text-link" href="/support">{t("about.support")}</a>
 			</nav>
+			<div class="card health-block">
+				<button class="btn btn-sm" onclick={runHealth}>{t("about.runHealth")}</button>
+				{#if health}
+					<p class="muted">{t("about.diskFree", { size: health.disk_free_bytes ? `${Math.round(health.disk_free_bytes / 1073741824)} GB` : t("about.unknown") })}</p>
+					<p class="muted">{t("about.writable", { ok: health.output_writable ? t("about.yes") : t("about.no") })}</p>
+					{#if !health.enough_space}<p class="error-text">{t("about.lowSpace")}</p>{/if}
+				{/if}
+			</div>
 			<div class="update-block">
 				<p class="update-title">{t("about.update")}</p>
 				{#if updateState === "idle"}

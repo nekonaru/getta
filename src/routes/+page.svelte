@@ -22,6 +22,12 @@
 	let analyzeSeq = 0;
 	let scheduleEnabled = $state(false);
 	let scheduleAt = $state("");
+	let presetId = $state("");
+	let priority = $state(0);
+	let itemSpeedLimit = $state(0);
+	let directDownload = $state(false);
+	let expectedSha = $state("");
+	let advancedOpen = $state(false);
 
 	const links = $derived(parseLinks(url));
 	const singleLink = $derived(links.length === 1 ? links[0] : null);
@@ -66,6 +72,18 @@
 		return /^(https?:\/\/|magnet:|p2p:).+/.test(text.trim());
 	}
 
+	const presets = $derived(settingsStore.value?.presets ?? []);
+
+	const applyPreset = (id: string) => {
+		presetId = id;
+		const preset = presets.find((p) => p.id === id);
+		if (!preset) return;
+		if (preset.quality) quality = preset.quality;
+		if (preset.mode) mode = preset.mode as typeof mode;
+		if (preset.priority) priority = preset.priority;
+		if (preset.speed_limit_mbps) itemSpeedLimit = preset.speed_limit_mbps;
+	};
+
 	const statusText = (status: string) =>
 		t(`queue.status${status.charAt(0).toUpperCase()}${status.slice(1)}`);
 
@@ -85,6 +103,7 @@
 	function resetSchedule() {
 		scheduleEnabled = false;
 		scheduleAt = "";
+		expectedSha = "";
 	}
 
 	async function importLinks() {
@@ -136,6 +155,16 @@
 		}
 	}
 
+	function extraOptions() {
+		return {
+			priority,
+			speed_limit_mbps: itemSpeedLimit,
+			expected_sha256: expectedSha.trim() || null,
+			direct: directDownload,
+			preset_id: presetId || null
+		};
+	}
+
 	async function startDownload(playlistItems?: string) {
 		const target = downloadTarget;
 		if (!target || !guardSchedule()) return;
@@ -159,7 +188,8 @@
 				format_id: null,
 				playlist_items: playlistItems ?? null,
 				output_dir: dir,
-				start_at: scheduledStart()
+				start_at: scheduledStart(),
+				...extraOptions()
 			});
 			url = "";
 			analysis = null;
@@ -201,7 +231,8 @@
 					format_id: null,
 					playlist_items: null,
 					output_dir: null,
-					start_at: startAt
+					start_at: startAt,
+					...extraOptions()
 				});
 			} catch (e) {
 				toastStore.push(e instanceof Error ? e.message : String(e), "error");
@@ -291,6 +322,47 @@
 				{/if}
 				<button class="btn btn-sm btn-ghost" onclick={importLinks}>{t("home.importLinks")}</button>
 			</div>
+
+			{#if presets.length > 0}
+				<div class="preset-row">
+					<span class="field-label">{t("home.preset")}</span>
+					<select class="input" value={presetId} onchange={(e) => applyPreset((e.currentTarget as HTMLSelectElement).value)} aria-label={t("home.preset")}>
+						<option value="">{t("home.presetNone")}</option>
+						{#each presets as preset (preset.id)}
+							<option value={preset.id}>{preset.name}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
+
+			<button class="btn btn-sm btn-ghost advanced-toggle" onclick={() => (advancedOpen = !advancedOpen)} aria-expanded={advancedOpen}>
+				{advancedOpen ? t("home.advancedHide") : t("home.advancedShow")}
+			</button>
+			{#if advancedOpen}
+				<div class="advanced-panel card">
+					<label class="adv-field">
+						<span>{t("home.priority")}</span>
+						<select class="input" bind:value={priority}>
+							<option value={-1}>{t("home.priorityLow")}</option>
+							<option value={0}>{t("home.priorityNormal")}</option>
+							<option value={1}>{t("home.priorityHigh")}</option>
+							<option value={2}>{t("home.priorityImmediate")}</option>
+						</select>
+					</label>
+					<label class="adv-field">
+						<span>{t("home.itemSpeed")}</span>
+						<input class="input" type="number" min="0" max="1000" bind:value={itemSpeedLimit} />
+					</label>
+					<label class="adv-check">
+						<input type="checkbox" bind:checked={directDownload} />
+						<span>{t("home.direct")}</span>
+					</label>
+					<label class="adv-field">
+						<span>{t("home.sha256")}</span>
+						<input class="input mono" type="text" placeholder="optional" bind:value={expectedSha} spellcheck="false" />
+					</label>
+				</div>
+			{/if}
 
 			<p class="hint hotkey-hint">
 				<kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">Shift</kbd>+<kbd class="kbd">D</kbd>
@@ -431,6 +503,36 @@
 </div>
 
 <style>
+	.preset-row,
+	.advanced-panel {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		margin-top: 12px;
+	}
+
+	.advanced-panel {
+		padding: 14px;
+	}
+
+	.adv-field,
+	.adv-check {
+		display: inline-flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 130px;
+	}
+
+	.adv-check {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.advanced-toggle {
+		margin-top: 10px;
+	}
+
 	.schedule-row {
 		display: flex;
 		flex-wrap: wrap;

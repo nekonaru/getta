@@ -7,7 +7,7 @@
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
 
-	type Category = "output" | "transfer" | "appearance" | "engine";
+	type Category = "output" | "transfer" | "appearance" | "engine" | "automation" | "data";
 	let category = $state<Category>("output");
 	let engine = $state<EngineStatus | null>(null);
 	let installBusy = $state<string | null>(null);
@@ -15,6 +15,7 @@
 	let inFlight = 0;
 	let updateChain = Promise.resolve();
 	let autostartEnabled = $state(false);
+	let auditLines = $state<string[]>([]);
 
 	function beginPatch() {
 		inFlight += 1;
@@ -246,11 +247,96 @@
 		}
 	}
 
+	function addPreset() {
+		void enqueueUpdate((current) => ({
+			presets: [
+				...(current?.presets ?? []),
+				{
+					id: crypto.randomUUID(),
+					name: t("settings.newPreset"),
+					quality: "best",
+					mode: "auto",
+					dir: "",
+					template: "",
+					priority: 0,
+					speed_limit_mbps: 0
+				}
+			]
+		}));
+	}
+
+	function patchPreset(id: string, patch: Partial<import("#lib/api").DownloadPreset>) {
+		void enqueueUpdate((current) => ({
+			presets: (current?.presets ?? []).map((p) => (p.id === id ? { ...p, ...patch } : p))
+		}));
+	}
+
+	function removePreset(id: string) {
+		void enqueueUpdate((current) => ({
+			presets: (current?.presets ?? []).filter((p) => p.id !== id)
+		}));
+	}
+
+	function addSmartFolder() {
+		void enqueueUpdate((current) => ({
+			smart_folders: [
+				...(current?.smart_folders ?? []),
+				{ id: crypto.randomUUID(), name: t("settings.newSmartFolder"), query: "", kind: "all" }
+			]
+		}));
+	}
+
+	function patchSmartFolder(id: string, patch: Partial<import("#lib/api").SmartFolder>) {
+		void enqueueUpdate((current) => ({
+			smart_folders: (current?.smart_folders ?? []).map((f) => (f.id === id ? { ...f, ...patch } : f))
+		}));
+	}
+
+	async function pickBackupPath(save: boolean): Promise<string | null> {
+		const { save: saveDialog, open: openDialog } = await import("@tauri-apps/plugin-dialog");
+		if (save) return await saveDialog({ filters: [{ name: "Getta backup", extensions: ["zip"] }] });
+		return await openDialog({ multiple: false, filters: [{ name: "Getta backup", extensions: ["zip"] }] });
+	}
+
+	async function doBackup() {
+		try {
+			const path = await pickBackupPath(true);
+			if (!path) return;
+			await api.createBackup(path);
+			toastStore.push(t("settings.backupDone"), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function doRestore() {
+		try {
+			const path = await pickBackupPath(false);
+			if (!path) return;
+			if (!window.confirm(t("settings.restoreConfirm"))) return;
+			const count = await api.restoreBackup(path);
+			toastStore.push(t("settings.restoreDone", { count }), "info");
+			await settingsStore.load();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function loadAudit() {
+		try {
+			auditLines = await api.readAudit();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	const categories: Array<{ id: Category; label: () => string }> = [
 		{ id: "output", label: () => t("settings.catOutput") },
 		{ id: "transfer", label: () => t("settings.catTransfer") },
 		{ id: "appearance", label: () => t("settings.catAppearance") },
-		{ id: "engine", label: () => t("settings.catEngine") }
+		{ id: "engine", label: () => t("settings.catEngine") },
+		{ id: "automation", label: () => t("settings.catAutomation") },
+		{ id: "data", label: () => t("settings.catData") }
 	];
 
 	const deps = $derived(
@@ -408,9 +494,16 @@
 							<span class="switch-label">{t("settings.closeToTray")}</span>
 							<button disabled={patching} class="switch" role="switch" aria-checked={settings.close_to_tray} aria-label={t("settings.closeToTray")} onclick={() => patch({ close_to_tray: !settings.close_to_tray })}></button>
 						</div>
-						<div class="row row-switch">
+						<div class="row">
 							<span class="switch-label">{t("settings.reduceMotion")}</span>
 							<button disabled={patching} class="switch" role="switch" aria-checked={settings.reduce_motion} aria-label={t("settings.reduceMotion")} onclick={() => patch({ reduce_motion: !settings.reduce_motion })}></button>
+						</div>
+						<div class="row">
+							<label class="field-label" for="accent-color">{t("settings.accent")}<input id="accent-color" class="input" type="color" value={settings.accent || "#00C896"} onchange={(e) => patch({ accent: e.currentTarget.value })} /></label>
+						</div>
+						<div class="row">
+							<span class="switch-label">{t("settings.compactMode")}</span>
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.compact_mode} aria-label={t("settings.compactMode")} onclick={() => patch({ compact_mode: !settings.compact_mode })}></button>
 						</div>
 					</section>
 				{:else if category === "engine"}
@@ -494,6 +587,99 @@
 							</div>
 						</div>
 					</section>
+				{:else if category === "automation"}
+					<section class="card group">
+						<h2 class="section-title">{t("settings.presets")}</h2>
+						<div class="row">
+							<button class="btn btn-sm" onclick={addPreset} disabled={patching}>{t("settings.addPreset")}</button>
+						</div>
+						{#each settings.presets as preset (preset.id)}
+							<div class="preset-row">
+								<input class="input" value={preset.name} aria-label={t("settings.presetName")} onchange={(e) => patchPreset(preset.id, { name: e.currentTarget.value })} />
+								<input class="input" value={preset.quality} aria-label={t("settings.videoQuality")} onchange={(e) => patchPreset(preset.id, { quality: e.currentTarget.value })} />
+								<select class="input" value={preset.mode} aria-label={t("settings.presetMode")} onchange={(e) => patchPreset(preset.id, { mode: e.currentTarget.value })}>
+									<option value="auto">{t("home.modeAuto")}</option>
+									<option value="audio">{t("home.modeAudio")}</option>
+									<option value="mute">{t("home.modeMute")}</option>
+									<option value="subs">{t("home.modeSubs")}</option>
+								</select>
+								<button class="btn-icon danger" title={t("settings.removeRule")} onclick={() => removePreset(preset.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+							</div>
+						{/each}
+					</section>
+
+					<section class="card group">
+						<h2 class="section-title">{t("settings.smartFolders")}</h2>
+						<div class="row">
+							<button class="btn btn-sm" onclick={addSmartFolder} disabled={patching}>{t("settings.addSmartFolder")}</button>
+						</div>
+						{#each settings.smart_folders as folder (folder.id)}
+							<div class="preset-row">
+								<input class="input" value={folder.name} aria-label={t("settings.smartName")} onchange={(e) => patchSmartFolder(folder.id, { name: e.currentTarget.value })} />
+								<input class="input" value={folder.query} aria-label={t("settings.smartQuery")} onchange={(e) => patchSmartFolder(folder.id, { query: e.currentTarget.value })} />
+							</div>
+						{/each}
+					</section>
+
+					<section class="card group">
+						<h2 class="section-title">{t("settings.retryPolicy")}</h2>
+						<div class="row">
+							<label class="field-label">{t("settings.retryDelay")}<input class="input" type="number" min="1" max="600" value={settings.retry_delay_secs} onchange={(e) => patch({ retry_delay_secs: Number(e.currentTarget.value) })} /></label>
+						</div>
+						<div class="row">
+							<label class="field-label">{t("settings.retryMultiplier")}<input class="input" type="number" min="1" max="10" step="0.1" value={settings.retry_multiplier} onchange={(e) => patch({ retry_multiplier: Number(e.currentTarget.value) })} /></label>
+						</div>
+						<div class="row">
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.quiet_hours_enabled} aria-label={t("settings.quietHours")} onclick={() => patch({ quiet_hours_enabled: !settings.quiet_hours_enabled })}></button>
+							<span>{t("settings.quietHours")}</span>
+						</div>
+						<div class="row">
+							<input class="input" type="number" min="0" max="23" value={settings.quiet_start_hour} aria-label={t("settings.quietStart")} onchange={(e) => patch({ quiet_start_hour: Number(e.currentTarget.value) })} />
+							<input class="input" type="number" min="0" max="23" value={settings.quiet_end_hour} aria-label={t("settings.quietEnd")} onchange={(e) => patch({ quiet_end_hour: Number(e.currentTarget.value) })} />
+						</div>
+						<div class="row">
+							<label class="field-label">{t("settings.postAction")}<select class="input" value={settings.post_action} onchange={(e) => patch({ post_action: e.currentTarget.value })}>
+								<option value="none">{t("settings.postNone")}</option>
+								<option value="move">{t("settings.postMove")}</option>
+								<option value="copy">{t("settings.postCopy")}</option>
+							</select></label>
+							<input class="input" value={settings.post_action_dir} placeholder={t("settings.outputDir")} aria-label={t("settings.outputDir")} onchange={(e) => patch({ post_action_dir: e.currentTarget.value })} />
+						</div>
+					</section>
+
+					<section class="card group">
+						<h2 class="section-title">{t("settings.webhook")}</h2>
+						<div class="row">
+							<input class="input" value={settings.webhook_url} placeholder="http://127.0.0.1:8080/hook" aria-label={t("settings.webhook")} onchange={(e) => patch({ webhook_url: e.currentTarget.value })} />
+						</div>
+						<div class="row">
+							<input class="input" value={settings.webhook_events} aria-label={t("settings.webhookEvents")} onchange={(e) => patch({ webhook_events: e.currentTarget.value })} />
+						</div>
+						<div class="row">
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.clipboard_monitor} aria-label={t("settings.clipboardMonitor")} onclick={() => patch({ clipboard_monitor: !settings.clipboard_monitor })}></button>
+							<span>{t("settings.clipboardMonitor")}</span>
+						</div>
+					</section>
+				{:else if category === "data"}
+					<section class="card group">
+						<h2 class="section-title">{t("settings.backup")}</h2>
+						<div class="row">
+							<button class="btn btn-sm" onclick={doBackup}>{t("settings.createBackup")}</button>
+							<button class="btn btn-sm" onclick={doRestore}>{t("settings.restoreBackup")}</button>
+						</div>
+						<p class="muted">{t("settings.backupHint")}</p>
+					</section>
+					<section class="card group">
+						<h2 class="section-title">{t("settings.audit")}</h2>
+						<div class="row"><button class="btn btn-sm" onclick={loadAudit}>{t("settings.loadAudit")}</button></div>
+						{#if auditLines.length > 0}
+							<ul class="audit-list">
+								{#each auditLines as line (line)}
+									<li class="mono">{line}</li>
+								{/each}
+							</ul>
+						{/if}
+					</section>
 				{/if}
 			</div>
 		</div>
@@ -501,6 +687,20 @@
 </div>
 
 <style>
+	.preset-row,
+	.audit-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 8px;
+	}
+
+	.audit-list {
+		flex-direction: column;
+		max-height: 260px;
+		overflow: auto;
+	}
+
 	.page-title {
 		font-family: var(--font-display);
 		font-size: 1.9rem;

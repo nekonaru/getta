@@ -14,7 +14,20 @@ use crate::AppState;
 
 #[tauri::command]
 pub async fn analyze_url(app: AppHandle, url: String) -> Result<Analysis, String> {
-    crate::queue::analyze(&app, &url).await
+    let resolved = maybe_resolve(&app, &url).await;
+    crate::queue::analyze(&app, &resolved).await
+}
+
+async fn maybe_resolve(app: &AppHandle, url: &str) -> String {
+    let enabled = app
+        .try_state::<AppState>()
+        .and_then(|state| state.settings.lock().ok().map(|s| s.resolve_shortlinks))
+        .unwrap_or(true);
+    if enabled {
+        crate::automation::resolve(url).await
+    } else {
+        url.to_string()
+    }
 }
 
 #[tauri::command]
@@ -26,7 +39,8 @@ pub async fn run_tool(
 }
 
 #[tauri::command]
-pub async fn start_download(app: AppHandle, options: StartOptions) -> Result<u64, String> {
+pub async fn start_download(app: AppHandle, mut options: StartOptions) -> Result<u64, String> {
+    options.url = maybe_resolve(&app, &options.url).await;
     app.try_state::<AppState>()
         .ok_or_else(|| "App is not ready yet.".to_string())?
         .queue

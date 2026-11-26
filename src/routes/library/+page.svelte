@@ -24,10 +24,61 @@
 	let chapters = $state<ChapterMarker[]>([]);
 	let chapterSelection = $state("");
 	let dupGroups = $state<string[][]>([]);
+	let showStats = $state(false);
+	let renameOpen = $state(false);
+	let renameTemplate = $state("{title}");
 	// The first entry of each group is the one we keep, so only extra
 	// copies carry the duplicate badge.
 	const dupIds = $derived(new Set(dupGroups.flatMap((group) => group.slice(1))));
 	const dupTotal = $derived(dupGroups.reduce((sum, group) => sum + group.length - 1, 0));
+
+	const storageStats = $derived.by(() => {
+		const byPlatform = new Map<string, { count: number; bytes: number }>();
+		for (const entry of entries) {
+			const row = byPlatform.get(entry.platform) ?? { count: 0, bytes: 0 };
+			row.count += 1;
+			row.bytes += entry.file_size_bytes ?? 0;
+			byPlatform.set(entry.platform, row);
+		}
+		const totalBytes = entries.reduce((sum, e) => sum + (e.file_size_bytes ?? 0), 0);
+		return { byPlatform: [...byPlatform.entries()], totalBytes };
+	});
+
+	async function patchEntry(id: string, patch: Parameters<typeof api.historyPatch>[1]) {
+		try {
+			const ok = await api.historyPatch(id, patch);
+			if (ok) {
+				entries = entries.map((e) => (e.id === id ? { ...e, ...patch, tags: patch.tags ?? e.tags, rating: patch.rating ?? e.rating, note: patch.note ?? e.note } : e));
+				if (active?.id === id) active = entries.find((e) => e.id === id) ?? null;
+			}
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function doBatchRename() {
+		try {
+			const ids = [...selected];
+			const count = await api.batchRename(ids, renameTemplate);
+			toastStore.push(t("library.renamed", { count }), "info");
+			renameOpen = false;
+			entries = await api.historyList();
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	async function doExportHtml() {
+		try {
+			const { save } = await import("@tauri-apps/plugin-dialog");
+			const path = await save({ filters: [{ name: "HTML", extensions: ["html"] }], defaultPath: "getta-library.html" });
+			if (!path) return;
+			await api.exportLibraryHtml(path);
+			toastStore.push(t("library.htmlExported"), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -299,6 +350,8 @@
 					<option value="name">{t("library.sortName")}</option>
 					<option value="size">{t("library.sortSize")}</option>
 				</select>
+				<button class="btn btn-sm btn-ghost" onclick={() => (showStats = !showStats)}>{t("library.storage")}</button>
+				<button class="btn btn-sm btn-ghost" onclick={doExportHtml}>{t("library.exportHtml")}</button>
 				<button class="btn btn-sm btn-ghost" onclick={findDuplicates}>{t("library.findDuplicates")}</button>
 				<button class="btn btn-sm btn-ghost" onclick={enterSelectionMode}>{t("library.select")}</button>
 				<div class="filters" role="group">
@@ -310,10 +363,32 @@
 				</div>
 			</div>
 
+			{#if showStats}
+				<div class="card stats-panel">
+					<p class="stats-total">{t("library.totalSize")}: <span class="mono">{formatBytes(storageStats.totalBytes)}</span></p>
+					{#each storageStats.byPlatform as [platform, row] (platform)}
+						<div class="stats-row">
+							<span class="mono">{platform}</span>
+							<span class="mono">{formatBytes(row.bytes)}</span>
+							<span class="mono">{row.count}</span>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			{#if renameOpen}
+				<div class="card rename-panel">
+					<input class="input" bind:value={renameTemplate} aria-label={t("library.renameTemplate")} />
+					<button class="btn btn-accent btn-sm" onclick={doBatchRename}>{t("library.applyRename")}</button>
+					<button class="btn btn-sm btn-ghost" onclick={() => (renameOpen = false)}>{t("library.cancel")}</button>
+				</div>
+			{/if}
+
 			{#if selectionMode}
 				<div class="selection-bar" role="status">
 					<span class="selection-count mono">{selected.size} {t("library.selected")}</span>
 					<div class="selection-actions">
+						<button class="btn btn-sm" onclick={() => (renameOpen = true)}>{t("library.batchRename")}</button>
 						<button class="btn btn-accent btn-sm" onclick={removeSelected}>{t("library.removeSelected", { count: selected.size })}</button>
 						<button class="btn btn-sm btn-ghost" onclick={cancelSelection}>{t("library.cancel")}</button>
 					</div>
@@ -402,6 +477,26 @@
 					{/if}
 				</div>
 			{/if}
+			<div class="card meta-panel">
+				<label class="meta-field">
+					<span>{t("library.tags")}</span>
+					<input class="input" value={(active.tags ?? []).join(", ")} aria-label={t("library.tags")} onchange={(e) => patchEntry(active!.id, { tags: e.currentTarget.value.split(",").map((s) => s.trim()) })} />
+				</label>
+				<label class="meta-field">
+					<span>{t("library.rating")}</span>
+					<select class="input" value={active.rating ?? 0} aria-label={t("library.rating")} onchange={(e) => patchEntry(active!.id, { rating: Number(e.currentTarget.value) })}>
+						{#each [0, 1, 2, 3, 4, 5] as n (n)}<option value={n}>{n === 0 ? t("library.unrated") : `${n} / 5`}</option>{/each}
+					</select>
+				</label>
+				<label class="meta-field">
+					<span>{t("library.note")}</span>
+					<textarea class="input" rows="2" value={active.note ?? ""} aria-label={t("library.note")} onchange={(e) => patchEntry(active!.id, { note: e.currentTarget.value })}></textarea>
+				</label>
+				<div class="meta-toggles">
+					<button class="btn btn-sm" onclick={() => patchEntry(active!.id, { favorite: !active!.favorite })}>{active.favorite ? t("library.unfavorite") : t("library.favorite")}</button>
+					<button class="btn btn-sm" onclick={() => patchEntry(active!.id, { watch_later: !active!.watch_later })}>{active.watch_later ? t("library.removeWatchLater") : t("library.watchLater")}</button>
+				</div>
+			</div>
 			<div class="media-modal-foot">
 				<div class="media-foot-left">
 					<span class="mono media-path">{active.file_path}</span>
@@ -422,6 +517,35 @@
 {/if}
 
 <style>
+	.stats-panel,
+	.rename-panel,
+	.meta-panel {
+		padding: 14px;
+		margin: 12px 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		align-items: center;
+	}
+
+	.stats-row {
+		display: flex;
+		gap: 12px;
+		min-width: 260px;
+	}
+
+	.meta-field {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 180px;
+	}
+
+	.meta-toggles {
+		display: flex;
+		gap: 8px;
+	}
+
 	.library-toolbar {
 		display: flex;
 		gap: 12px;

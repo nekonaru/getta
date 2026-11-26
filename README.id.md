@@ -62,6 +62,10 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Ikuti channel** | Ikuti channel publik mana pun; Getta mendeteksi unggahan baru dan mengantrekannya. Opsional: auto-unduh latar |
 | **Aturan unduhan** | Rute link ke folder berdasarkan pola, yang pertama cocok menang |
 | **Profil situs** | Aturan per link juga menimpa kualitas dan mode, misalnya audio saja dari satu situs |
+| **Unduhan langsung native** | File http(s) biasa mengalir dengan resume dan batas kecepatan per item, tanpa yt-dlp |
+| **Prioritas dan jam hening** | Item prioritas tinggi mulai lebih dulu; unduhan baru bisa dijeda saat jam hening |
+| **Preset** | Simpan kualitas, mode, folder, dan kecepatan sebagai konfigurasi yang bisa dipakai ulang |
+| **Checksum** | Verifikasi SHA-256 opsional sebelum unduhan ditandai selesai |
 | **Unduhan terjadwal** | Pilih waktu mulai di Beranda; item menunggu di antrean dan bisa dimulai lebih awal |
 | **Impor link dari file** | Baca file teks UTF-8 berisi link dan antrekan hingga 500 sekaligus |
 | **Pola nama file** | Template field yt-dlp dengan default yang aman, misalnya `%(title).200s [%(id)s].%(ext)s` |
@@ -87,6 +91,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Pustaka** | Grid unduhan selesai kamu; putar media inline (kecepatan 0.5x-3x), urutkan (tanggal/nama/ukuran), pilih banyak dan hapus, filter per tipe, salin URL sumber, cari dan hapus file duplikat |
+| **Metadata pustaka** | Tag, peringkat, catatan, favorit, tonton nanti, ganti nama massal, dan analitik penyimpanan |
+| **Cadangan dan audit** | Satu ZIP cadangan data lokal, log audit, pemeriksaan kesehatan, dan ekspor HTML offline |
 | **Alat** | Meja kerja lokal: 23 alat untuk audio, video, gambar, dan subtitle, ditenagai FFmpeg |
 | **Command palette** | Ctrl/Cmd+K launcher fuzzy: lompat ke halaman mana pun atau jalankan aksi seperti jeda semua dan lanjutkan semua |
 | **Global hotkey** | Ctrl/Cmd+Shift+D mengambil dari clipboard dari mana pun |

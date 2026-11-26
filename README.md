@@ -62,6 +62,10 @@ Getta is an original implementation under the MIT license.
 | **Channel following** | Follow any public channel; Getta spots new uploads and queues them. Optional background auto-download |
 | **Download rules** | Route links to folders by pattern, first match wins |
 | **Site profiles** | Per-link rules also override quality and mode, for example audio only from one site |
+| **Native direct download** | Plain http(s) files stream with resume and per-item speed caps, no yt-dlp needed |
+| **Priority and quiet hours** | Higher priority items start first; new starts can pause during quiet hours |
+| **Presets** | Save quality, mode, folder and speed as a reusable configuration |
+| **Checksum** | Optional SHA-256 verification before a download is marked complete |
 | **Scheduled downloads** | Pick a start time on Home; the item waits in the queue and can be released early |
 | **Import links from a file** | Read a UTF-8 text file of links and queue up to 500 at once |
 | **Filename template** | yt-dlp field template with live defaults, e.g. `%(title).200s [%(id)s].%(ext)s` |
@@ -87,6 +91,8 @@ Getta is an original implementation under the MIT license.
 | Feature | Description |
 |---------|-------------|
 | **Library** | Grid of your completed downloads; play media inline (0.5x-3x speed), sort by date/name/size, bulk select and remove, filter by type, copy the source URL, find and delete duplicate files |
+| **Library metadata** | Tags, ratings, notes, favorites, watch later, batch rename and storage analytics |
+| **Backup and audit** | One ZIP backup of local data, an audit log, health check and offline HTML export |
 | **Tools** | Local workbench: 23 tools for audio, video, images and subtitles, powered by FFmpeg |
 | **Command palette** | Ctrl/Cmd+K fuzzy launcher: jump anywhere or run actions like pause all and resume all |
 | **Global hotkey** | Ctrl/Cmd+Shift+D fetches from the clipboard from anywhere |

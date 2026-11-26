@@ -3,6 +3,32 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.19.0
+
+A major expansion: native direct downloads, queue automation, rich library metadata and local data tools.
+
+## New features
+
+- **Native direct downloads.** Direct http(s) file links now stream through Getta itself, with `.part` resume, per-item speed caps and a real progress bar. No yt-dlp needed for plain files.
+- **Priority and quiet hours.** Give items Low to Immediate priority. The scheduler starts higher priority first and can pause new starts during configured quiet hours.
+- **Download presets.** Save quality, mode, folder, template, priority and speed as a preset, then apply it from Home in one click.
+- **Configurable retry policy.** Set the initial delay and multiplier instead of a fixed exponential backoff.
+- **Checksum verification.** Supply an expected SHA-256 and Getta verifies the finished file before recording success.
+- **Webhook notifications.** Send a JSON event to a local or self-hosted endpoint when a download finishes or fails.
+- **Post-download actions.** Automatically move or copy finished files into a second folder.
+- **Library metadata.** Add tags, a 1 to 5 rating, notes, favorites and watch-later flags to completed items.
+- **Batch rename.** Rename selected files with a template using title, platform, id and old name, with collision-safe output.
+- **Storage analytics.** See total downloaded bytes and a per-site breakdown in the Library.
+- **Smart folders.** Save a library search as a named folder definition in Settings.
+- **Backup and restore.** Create one ZIP with settings, history, follows and recovery, and restore it later.
+- **Audit log.** A local append-only record of enqueues, renames, backups and watch-folder activity.
+- **Health check.** Check free disk space and whether the output folder is writable from About.
+- **Offline library export.** Export completed entries to a standalone HTML gallery.
+- **Accent color and compact mode.** Pick a custom accent and switch to a denser layout.
+- **Watch folder.** Drop `.txt` files with links into a folder and Getta queues them automatically.
+- **Shortlink resolution.** Known shorteners are expanded before analysis and enqueue.
+- **Conditional rules.** A download rule can now also set priority or apply a preset.
+
 ## v0.18.0
 
 Scheduled downloads, link file import, and a third native audit pass.
