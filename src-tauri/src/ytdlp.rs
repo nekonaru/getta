@@ -359,6 +359,12 @@ pub enum LineEvent {
         speed_bps: Option<u64>,
         eta_seconds: Option<u64>,
     },
+    /// A progress line without a percent, used by streams with no total size.
+    Bytes {
+        downloaded_bytes: u64,
+        speed_bps: Option<u64>,
+        eta_seconds: Option<u64>,
+    },
     Destination(String),
     PostProcess(String),
     PlaylistItem(u32),
@@ -411,6 +417,13 @@ pub fn parse_line(line: &str) -> LineEvent {
         return LineEvent::PostProcess("already exists".to_string());
     }
 
+    let leading_bytes = capture_unit(
+        LEADING_BYTES_RE.get_or_init(|| {
+            regex::Regex::new(r"^\[download\]\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)")
+                .expect("LEADING_BYTES_RE is valid")
+        }),
+        line,
+    );
     let percent = DOWNLOAD_RE_STATIC
         .get_or_init(|| regex::Regex::new(DOWNLOAD_RE).expect("DOWNLOAD_RE is valid"))
         .captures(line)
@@ -423,21 +436,24 @@ pub fn parse_line(line: &str) -> LineEvent {
         let speed_bps = capture_unit(UNIT_AT_RE
             .get_or_init(|| regex::Regex::new(r"at\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)/s").expect("AT_RE is valid")), line);
         let eta_seconds = capture_eta(line);
-        // Streams without a total print "[download] 12.30MiB at ..." instead
-        // of a percent line. Capture that number as bytes transferred.
-        let downloaded_bytes = capture_unit(
-            LEADING_BYTES_RE.get_or_init(|| {
-                regex::Regex::new(r"^\[download\]\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)")
-                    .expect("LEADING_BYTES_RE is valid")
-            }),
-            line,
-        );
         return LineEvent::Progress {
             percent,
-            downloaded_bytes,
+            downloaded_bytes: leading_bytes,
             total_bytes,
             speed_bps,
             eta_seconds,
+        };
+    }
+
+    if let Some(downloaded_bytes) = leading_bytes {
+        return LineEvent::Bytes {
+            downloaded_bytes,
+            speed_bps: capture_unit(
+                UNIT_AT_RE
+                    .get_or_init(|| regex::Regex::new(r"at\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)/s").expect("AT_RE is valid")),
+                line,
+            ),
+            eta_seconds: capture_eta(line),
         };
     }
 
@@ -549,8 +565,8 @@ mod tests {
     #[test]
     fn parse_line_reads_bytes_without_total() {
         match parse_line("[download] 12.30MiB at 2.5MiB/s ETA 00:12") {
-            LineEvent::Progress { downloaded_bytes, .. } => {
-                assert_eq!(downloaded_bytes, Some((12.30 * 1024.0 * 1024.0) as u64));
+            LineEvent::Bytes { downloaded_bytes, .. } => {
+                assert_eq!(downloaded_bytes, (12.30 * 1024.0 * 1024.0) as u64);
             }
             other => panic!("expected progress, got {other:?}"),
         }

@@ -996,6 +996,21 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                     }
                     structural_emit = false;
                 }
+                ytdlp::LineEvent::Bytes { downloaded_bytes, speed_bps, eta_seconds } => {
+                    if let Some(state) = app.try_state::<AppState>() {
+                        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+                        if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                            if item.generation != generation || item.cancelled {
+                                structural_emit = false;
+                                continue;
+                            }
+                            item.downloaded_bytes = downloaded_bytes.max(item.downloaded_bytes);
+                            item.speed_bps = speed_bps.unwrap_or(0);
+                            item.eta_seconds = eta_seconds;
+                        }
+                    }
+                    structural_emit = false;
+                }
                 ytdlp::LineEvent::Destination(path) => {
                     if let Some(state) = app.try_state::<AppState>() {
                         let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
