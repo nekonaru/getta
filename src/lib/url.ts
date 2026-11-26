@@ -11,7 +11,7 @@
 const URL_CHARS = String.raw`[^\s"'<>` + "`" + String.raw`\]]`;
 const SCHEME_LINK = new RegExp(`https?:\\/\\/${URL_CHARS}+|magnet:\\?${URL_CHARS}+|p2p:${URL_CHARS}+`, "i");
 const HOST_LIKE = new RegExp(
-	`(?:[a-z0-9-]+\\.)+(?:com|net|org|id|io|tv|co|me|gg|ly|to|cc|app|dev|live|music|be)(?:\\/${URL_CHARS}*)?`,
+	`(?:[a-z0-9-]+\\.)+(?:[a-z]{2,24})(?:\\/${URL_CHARS}*)?`,
 	"i"
 );
 

@@ -149,6 +149,33 @@ impl QueueManager {
 
     pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {
         let trimmed = validate_url(url)?;
+        // Site profiles can override quality and mode for matching links.
+        let profile = app
+            .try_state::<AppState>()
+            .and_then(|state| {
+                state
+                    .settings
+                    .lock()
+                    .ok()
+                    .and_then(|settings| crate::settings::resolve_profile(&settings, &trimmed).cloned())
+            });
+        let quality = profile
+            .as_ref()
+            .filter(|p| !p.quality.trim().is_empty())
+            .map(|p| p.quality.trim().to_string())
+            .unwrap_or_else(|| {
+                if options.quality.trim().is_empty() {
+                    "best".to_string()
+                } else {
+                    options.quality.trim().to_string()
+                }
+            });
+        let mode = profile
+            .as_ref()
+            .filter(|p| !p.mode.trim().is_empty())
+            .map(|p| DownloadMode::parse(&p.mode))
+            .unwrap_or_else(|| DownloadMode::parse(&options.download_mode));
+        let mode_text = mode.as_str().to_string();
         let trimmed_lc = trimmed.to_ascii_lowercase();
         let is_search = trimmed_lc.starts_with("ytsearch");
         let platform_name = if is_search {
@@ -166,8 +193,8 @@ impl QueueManager {
             url: trimmed.to_string(),
             platform: platform_name,
             title: title_from_url(&trimmed),
-            download_mode: DownloadMode::parse(&options.download_mode),
-            quality: if options.quality.trim().is_empty() { "best".to_string() } else { options.quality.trim().to_string() },
+            download_mode: mode,
+            quality: quality.clone(),
             format_id: options.format_id.clone(),
             status: QueueStatus::Queued,
             percent: 0.0,
@@ -197,6 +224,24 @@ impl QueueManager {
                 .filter(|s| !s.trim().is_empty())
                 .filter(|s| s.chars().all(|c| c.is_ascii_digit() || matches!(c, ',' | '-' | ' '))),
         };
+        // Coalesce a double click or repeated enqueue of the same link while
+        // it is still active or queued. Two jobs writing the same file is a
+        // corruption risk, and --no-overwrites does not serialise them.
+        if let Some(existing) = self
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .items
+            .iter()
+            .find(|i| {
+                i.url == trimmed
+                    && matches!(i.status, QueueStatus::Queued | QueueStatus::Active)
+                    && i.download_mode == mode
+            })
+            .map(|i| i.id)
+        {
+            return Ok(existing);
+        }
         let item_title = item.title.clone();
         let id = item.id;
         {
@@ -207,8 +252,8 @@ impl QueueManager {
             id,
             url: trimmed.to_string(),
             title: item_title,
-            download_mode: options.download_mode.clone(),
-            quality: options.quality.clone(),
+            download_mode: mode_text,
+            quality,
             format_id: options.format_id.clone(),
             playlist_items: options.playlist_items.clone(),
             output_dir: options.output_dir.clone(),
@@ -531,23 +576,32 @@ impl QueueManager {
 }
 
 fn pause_all_impl(app: &tauri::AppHandle) -> Result<(), String> {
-    let ids: Vec<u64> = app
-        .try_state::<AppState>()
-        .map(|state| {
-            state
-                .queue
-                .snapshot()
-                .into_iter()
-                .filter(|i| i.status == "active")
-                .map(|i| i.id)
-                .collect()
-        })
-        .unwrap_or_default();
-    if let Some(state) = app.try_state::<AppState>() {
-        for id in ids {
-            let _ = state.queue.pause(app, id);
+    let Some(state) = app.try_state::<AppState>() else {
+        return Ok(());
+    };
+    // Mark every active item paused under one lock. Pausing one by one would
+    // free a concurrency slot and let try_start_next spawn a queued job.
+    let pids: Vec<u32> = {
+        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+        let mut pids = Vec::new();
+        for item in inner.items.iter_mut() {
+            if item.status != QueueStatus::Active {
+                continue;
+            }
+            if let Some(pid) = item.pid {
+                pids.push(pid);
+            }
+            item.status = QueueStatus::Paused;
+            item.speed_bps = 0;
+            item.phase = Some("paused".to_string());
         }
+        pids
+    };
+    for pid in pids {
+        let _ = suspend_process(pid, true);
     }
+    emit_queue(app);
+    sync_prevent_sleep(app);
     Ok(())
 }
 
@@ -794,7 +848,15 @@ fn build_args(
     }
     args.extend(metadata_args(settings));
 
-    args.push("--yes-playlist".to_string());
+    let lower_url = item_url.to_ascii_lowercase();
+    let single_video = lower_url.contains("/watch?") || lower_url.contains("youtu.be/");
+    // A watch URL with &list= is still one video unless the user picked
+    // playlist entries; forcing --yes-playlist downloads the whole list.
+    if playlist_items.is_none() && single_video {
+        args.push("--no-playlist".to_string());
+    } else {
+        args.push("--yes-playlist".to_string());
+    }
     args.push(item_url.to_string());
     args
 }
@@ -912,7 +974,7 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
         let mut structural_emit = false;
         while let Ok(Some(line)) = lines.next_line().await {
             match ytdlp::parse_line(&line) {
-                ytdlp::LineEvent::Progress { percent, total_bytes, speed_bps, eta_seconds, .. } => {
+                ytdlp::LineEvent::Progress { percent, total_bytes, downloaded_bytes, speed_bps, eta_seconds } => {
                     if let Some(state) = app.try_state::<AppState>() {
                         let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
                         if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
@@ -921,6 +983,9 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                             }
                             item.percent = percent;
                             item.total_bytes = total_bytes.or(item.total_bytes);
+                            if let Some(bytes) = downloaded_bytes {
+                                item.downloaded_bytes = bytes.max(item.downloaded_bytes);
+                            }
                             item.speed_bps = speed_bps.unwrap_or(0);
                             item.eta_seconds = eta_seconds;
                             item.phase = Some("downloading".to_string());
@@ -1004,7 +1069,9 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                 item.phase = None;
                 item.pid = None;
                 let size = item.file_path.as_ref().and_then(|p| std::fs::metadata(p).ok()).map(|m| m.len());
-                item.downloaded_bytes = item.total_bytes.or(Some(item.downloaded_bytes)).unwrap_or(item.downloaded_bytes);
+                item.downloaded_bytes = size
+                    .or(item.total_bytes)
+                    .unwrap_or(item.downloaded_bytes);
                 let paths = item.file_paths.clone();
                 let fallback_path = item.file_path.clone();
                 (
@@ -1027,6 +1094,27 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                 } else {
                     file_paths
                 };
+                if paths.is_empty() {
+                    // Subtitle-only downloads produce no after_move print.
+                    // Keep a history row even without a file path.
+                    history::push(
+                        &state.data_dir,
+                        crate::models::HistoryEntry {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            url: url.clone(),
+                            platform: platform.clone(),
+                            title: title.clone(),
+                            file_path: None,
+                            file_size_bytes: None,
+                            success: true,
+                            error: None,
+                            completed_at: now_secs(),
+                            thumbnail_url: thumbnail_url.clone(),
+                            quality: Some(quality.clone()),
+                            download_mode: Some(mode.clone()),
+                        },
+                    );
+                }
                 for path in paths {
                     if std::path::Path::new(&path).is_file() {
                         let _ = app.asset_protocol_scope().allow_file(&path);
@@ -1752,7 +1840,12 @@ pub async fn analyze(app: &tauri::AppHandle, url: &str) -> Result<Analysis, Stri
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let tail = stderr.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("yt-dlp failed");
+        let tail = stderr
+            .lines()
+            .rev()
+            .find(|l| l.trim().starts_with("ERROR:"))
+            .or_else(|| stderr.lines().rev().find(|l| !l.trim().is_empty()))
+            .unwrap_or("yt-dlp failed");
         return Err(tail.trim().to_string());
     }
 

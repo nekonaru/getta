@@ -64,8 +64,12 @@
 		return /^(https?:\/\/|magnet:|p2p:).+/.test(text.trim());
 	}
 
+	const statusText = (status: string) =>
+		t(`queue.status${status.charAt(0).toUpperCase()}${status.slice(1)}`);
+
 	function onInput() {
 		clearTimeout(analyzeTimer);
+		analyzeSeq += 1;
 		analysis = null;
 		if (!looksLikeUrl(url) && !isSearch) {
 			busy = "idle";
@@ -353,7 +357,7 @@
 								<span class="cargo-index mono">{item.status === "active" ? "→" : item.status === "done" ? "✓" : "·"}</span>
 								<span class="cargo-body">
 									<span class="cargo-title-text">{item.title}</span>
-									<span class="cargo-status mono">{item.status === "active" ? t("queue.statusActive") : item.status === "done" ? t("queue.statusDone") : item.status}</span>
+									<span class="cargo-status mono">{item.status === "active" ? t("queue.statusActive") : item.status === "done" ? t("queue.statusDone") : statusText(item.status)}</span>
 								</span>
 								{#if item.status === "active"}
 									<span class="cargo-pct mono">{Math.floor(item.percent)}%</span>

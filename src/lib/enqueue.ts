@@ -8,10 +8,11 @@ import { extractLink } from "#lib/url";
 export interface EnqueueResult {
 	queued: boolean;
 	url: string;
+	reason?: EnqueueFailure;
 }
 
 /** Why an enqueue attempt did not happen. */
-export type EnqueueFailure = "empty-clipboard" | "no-link";
+export type EnqueueFailure = "empty-clipboard" | "no-link" | "cancelled";
 
 export async function enqueueUrl(url: string, forceFolder?: boolean): Promise<EnqueueResult> {
 	const settings = settingsStore.value;
@@ -19,10 +20,10 @@ export async function enqueueUrl(url: string, forceFolder?: boolean): Promise<En
 	if (forceFolder || settings?.always_ask_path) {
 		try {
 			const picked = await open({ directory: true, multiple: false });
-			if (typeof picked !== "string" || !picked) return { queued: false, url };
+			if (typeof picked !== "string" || !picked) return { queued: false, url, reason: "cancelled" };
 			outputDir = picked;
 		} catch {
-			return { queued: false, url };
+			return { queued: false, url, reason: "cancelled" };
 		}
 	}
 	try {
@@ -50,7 +51,7 @@ export async function enqueueText(
 		return { queued: false, reason: text.trim() ? "no-link" : "empty-clipboard" };
 	}
 	const result = await enqueueUrl(match.url, forceFolder);
-	return { queued: result.queued, reason: null };
+	return { queued: result.queued, reason: result.reason ?? null };
 }
 
 export async function enqueueFromClipboardText(text: string, forceFolder?: boolean): Promise<boolean> {
@@ -63,6 +64,7 @@ export async function enqueueFromClipboardText(text: string, forceFolder?: boole
 		toastStore.push(t("enqueue.emptyClipboard"), "error");
 		return false;
 	}
+	if (result.reason === "cancelled") return false;
 	toastStore.push(t("home.invalidUrl"), "error");
 	return false;
 }

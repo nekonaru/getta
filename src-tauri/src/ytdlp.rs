@@ -374,6 +374,7 @@ static DOWNLOAD_RE_STATIC: std::sync::OnceLock<regex::Regex> = std::sync::OnceLo
 static UNIT_OF_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
 static UNIT_AT_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
 static ETA_RE_STATIC: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+static LEADING_BYTES_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
 
 pub fn parse_line(line: &str) -> LineEvent {
     let line = line.trim();
@@ -422,9 +423,18 @@ pub fn parse_line(line: &str) -> LineEvent {
         let speed_bps = capture_unit(UNIT_AT_RE
             .get_or_init(|| regex::Regex::new(r"at\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)/s").expect("AT_RE is valid")), line);
         let eta_seconds = capture_eta(line);
+        // Streams without a total print "[download] 12.30MiB at ..." instead
+        // of a percent line. Capture that number as bytes transferred.
+        let downloaded_bytes = capture_unit(
+            LEADING_BYTES_RE.get_or_init(|| {
+                regex::Regex::new(r"^\[download\]\s+([0-9]+(?:\.[0-9]+)?)\s*([KMGTPE]?i?B)")
+                    .expect("LEADING_BYTES_RE is valid")
+            }),
+            line,
+        );
         return LineEvent::Progress {
             percent,
-            downloaded_bytes: None,
+            downloaded_bytes,
             total_bytes,
             speed_bps,
             eta_seconds,
@@ -464,15 +474,34 @@ fn capture_eta(line: &str) -> Option<u64> {
 
 pub fn classify_error(message: &str) -> (&'static str, bool) {
     let lower = message.to_ascii_lowercase();
+    // Anchor on phrases: a URL containing "/404/" or a warning containing
+    // "login" must not change the retry decision.
     let retryable_rate = |m: &str| {
-        m.contains("429") || m.contains("too many requests") || m.contains("rate limit") || m.contains("rate-limited")
+        m.contains("too many requests")
+            || m.contains("rate limit")
+            || m.contains("rate-limited")
+            || (m.contains("429") && (m.contains("http") || m.contains("error")))
     };
     let auth = |m: &str| {
-        m.contains("sign in") || m.contains("login") || m.contains("authentication")
-            || m.contains("cookie") || m.contains("403 forbidden") || m.contains("401 unauthorized")
+        m.contains("sign in")
+            || m.contains("login required")
+            || m.contains("authentication required")
+            || m.contains("403 forbidden")
+            || m.contains("401 unauthorized")
     };
-    let not_found = |m: &str| m.contains("404") || m.contains("not found") || m.contains("does not exist");
-    let restricted = |m: &str| m.contains("copyright") || m.contains("private") || m.contains("blocked") || m.contains("geo");
+    let not_found = |m: &str| {
+        m.contains("http error 404")
+            || m.contains("not found")
+            || m.contains("does not exist")
+            || (m.contains("video unavailable") && m.contains("404"))
+    };
+    let restricted = |m: &str| {
+        m.contains("copyright")
+            || m.contains("private video")
+            || m.contains("this video is private")
+            || m.contains("geo restricted")
+            || m.contains("blocked")
+    };
 
     if retryable_rate(&lower) {
         ("rate_limited", true)
@@ -515,6 +544,24 @@ mod tests {
             }
             other => panic!("expected progress, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn parse_line_reads_bytes_without_total() {
+        match parse_line("[download] 12.30MiB at 2.5MiB/s ETA 00:12") {
+            LineEvent::Progress { downloaded_bytes, .. } => {
+                assert_eq!(downloaded_bytes, Some((12.30 * 1024.0 * 1024.0) as u64));
+            }
+            other => panic!("expected progress, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn classify_error_ignores_numbers_in_urls() {
+        assert_eq!(
+            classify_error("ERROR: unable to download https://cdn.example.com/404/video.mp4"),
+            ("unknown", true)
+        );
     }
 
     #[test]

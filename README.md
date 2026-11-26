@@ -61,6 +61,7 @@ Getta is an original implementation under the MIT license.
 | **Batch pastes** | Many links at once: Getta queues them all |
 | **Channel following** | Follow any public channel; Getta spots new uploads and queues them. Optional background auto-download |
 | **Download rules** | Route links to folders by pattern, first match wins |
+| **Site profiles** | Per-link rules also override quality and mode, for example audio only from one site |
 | **Filename template** | yt-dlp field template with live defaults, e.g. `%(title).200s [%(id)s].%(ext)s` |
 
 ### A queue that behaves
@@ -69,6 +70,7 @@ Getta is an original implementation under the MIT license.
 |---------|-------------|
 | **Pause and resume** | Process-level pause on Windows and Linux/macOS; downloads pick up where they stopped |
 | **Search** | Filter transit, queued, delivered and failed by title, link or site |
+| **Copy source URL** | Copy a queued link directly from its row |
 | **Retry with backoff** | Automatic retry for rate limits and transient errors with exponential backoff |
 | **Concurrency** | Configurable simultaneous downloads, connections per download and retry count |
 | **Speed limit** | Cap the download rate globally (MB/s), changeable from the Queue screen |

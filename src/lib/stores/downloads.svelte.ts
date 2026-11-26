@@ -74,11 +74,15 @@ class DownloadsStore {
 			/* backend not ready; listener below will populate */
 		}
 		await onQueueChanged((items) => {
-			const previous = new Map(this.items.map((i) => [i.id, i.status]));
+			// On a cold start the snapshot may have failed. Seed the first
+			// event instead of treating every existing item as a new completion.
+			const seeded = !this.loaded;
+			const source = seeded ? items : this.items;
+			const previous = new Map(source.map((i) => [i.id, i.status]));
 			this.items = items;
 			this.loaded = true;
 			this.recordSpeed(items);
-			this.trackTransitions(previous, items);
+			if (!seeded) this.trackTransitions(previous, items);
 		});
 	}
 

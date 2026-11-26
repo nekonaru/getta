@@ -61,6 +61,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Banyak tautan** | Tempel banyak link sekaligus: Getta mengantrekan semuanya |
 | **Ikuti channel** | Ikuti channel publik mana pun; Getta mendeteksi unggahan baru dan mengantrekannya. Opsional: auto-unduh latar |
 | **Aturan unduhan** | Rute link ke folder berdasarkan pola, yang pertama cocok menang |
+| **Profil situs** | Aturan per link juga menimpa kualitas dan mode, misalnya audio saja dari satu situs |
 | **Pola nama file** | Template field yt-dlp dengan default yang aman, misalnya `%(title).200s [%(id)s].%(ext)s` |
 
 ### Antrean yang bisa diandalkan
@@ -69,6 +70,7 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 |-------|-----------|
 | **Jeda dan lanjut** | Jeda level proses di Windows, Linux, dan macOS; unduhan dilanjutkan dari posisi terakhir |
 | **Cari** | Filter sedang berjalan, menunggu, selesai, dan gagal berdasarkan judul, link, atau situs |
+| **Salin URL sumber** | Salin link antrean langsung dari barisnya |
 | **Coba ulang dengan backoff** | Coba ulang otomatis untuk rate limit dan error sementara dengan backoff eksponensial |
 | **Konkurensi** | Jumlah unduhan bersamaan, jumlah koneksi per unduhan, dan jumlah coba ulang bisa diatur |
 | **Batas kecepatan** | Batasi kecepatan unduh global (MB/s), bisa diubah dari layar Antrean |

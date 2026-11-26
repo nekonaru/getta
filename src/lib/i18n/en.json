@@ -112,7 +112,9 @@
 		"confirmRemoveFile": "Delete \"{title}\" from disk? This cannot be undone.",
 		"reorder": "Drag to reorder",
 		"retryAllFailed": "Retry {count} failed",
-		"retryAllDone": "{count} links requeued"
+		"retryAllDone": "{count} links requeued",
+		"copyUrl": "Copy source URL",
+		"urlCopied": "Source URL copied"
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -369,7 +371,10 @@
 		"downloadArchive": "Skip links already downloaded (ID archive)",
 		"sections": "Settings sections",
 		"rulePattern": "Link pattern",
-		"cookieCheckSummary": "{total} cookies · {sites} sites"
+		"cookieCheckSummary": "{total} cookies · {sites} sites",
+		"ruleQuality": "Quality override",
+		"ruleMode": "Mode override",
+		"ruleModeDefault": "Global default"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",

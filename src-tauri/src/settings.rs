@@ -63,6 +63,11 @@ pub struct DownloadRule {
     pub id: String,
     pub pattern: String,
     pub dir: String,
+    /// Empty means "use the global setting".
+    #[serde(default)]
+    pub quality: String,
+    #[serde(default)]
+    pub mode: String,
 }
 
 impl Default for DownloadRule {
@@ -71,8 +76,19 @@ impl Default for DownloadRule {
             id: uuid::Uuid::new_v4().to_string(),
             pattern: String::new(),
             dir: String::new(),
+            quality: String::new(),
+            mode: String::new(),
         }
     }
+}
+
+/// First matching rule wins. An empty field means no override.
+pub fn resolve_profile(settings: &AppSettings, url: &str) -> Option<&DownloadRule> {
+    let lower = url.to_ascii_lowercase();
+    settings.download_rules.iter().find(|rule| {
+        let pattern = rule.pattern.trim().to_ascii_lowercase();
+        !pattern.is_empty() && lower.contains(&pattern)
+    })
 }
 
 /// First matching rule wins; an explicitly chosen folder always beats a rule.

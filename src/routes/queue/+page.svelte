@@ -40,6 +40,15 @@
 		dropIndex = null;
 	}
 
+	async function copySourceUrl(url: string) {
+		try {
+			await api.setClipboardText(url);
+			toastStore.push(t("queue.urlCopied"), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function retryFailed() {
 		try {
 			const count = await api.retryAllFailed();
@@ -49,6 +58,13 @@
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
 	}
+
+	const relativeLabels = () => ({
+		justNow: t("time.justNow"),
+		minutesAgo: t("time.minutesAgo"),
+		hoursAgo: t("time.hoursAgo"),
+		daysAgo: t("time.daysAgo")
+	});
 
 	const matchesQuery = (item: QueueItemInfo) => {
 		const needle = query.trim().toLowerCase();
@@ -403,6 +419,7 @@
 												{/if}
 											</div>
 											<div class="row-actions">
+												<button class="btn-icon" title={t("queue.copyUrl")} aria-label={t("queue.copyUrl")} onclick={() => copySourceUrl(item.url)}><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg></button>
 												{#if item.status === "active"}
 													<button class="btn-icon" title={t("queue.pause")} aria-label={t("queue.pause")} onclick={() => api.pauseDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14" /></svg></button>
 													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
@@ -460,7 +477,7 @@
 									<div class="row-meta muted">
 										<span class="mono">{entry.platform}</span>
 										{#if entry.file_size_bytes}<span>· {formatBytes(entry.file_size_bytes)}</span>{/if}
-										<span>· {formatRelativeTime(entry.completed_at)}</span>
+										<span>· {formatRelativeTime(entry.completed_at, relativeLabels())}</span>
 									</div>
 								</div>
 								<div class="row-actions">

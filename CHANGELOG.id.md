@@ -3,6 +3,32 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.17.0
+
+Profil per tautan, salin link antrean, dan audit native putaran berikutnya.
+
+## Fitur baru
+
+- **Profil situs.** Aturan unduhan kini bisa menimpa kualitas dan mode untuk link yang cocok, tidak hanya folder.
+- **Salin URL sumber.** Setiap baris antrean punya tombol salin, jadi link bisa dipakai ulang tanpa membuka pustaka.
+
+## Perbaikan bug
+
+- **Jeda semua benar-benar menjeda.** Menjeda beberapa item tidak lagi membebaskan slot dan memulai unduhan yang menunggu.
+- **Link tontonan tidak menarik seluruh playlist.** URL tontonan dengan `&list=` dianggap satu video kecuali entri playlist dipilih.
+- **Unduhan ganda digabung.** Klik dua kali Download memakai item yang sudah aktif atau menunggu, bukan menulis file yang sama dua kali.
+- **Unduhan subtitle masuk riwayat.** Pekerjaan subtitle saja kini mencatat entri selesai meski tidak menghasilkan file media.
+- **Transfer tanpa ukuran tetap menampilkan byte.** Baris progres tanpa total kini memperbarui jumlah byte; file selesai melaporkan ukuran aslinya.
+- **Error diklasifikasikan benar.** URL atau peringatan yang mengandung "404" atau "login" tidak lagi mengubah keputusan retry.
+- **Error pratinjau menunjuk penyebabnya.** Baris `ERROR:` pertama mengalahkan peringatan di belakangnya.
+- **Statistik saat buka tidak membengkak.** Item selesai yang sudah ada tidak dihitung sebagai selesai baru saat aplikasi dibuka.
+- **Daftar bab mengikuti videonya.** Probes lambat tidak lagi memasang bab file lain ke video yang sedang diputar.
+- **Batal memilih folder tidak bising.** Membatalkan dialog folder tidak lagi dilaporkan sebagai link tidak valid.
+- **Teks status mengikuti bahasa.** Waktu di riwayat dan label status di Beranda mengikuti bahasa yang dipilih.
+- **Lencana duplikat hanya untuk salinan ekstra.** File yang akan disimpan tidak diberi lencana duplikat.
+- **Pencarian aman terhadap hasil basi.** Mengetik setelah analisis dimulai tidak membuat hasil lama mengulang pilihanmu.
+- **Link tanpa skema menerima lebih banyak domain.** Deteksi host kini memakai TLD wajar apa pun, bukan daftar tetap.
+
 ## v0.16.0
 
 Audit native putaran berikutnya, ambil link dengan seret, dan penulisan state yang lebih aman.

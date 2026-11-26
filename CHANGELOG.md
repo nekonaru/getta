@@ -3,6 +3,32 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.17.0
+
+Per-link profiles, copyable queue links, and another native audit pass.
+
+## New features
+
+- **Site profiles.** A download rule can now override quality and mode for matching links, not just the folder.
+- **Copy source URL.** Every queue row has a copy button, so a link can be reused without opening the library.
+
+## Bug fixes
+
+- **Pause all really pauses.** Pausing several items no longer frees slots and starts queued downloads mid-action.
+- **Watch links no longer pull whole playlists.** A watch URL with `&list=` is treated as one video unless playlist entries were selected.
+- **Duplicate enqueues are coalesced.** Double-clicking Download reuses the existing active or queued item instead of writing the same file twice.
+- **Subtitle downloads reach history.** Subtitle-only jobs now record a completed entry even though they produce no media file.
+- **Unknown-size transfers show bytes.** Progress lines without a total now update the transferred byte count; completed files report their real size.
+- **Errors are classified correctly.** A URL or warning containing "404" or "login" no longer changes the retry decision.
+- **Preview errors point at the cause.** The first `ERROR:` line wins over trailing warnings.
+- **Launch stats do not inflate.** A cold start no longer counts existing completed items as new finishes.
+- **Chapter lists stay with their video.** A slow probe can no longer put one file's chapters on another.
+- **Cancelled folder picker is silent.** Canceling the output folder no longer reports an invalid link.
+- **Localized status text.** History timestamps and Home status chips follow the selected language.
+- **Duplicate badge marks extras only.** The file that will be kept is no longer badged as a duplicate.
+- **Search is debounced safely.** Typing after an analysis starts no longer lets a stale result reset your selections.
+- **Schemeless links accept more domains.** Host detection now works for any plausible TLD, not a fixed list.
+
 ## v0.16.0
 
 Another native audit pass, drag-and-drop fetching, and safer state writes.

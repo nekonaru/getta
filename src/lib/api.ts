@@ -103,6 +103,8 @@ export interface DownloadRule {
 	id: string;
 	pattern: string;
 	dir: string;
+	quality: string;
+	mode: string;
 }
 
 export interface AppSettings {

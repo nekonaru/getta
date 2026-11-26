@@ -24,7 +24,9 @@
 	let chapters = $state<ChapterMarker[]>([]);
 	let chapterSelection = $state("");
 	let dupGroups = $state<string[][]>([]);
-	const dupIds = $derived(new Set(dupGroups.flat()));
+	// The first entry of each group is the one we keep, so only extra
+	// copies carry the duplicate badge.
+	const dupIds = $derived(new Set(dupGroups.flatMap((group) => group.slice(1))));
 	const dupTotal = $derived(dupGroups.reduce((sum, group) => sum + group.length - 1, 0));
 
 	onMount(async () => {
@@ -138,11 +140,13 @@
 		chapters = [];
 		chapterSelection = "";
 		const kind = kindOf(entry.file_path);
+		const id = entry.id;
 		if (kind === "video" || kind === "audio") {
 			try {
-				chapters = await api.probeChapters(entry.file_path ?? "");
+				const markers = await api.probeChapters(entry.file_path ?? "");
+				if (active?.id === id) chapters = markers;
 			} catch {
-				chapters = [];
+				if (active?.id === id) chapters = [];
 			}
 		}
 	}

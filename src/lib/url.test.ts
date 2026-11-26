@@ -51,6 +51,13 @@ describe("extractLink", () => {
 		});
 	});
 
+	it("accepts schemeless links with uncommon TLDs", () => {
+		expect(extractLink("example.xyz/watch?v=abc")).toEqual({
+			url: "https://example.xyz/watch?v=abc",
+			guessedScheme: true
+		});
+	});
+
 	it("accepts magnet links", () => {
 		expect(extractLink("magnet:?xt=urn:btih:abcdef123456")?.url).toBe("magnet:?xt=urn:btih:abcdef123456");
 	});

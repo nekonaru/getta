@@ -92,7 +92,7 @@
 		if (patching) return;
 		const rules = [
 			...(settings?.download_rules ?? []),
-			{ id: crypto.randomUUID(), pattern: "", dir: "" }
+			{ id: crypto.randomUUID(), pattern: "", dir: "", quality: "", mode: "" }
 		];
 		void patch({ download_rules: rules });
 	}
@@ -282,6 +282,14 @@
 							<div class="rule-row">
 								<input class="input mono rule-pattern" type="text" placeholder="youtube.com" aria-label={t("settings.rulePattern")} value={rule.pattern} onchange={(e) => patchRule(rule.id, { pattern: (e.currentTarget as HTMLInputElement).value })} />
 								<input class="input mono rule-dir" type="text" placeholder="D:\Media" aria-label={t("settings.outputDir")} value={rule.dir} onchange={(e) => patchRule(rule.id, { dir: (e.currentTarget as HTMLInputElement).value })} />
+								<input class="input mono rule-quality" type="text" placeholder="best" aria-label={t("settings.ruleQuality")} value={rule.quality} onchange={(e) => patchRule(rule.id, { quality: (e.currentTarget as HTMLInputElement).value })} />
+								<select class="input rule-mode" aria-label={t("settings.ruleMode")} value={rule.mode} onchange={(e) => patchRule(rule.id, { mode: (e.currentTarget as HTMLSelectElement).value })}>
+									<option value="">{t("settings.ruleModeDefault")}</option>
+									<option value="auto">{t("home.modeAuto")}</option>
+									<option value="audio">{t("home.modeAudio")}</option>
+									<option value="mute">{t("home.modeMute")}</option>
+									<option value="subs">{t("home.modeSubs")}</option>
+								</select>
 								<button disabled={patching} class="btn-icon" title={t("settings.browse")} aria-label={t("settings.browse")} onclick={() => browseRuleDir(rule.id)}><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg></button>
 								<button disabled={patching} class="btn-icon danger" title={t("settings.removeRule")} aria-label={t("settings.removeRule")} onclick={() => removeRule(rule.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 							</div>
@@ -567,8 +575,10 @@
 		min-width: 0;
 	}
 
-	.rule-dir {
-		flex: 1.6;
+	.rule-dir,
+	.rule-quality,
+	.rule-mode {
+		flex: 1.2;
 		min-width: 0;
 	}
 

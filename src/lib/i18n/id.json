@@ -112,7 +112,9 @@
 		"confirmRemoveFile": "Hapus \"{title}\" dari disk? Tindakan ini tidak bisa dibatalkan.",
 		"reorder": "Seret untuk mengurutkan",
 		"retryAllFailed": "Coba ulang {count} gagal",
-		"retryAllDone": "{count} link masuk antrean lagi"
+		"retryAllDone": "{count} link masuk antrean lagi",
+		"copyUrl": "Salin URL sumber",
+		"urlCopied": "URL sumber disalin"
 	},
 	"library": {
 		"kicker": "Barang tersimpan",
@@ -369,7 +371,10 @@
 		"downloadArchive": "Lewati link yang sudah diunduh (arsip ID)",
 		"sections": "Bagian pengaturan",
 		"rulePattern": "Pola tautan",
-		"cookieCheckSummary": "{total} cookie · {sites} situs"
+		"cookieCheckSummary": "{total} cookie · {sites} situs",
+		"ruleQuality": "Timpa kualitas",
+		"ruleMode": "Timpa mode",
+		"ruleModeDefault": "Bawaan global"
 	},
 	"about": {
 		"tagline": "Setiap tautan, terkirim.",
