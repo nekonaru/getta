@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use tauri::Manager;
+
 /// Known shortener hosts we are willing to follow. Anything else is left
 /// untouched so a random redirect cannot change the target silently.
 const SHORTENERS: &[&str] = &[
