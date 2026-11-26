@@ -12,6 +12,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use chrono::Timelike;
+use sha2::Digest;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -798,11 +799,11 @@ fn title_from_url(url: &str) -> String {
 /// Fire an opt-in webhook for a queue event. The request is spawned and
 /// never blocks a download. Failures are ignored by design.
 fn notify_webhook(app: &tauri::AppHandle, event: &str, title: &str, url: &str, error: Option<&str>) {
-    let (enabled, endpoint, events) = app
+    let (endpoint, events, enabled) = app
         .try_state::<AppState>()
         .and_then(|state| {
             state.settings.lock().ok().map(|s| {
-                (s.webhook_url.trim().to_string(), s.webhook_events.clone(), s.webhook_url.trim().len() > 0)
+                (s.webhook_url.trim().to_string(), s.webhook_events.clone(), !s.webhook_url.trim().is_empty())
             })
         })
         .unwrap_or_default();

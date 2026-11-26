@@ -102,7 +102,7 @@ pub fn batch_rename(data_dir: &Path, ids: &[String], template: &str) -> Result<u
         let rendered = template
             .replace("{title}", &entry.title)
             .replace("{platform}", &entry.platform)
-            .replace("{id}", sanitize_segment(&entry.id))
+            .replace("{id}", &sanitize_segment(&entry.id))
             .replace("{old}", &stem)
             .replace("{ext}", &ext);
         let safe = sanitize_segment(&rendered);
@@ -175,7 +175,7 @@ pub fn health(data_dir: &Path, output_dir: &Path, needed_bytes: u64) -> HealthRe
 
 #[cfg(windows)]
 fn disk_space(path: &Path) -> (u64, u64) {
-    use std::os::windows::ffi::OsStringExt;
+    use std::os::windows::ffi::OsStrExt;
     let wide: Vec<u16> = path
         .as_os_str()
         .encode_wide()
@@ -225,7 +225,7 @@ pub fn export_library_html(data_dir: &Path, dest: &Path) -> Result<(), String> {
         ));
     }
     html.push_str("</div></body></html>");
-    storage::write_text_atomic(dest, &html)
+    storage::write_text_atomic(dest, &html).map_err(|e| e.to_string())
 }
 
 fn html_escape(value: &str) -> String {
