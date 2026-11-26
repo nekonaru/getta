@@ -58,7 +58,12 @@
 		"downloadAll": "Queue all {count}",
 		"invalidUrl": "That does not look like a link.",
 		"statsLine": "{count} files · {bytes} saved · runs on your machine",
-		"hotkeyHint": "anywhere to fetch from your clipboard."
+		"hotkeyHint": "anywhere to fetch from your clipboard.",
+		"scheduleLabel": "Start later",
+		"scheduleHint": "Leave empty to start now",
+		"importLinks": "Import links from file",
+		"imported": "Imported {count} links",
+		"scheduled": "Scheduled"
 	},
 	"queue": {
 		"kicker": "Cargo manifest",
@@ -114,7 +119,9 @@
 		"retryAllFailed": "Retry {count} failed",
 		"retryAllDone": "{count} links requeued",
 		"copyUrl": "Copy source URL",
-		"urlCopied": "Source URL copied"
+		"urlCopied": "Source URL copied",
+		"scheduledFor": "Scheduled for {time}",
+		"cancelSchedule": "Cancel schedule"
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -380,7 +387,7 @@
 		"tagline": "Every link, delivered.",
 		"body": "Getta is a free, open source app for fetching media and files from across the web. Downloads run locally through yt-dlp and FFmpeg. No account, no telemetry on what you fetch, no terminal.",
 		"engine": "Powered by yt-dlp and FFmpeg.",
-		"license": "Distributed under the MIT License.",
+		"license": "License",
 		"source": "Source code",
 		"releases": "Release notes",
 		"report": "Report an issue",
@@ -406,7 +413,9 @@
 		"checkingEngines": "Checking engines...",
 		"diagnosticsError": "Diagnostics could not be loaded.",
 		"retry": "Retry",
-		"engineError": "Engine status could not be checked."
+		"engineError": "Engine status could not be checked.",
+		"version": "Version",
+		"identifier": "Identifier"
 	},
 	"recovery": {
 		"title": "Unfinished downloads",
@@ -439,7 +448,9 @@
 	},
 	"layout": {
 		"engineBroken": "The download engine is not working. Reinstall it in Settings, Engine.",
-		"dropHint": "Drop a link anywhere to fetch it"
+		"dropHint": "Drop a link anywhere to fetch it",
+		"tagline": "link in · file out",
+		"engineReady": "engine ready"
 	},
 	"common": {
 		"ok": "OK",

@@ -53,7 +53,7 @@ pub fn export_csv(data_dir: &Path, dest: &Path) -> std::io::Result<()> {
         out.push_str(&row.iter().map(|field| csv_cell(field)).collect::<Vec<_>>().join(","));
         out.push('\n');
     }
-    std::fs::write(dest, out)
+    storage::write_text_atomic(dest, &out)
 }
 
 fn csv_cell(field: &str) -> String {

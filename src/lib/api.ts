@@ -53,6 +53,7 @@ export interface QueueItemInfo {
 	quality: string | null;
 	download_mode: DownloadMode | null;
 	format_id: string | null;
+	scheduled_at?: number | null;
 }
 
 export interface HistoryEntry {
@@ -192,6 +193,7 @@ export interface StartOptions {
 	format_id: string | null;
 	playlist_items: string | null;
 	output_dir: string | null;
+	start_at?: number | null;
 }
 
 export type ToolName =
@@ -265,12 +267,15 @@ export const api = {
 	resumeDownload: (id: number) => call(() => invoke<void>("resume_download", { id })),
 	cancelDownload: (id: number) => call(() => invoke<void>("cancel_download", { id })),
 	retryDownload: (id: number) => call(() => invoke<void>("retry_download", { id })),
+	clearSchedule: (id: number) => call(() => invoke<void>("clear_schedule", { id })),
 	removeDownload: (id: number, deleteFile: boolean) =>
 		call(() => invoke<void>("remove_download", { id, deleteFile })),
 	clearFinished: () => call(() => invoke<void>("clear_finished")),
 	pauseAll: () => call(() => invoke<void>("pause_all")),
 	resumeAll: () => call(() => invoke<void>("resume_all")),
 	queueSnapshot: () => call(() => invoke<QueueItemInfo[]>("queue_snapshot")),
+	takePendingLinks: () => call(() => invoke<string[]>("take_pending_links")),
+	importLinksFile: (path: string) => call(() => invoke<number>("import_links_file", { path })),
 	moveItem: (id: number, delta: number) => call(() => invoke<void>("move_item", { id, delta })),
 	retryAllFailed: () => call(() => invoke<number>("retry_all_failed")),
 	moveItemTo: (id: number, targetIndex: number) =>

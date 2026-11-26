@@ -38,7 +38,13 @@
 					: t("about.enginesMissing"),
 				ok ? "info" : "error"
 			);
-			diagnostics = await api.getDiagnostics();
+			try {
+				diagnostics = await api.getDiagnostics();
+				diagnosticsError = false;
+			} catch {
+				diagnostics = null;
+				diagnosticsError = true;
+			}
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		} finally {
@@ -103,9 +109,9 @@
 			<p class="muted">{t("about.engine")}</p>
 
 			<dl class="about-meta">
-				<div><dt>Version</dt><dd class="mono">v{version}</dd></div>
-				<div><dt>Identifier</dt><dd class="mono">com.getta.app</dd></div>
-				<div><dt>License</dt><dd>MIT</dd></div>
+				<div><dt>{t("about.version")}</dt><dd class="mono">v{version}</dd></div>
+				<div><dt>{t("about.identifier")}</dt><dd class="mono">com.getta.app</dd></div>
+				<div><dt>{t("about.license")}</dt><dd>MIT</dd></div>
 			</dl>
 
 			<nav class="about-links">

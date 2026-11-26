@@ -3,6 +3,37 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v0.18.0
+
+Scheduled downloads, link file import, and a third native audit pass.
+
+## New features
+
+- **Scheduled downloads.** Set a start time on Home. The item waits in the queue with a visible timestamp and can be released early from its row. The schedule survives a restart through recovery.
+- **Import links from a file.** Home now reads a UTF-8 text file of links, deduplicates them, and queues up to 500 at once.
+
+## Bug fixes
+
+- **Forwarded deep links are no longer lost.** Links arriving before the UI mounted are buffered and replayed.
+- **All second-instance links are forwarded.** Previously only the first URL argument survived.
+- **Reset syncs OS autostart.** The system launch entry now follows the persisted setting instead of staying enabled after a reset.
+- **In-flight follow checks no longer undo newer changes.** Toggling auto-download during a check keeps the new value.
+- **Duplicate follows are detected across URL forms.** Scheme and `www` differences no longer create two polls for one channel.
+- **Tray click restores a minimized window** instead of hiding it.
+- **Tray labels follow the language setting.** Changing locale rebuilds the menu at runtime.
+- **Import and restore counts are accurate.** Deduplicated links are no longer counted as added.
+- **One bad record no longer wipes a state file.** Valid history, follow and settings records are salvaged and the original is kept as `.bad`.
+- **CSV export is atomic.** A crash during export cannot leave a partial file.
+- **Rapid rule edits are serialized.** Changing two rules quickly no longer discards the first edit.
+- **Cookie bucket status is honest.** The success toast appears only when the setting was actually saved.
+- **Hotkey deduplicates clipboard links.** Pressing Ctrl+Shift+D twice no longer queues the same URL twice.
+- **Dropped links are all queued.** A URI list with several links no longer loses everything after the first.
+- **Tool labels translate at runtime.** Remux, re-encode and original now follow the selected language.
+- **Autostart switch reflects saved state.** A failed save no longer shows the switch as enabled.
+- **Diagnostics errors are visible.** A failed refresh clears stale data instead of leaving an outdated panel.
+- **Remaining English labels are translated.** Tagline, engine ready, version, identifier and license now use locale keys.
+- **Adding a bucket cannot resurrect a deleted one.** Rapid bucket edits are serialized.
+
 ## v0.17.0
 
 Per-link profiles, copyable queue links, and another native audit pass.

@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { open } from "@tauri-apps/plugin-dialog";
 	import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
-	import { api, type EngineStatus, type DownloadRule, type CookieBucket } from "#lib/api";
+	import { api, type EngineStatus, type DownloadRule, type CookieBucket, type AppSettings } from "#lib/api";
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
@@ -12,7 +12,19 @@
 	let engine = $state<EngineStatus | null>(null);
 	let installBusy = $state<string | null>(null);
 	let patching = $state(false);
+	let inFlight = 0;
+	let updateChain = Promise.resolve();
 	let autostartEnabled = $state(false);
+
+	function beginPatch() {
+		inFlight += 1;
+		patching = true;
+	}
+
+	function endPatch() {
+		inFlight = Math.max(0, inFlight - 1);
+		patching = inFlight > 0;
+	}
 
 	const settings = $derived(settingsStore.value);
 
@@ -30,8 +42,8 @@
 		try {
 			if (next) await enable();
 			else await disable();
-			autostartEnabled = next;
 			await settingsStore.update({ autostart: next });
+			autostartEnabled = next;
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -45,15 +57,27 @@
 		}
 	}
 
-	async function patch(p: Partial<import("#lib/api").AppSettings>) {
-		patching = true;
+	async function patch(p: Partial<AppSettings>): Promise<boolean> {
+		beginPatch();
 		try {
 			await settingsStore.update(p);
+			return true;
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+			return false;
 		} finally {
-			patching = false;
+			endPatch();
 		}
+	}
+
+	/// Serialise updates that are computed from the current settings so a
+	/// rapid second click cannot overwrite the first with a stale snapshot.
+	function enqueueUpdate(updater: (current: AppSettings | null) => Partial<AppSettings>): Promise<void> {
+		const task = updateChain.then(async () => {
+			await patch(updater(settingsStore.value));
+		});
+		updateChain = task.catch(() => {});
+		return task;
 	}
 
 	async function pickFolder() {
@@ -83,23 +107,24 @@
 	}
 
 	function patchRule(id: string, rulePatch: Partial<DownloadRule>) {
-		if (patching) return;
-		const rules = (settings?.download_rules ?? []).map((r) => (r.id === id ? { ...r, ...rulePatch } : r));
-		void patch({ download_rules: rules });
+		void enqueueUpdate((current) => ({
+			download_rules: (current?.download_rules ?? []).map((r) => (r.id === id ? { ...r, ...rulePatch } : r))
+		}));
 	}
 
 	function addRule() {
-		if (patching) return;
-		const rules = [
-			...(settings?.download_rules ?? []),
-			{ id: crypto.randomUUID(), pattern: "", dir: "", quality: "", mode: "" }
-		];
-		void patch({ download_rules: rules });
+		void enqueueUpdate((current) => ({
+			download_rules: [
+				...(current?.download_rules ?? []),
+				{ id: crypto.randomUUID(), pattern: "", dir: "", quality: "", mode: "" }
+			]
+		}));
 	}
 
 	function removeRule(id: string) {
-		if (patching) return;
-		void patch({ download_rules: (settings?.download_rules ?? []).filter((r) => r.id !== id) });
+		void enqueueUpdate((current) => ({
+			download_rules: (current?.download_rules ?? []).filter((r) => r.id !== id)
+		}));
 	}
 
 	async function browseRuleDir(id: string) {
@@ -129,15 +154,17 @@
 				domain: "",
 				added_at: Math.floor(Date.now() / 1000)
 			};
-			await patch({ cookie_buckets: [...(settings?.cookie_buckets ?? []), bucket] });
+			await enqueueUpdate((current) => ({
+				cookie_buckets: [...(current?.cookie_buckets ?? []), bucket]
+			}));
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
 	}
 
 	async function useBucket(bucket: CookieBucket) {
-		await patch({ cookie_file: bucket.file });
-		toastStore.push(t("settings.cookieBucketUsed", { name: bucket.name }));
+		const ok = await patch({ cookie_file: bucket.file });
+		if (ok) toastStore.push(t("settings.cookieBucketUsed", { name: bucket.name }));
 	}
 
 	async function renameBucket(bucket: CookieBucket) {
@@ -145,32 +172,34 @@
 		if (name === null) return;
 		const trimmed = name.trim();
 		if (!trimmed) return;
-		await patch({
-			cookie_buckets: (settings?.cookie_buckets ?? []).map((b) =>
+		await enqueueUpdate((current) => ({
+			cookie_buckets: (current?.cookie_buckets ?? []).map((b) =>
 				b.id === bucket.id ? { ...b, name: trimmed } : b
 			)
-		});
+		}));
 	}
 
 	async function deleteBucket(bucket: CookieBucket) {
 		if (!window.confirm(t("settings.deleteBucketConfirm", { name: bucket.name }))) return;
-		await patch({
-			cookie_buckets: (settings?.cookie_buckets ?? []).filter((b) => b.id !== bucket.id),
-			cookie_trash: [...(settings?.cookie_trash ?? []), bucket],
-			...(settings?.cookie_file === bucket.file ? { cookie_file: "" } : {})
-		});
+		await enqueueUpdate((current) => ({
+			cookie_buckets: (current?.cookie_buckets ?? []).filter((b) => b.id !== bucket.id),
+			cookie_trash: [...(current?.cookie_trash ?? []), bucket],
+			...(current?.cookie_file === bucket.file ? { cookie_file: "" } : {})
+		}));
 	}
 
 	async function restoreBucket(bucket: CookieBucket) {
-		await patch({
-			cookie_trash: (settings?.cookie_trash ?? []).filter((b) => b.id !== bucket.id),
-			cookie_buckets: [...(settings?.cookie_buckets ?? []), bucket]
-		});
+		await enqueueUpdate((current) => ({
+			cookie_trash: (current?.cookie_trash ?? []).filter((b) => b.id !== bucket.id),
+			cookie_buckets: [...(current?.cookie_buckets ?? []), bucket]
+		}));
 	}
 
 	async function deleteForever(bucket: CookieBucket) {
 		if (!window.confirm(t("settings.deleteForeverConfirm", { name: bucket.name }))) return;
-		await patch({ cookie_trash: (settings?.cookie_trash ?? []).filter((b) => b.id !== bucket.id) });
+		await enqueueUpdate((current) => ({
+			cookie_trash: (current?.cookie_trash ?? []).filter((b) => b.id !== bucket.id)
+		}));
 	}
 
 	async function emptyTrash() {
@@ -425,7 +454,7 @@
                                 <div class="bucket-block">
                                     <div class="bucket-head">
                                         <span class="field-label" style="margin:0">{t("settings.cookieBuckets")}</span>
-                                        <button class="btn btn-sm" onclick={pickCookieBucket}>{t("settings.addBucket")}</button>
+                                        <button class="btn btn-sm" disabled={patching} onclick={pickCookieBucket}>{t("settings.addBucket")}</button>
                                     </div>
                                     <p class="hint">{t("settings.cookieBucketsHint")}</p>
                                     {#each settings.cookie_buckets as bucket (bucket.id)}

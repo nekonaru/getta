@@ -33,11 +33,8 @@ fn save(data_dir: &Path, follows: &[FollowChannel]) -> std::io::Result<()> {
 pub fn add(data_dir: &Path, channel: FollowChannel) -> std::io::Result<()> {
     let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut follows = list(data_dir);
-    let target = channel_target(&channel.url);
-    if follows
-        .iter()
-        .any(|f| channel_target(&f.url) == target)
-    {
+    let key = channel_key(&channel.url);
+    if follows.iter().any(|f| channel_key(&f.url) == key) {
         return Ok(());
     }
     follows.push(channel);
@@ -86,6 +83,20 @@ fn channel_target(url: &str) -> String {
         }
     }
     trimmed
+}
+
+/// Stable identity for duplicate detection. The fetch target itself keeps
+/// the original scheme because yt-dlp needs a full URL.
+fn channel_key(url: &str) -> String {
+    let target = channel_target(url);
+    let no_scheme = target
+        .strip_prefix("https://")
+        .or_else(|| target.strip_prefix("http://"))
+        .unwrap_or(&target);
+    no_scheme
+        .strip_prefix("www.")
+        .unwrap_or(no_scheme)
+        .to_ascii_lowercase()
 }
 
 async fn fetch_flat_playlist(app: &AppHandle, target: &str) -> Result<Value, String> {
@@ -238,6 +249,7 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
             format_id: None,
             playlist_items: None,
             output_dir: None,
+            start_at: None,
         };
         let started = app
             .try_state::<AppState>()
@@ -256,13 +268,13 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
     if new_seen.len() > cap {
         new_seen = new_seen.split_off(new_seen.len() - cap);
     }
-    let mut follow = follow;
-    follow.seen_ids = new_seen;
-    follow.last_checked_at = Some(now_secs());
-    let updated = list(&data_dir)
-        .into_iter()
-        .map(|f| if f.id == follow.id { follow.clone() } else { f })
-        .collect::<Vec<_>>();
+    // Re-read the file now. A settings toggle during the 45s fetch may have
+    // changed this record; overwrite only the fields this check owns.
+    let mut updated = list(&data_dir);
+    if let Some(current) = updated.iter_mut().find(|f| f.id == follow.id) {
+        current.seen_ids = new_seen;
+        current.last_checked_at = Some(now_secs());
+    }
     let _ = save(&data_dir, &updated);
     Ok(enqueued)
 }

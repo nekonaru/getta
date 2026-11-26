@@ -58,7 +58,12 @@
 		"downloadAll": "Antrekan {count} tautan",
 		"invalidUrl": "Itu bukan tautan.",
 		"statsLine": "{count} file · {bytes} tersimpan · berjalan di komputermu",
-		"hotkeyHint": "di mana pun untuk mengambil dari clipboard."
+		"hotkeyHint": "di mana pun untuk mengambil dari clipboard.",
+		"scheduleLabel": "Mulai nanti",
+		"scheduleHint": "Biarkan kosong untuk langsung memulai",
+		"importLinks": "Impor link dari file",
+		"imported": "{count} link diimpor",
+		"scheduled": "Dijadwalkan"
 	},
 	"queue": {
 		"kicker": "Manifest kargo",
@@ -114,7 +119,9 @@
 		"retryAllFailed": "Coba ulang {count} gagal",
 		"retryAllDone": "{count} link masuk antrean lagi",
 		"copyUrl": "Salin URL sumber",
-		"urlCopied": "URL sumber disalin"
+		"urlCopied": "URL sumber disalin",
+		"scheduledFor": "Dijadwalkan {time}",
+		"cancelSchedule": "Batalkan jadwal"
 	},
 	"library": {
 		"kicker": "Barang tersimpan",
@@ -380,7 +387,7 @@
 		"tagline": "Setiap tautan, terkirim.",
 		"body": "Getta adalah aplikasi gratis dan open source untuk mengambil media dan file dari seluruh web. Unduhan berjalan secara lokal lewat yt-dlp dan FFmpeg. Tanpa akun, tanpa telemetri soal apa yang kamu unduh, tanpa terminal.",
 		"engine": "Didukung yt-dlp dan FFmpeg.",
-		"license": "Didistribusikan di bawah MIT License.",
+		"license": "Lisensi",
 		"source": "Kode sumber",
 		"releases": "Catatan rilis",
 		"report": "Laporkan masalah",
@@ -406,7 +413,9 @@
 		"checkingEngines": "Memeriksa mesin...",
 		"diagnosticsError": "Diagnostik tidak dapat dimuat.",
 		"retry": "Coba lagi",
-		"engineError": "Status mesin tidak dapat diperiksa."
+		"engineError": "Status mesin tidak dapat diperiksa.",
+		"version": "Versi",
+		"identifier": "Identifier"
 	},
 	"recovery": {
 		"title": "Unduhan belum selesai",
@@ -439,7 +448,9 @@
 	},
 	"layout": {
 		"engineBroken": "Mesin unduhan tidak bekerja. Pasang ulang di Pengaturan, Mesin.",
-		"dropHint": "Jatuhkan link ke mana saja untuk mengambilnya"
+		"dropHint": "Jatuhkan link ke mana saja untuk mengambilnya",
+		"tagline": "link masuk · file keluar",
+		"engineReady": "mesin siap"
 	},
 	"common": {
 		"ok": "OK",

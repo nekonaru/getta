@@ -3,6 +3,37 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v0.18.0
+
+Unduhan terjadwal, impor link dari file, dan audit native putaran ketiga.
+
+## Fitur baru
+
+- **Unduhan terjadwal.** Atur waktu mulai di Beranda. Item menunggu di antrean dengan cap waktu yang terlihat dan bisa dimulai lebih awal dari barisnya. Jadwal tetap tersimpan saat aplikasi dibuka ulang lewat pemulihan.
+- **Impor link dari file.** Beranda kini membaca file teks UTF-8 berisi link, menghapus duplikat, dan mengantrekan hingga 500 link sekaligus.
+
+## Perbaikan bug
+
+- **Link yang diteruskan tidak hilang lagi.** Link yang tiba sebelum antarmuka siap disimpan sementara lalu diputar ulang.
+- **Semua link dari instance kedua diteruskan.** Sebelumnya hanya argumen URL pertama yang bertahan.
+- **Reset menyelaraskan autostart sistem.** Entri peluncuran sistem kini mengikuti pengaturan yang tersimpan, tidak tetap aktif setelah reset.
+- **Pemeriksaan follow yang berjalan tidak membatalkan perubahan baru.** Mengubah unduhan otomatis saat pemeriksaan tetap mempertahankan nilai baru.
+- **Follow ganda terdeteksi lintas bentuk URL.** Perbedaan skema dan `www` tidak lagi membuat dua pemeriksaan untuk satu kanal.
+- **Klik tray memulihkan jendela yang diminimalkan**, bukan menyembunyikannya.
+- **Label tray mengikuti bahasa.** Mengubah bahasa kini menyusun ulang menu saat berjalan.
+- **Jumlah impor dan pemulihan akurat.** Link yang digabung tidak lagi dihitung sebagai item baru.
+- **Satu record rusak tidak menghapus seluruh file state.** Record riwayat, follow, dan pengaturan yang valid diselamatkan, berkas asli disimpan sebagai `.bad`.
+- **Ekspor CSV bersifat atomik.** Kegagalan saat ekspor tidak meninggalkan file setengah jadi.
+- **Edit aturan cepat diurutkan.** Mengubah dua aturan dengan cepat tidak lagi menggugurkan edit pertama.
+- **Status bucket cookie jujur.** Toast sukses hanya muncul saat pengaturan benar-benar tersimpan.
+- **Hotkey memilah link clipboard.** Menekan Ctrl+Shift+D dua kali tidak mengantrekan URL yang sama dua kali.
+- **Semua link yang dijatuhkan masuk antrean.** Daftar URI dengan beberapa link tidak lagi kehilangan sisanya.
+- **Label alat diterjemahkan saat berjalan.** Remux, encode ulang, dan original kini mengikuti bahasa yang dipilih.
+- **Sakelar autostart mengikuti keadaan tersimpan.** Gagal menyimpan tidak lagi menampilkan sakelar sebagai aktif.
+- **Error diagnostik terlihat.** Kegagalan muat ulang menghapus data basi, bukan membiarkan panel lama.
+- **Label Inggris yang tersisa diterjemahkan.** Tagline, mesin siap, versi, identifier, dan lisensi memakai kunci lokal.
+- **Menambah bucket tidak menghidupkan kembali bucket yang dihapus.** Edit bucket cepat diurutkan.
+
 ## v0.17.0
 
 Profil per tautan, salin link antrean, dan audit native putaran berikutnya.

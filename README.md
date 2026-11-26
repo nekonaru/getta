@@ -62,6 +62,8 @@ Getta is an original implementation under the MIT license.
 | **Channel following** | Follow any public channel; Getta spots new uploads and queues them. Optional background auto-download |
 | **Download rules** | Route links to folders by pattern, first match wins |
 | **Site profiles** | Per-link rules also override quality and mode, for example audio only from one site |
+| **Scheduled downloads** | Pick a start time on Home; the item waits in the queue and can be released early |
+| **Import links from a file** | Read a UTF-8 text file of links and queue up to 500 at once |
 | **Filename template** | yt-dlp field template with live defaults, e.g. `%(title).200s [%(id)s].%(ext)s` |
 
 ### A queue that behaves

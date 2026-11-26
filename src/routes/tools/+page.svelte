@@ -13,7 +13,7 @@
 		error: string | null;
 	};
 	type ParamSpec =
-		| { kind: "select"; key: string; labelKey: string; options: Array<{ value: string; label: string }>; defaultValue: string }
+		| { kind: "select"; key: string; labelKey: string; options: Array<{ value: string; label?: string; labelKey?: string }>; defaultValue: string }
 		| { kind: "number"; key: string; labelKey: string; min: number; max: number; step: number; defaultValue: string }
 		| { kind: "file"; key: string; labelKey: string; extensions: string[]; defaultValue: string };
 	type ToolGroup = "audio" | "video" | "image" | "subtitles";
@@ -67,7 +67,7 @@
 		], filters: VIDEO, icon: "compress" },
 		{ id: "video_convert", group: "video", name: () => t("tools.videoConvert"), desc: () => t("tools.videoConvertDesc"), params: [
 			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "mp4", options: [{ value: "mp4", label: "MP4 (H.264)" }, { value: "mkv", label: "MKV" }, { value: "webm", label: "WebM (VP9)" }, { value: "mov", label: "MOV" }] },
-			{ kind: "select", key: "mode", labelKey: "tools.mode", defaultValue: "remux", options: [{ value: "remux", label: t("tools.remux") }, { value: "encode", label: t("tools.encode") }] },
+			{ kind: "select", key: "mode", labelKey: "tools.mode", defaultValue: "remux", options: [{ value: "remux", labelKey: "tools.remux" }, { value: "encode", labelKey: "tools.encode" }] },
 		], filters: VIDEO, icon: "video" },
 		{ id: "video_resize", group: "video", name: () => t("tools.videoResize"), desc: () => t("tools.videoResizeDesc"), params: [
 			{ kind: "select", key: "height", labelKey: "tools.height", defaultValue: "720", options: [{ value: "480", label: "480p" }, { value: "720", label: "720p" }, { value: "1080", label: "1080p" }, { value: "1440", label: "1440p" }, { value: "2160", label: "2160p" }] },
@@ -88,7 +88,7 @@
 
 		{ id: "image_resize", group: "image", name: () => t("tools.imageResize"), desc: () => t("tools.imageResizeDesc"), params: [
 			{ kind: "number", key: "width", labelKey: "tools.width", min: 16, max: 8192, step: 10, defaultValue: "1280" },
-			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "original", options: [{ value: "original", label: t("tools.original") }, { value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
+			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "original", options: [{ value: "original", labelKey: "tools.original" }, { value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
 		], filters: IMAGE, icon: "image" },
 		{ id: "image_convert", group: "image", name: () => t("tools.imageConvert"), desc: () => t("tools.imageConvertDesc"), params: [
 			{ kind: "select", key: "target", labelKey: "tools.target", defaultValue: "webp", options: [{ value: "jpg", label: "JPG" }, { value: "png", label: "PNG" }, { value: "webp", label: "WebP" }] },
@@ -285,7 +285,7 @@
 												<label><span class="field-label">{t(spec.labelKey)}</span>
 													<select class="input" bind:value={paramValues[def.id][spec.key]} disabled={state.running}>
 														{#each spec.options as opt (opt.value)}
-															<option value={opt.value}>{opt.label}</option>
+															<option value={opt.value}>{opt.labelKey ? t(opt.labelKey) : opt.label}</option>
 														{/each}
 													</select>
 												</label>

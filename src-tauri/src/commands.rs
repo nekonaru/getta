@@ -58,6 +58,12 @@ pub async fn cancel_download(app: AppHandle, id: u64) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn clear_schedule(app: AppHandle, state: State<'_, AppState>, id: u64) -> Result<(), String> {
+    state.queue.clear_schedule(&app, id);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn retry_download(app: AppHandle, id: u64) -> Result<(), String> {
     if let Some(state) = app.try_state::<AppState>() {
         state.queue.retry(&app, id);
@@ -123,8 +129,14 @@ pub async fn restore_recovery(app: AppHandle, state: State<'_, AppState>) -> Res
             format_id: entry.format_id.clone(),
             playlist_items: entry.playlist_items.clone(),
             output_dir: entry.output_dir.clone(),
+            start_at: entry.start_at,
         };
-        if state.queue.start(&app, &options.url, &options).is_ok() {
+        if state
+            .queue
+            .start_counted(&app, &options.url, &options)
+            .map(|(_, inserted)| inserted)
+            .unwrap_or(false)
+        {
             // start() pushes a fresh RecoveryEntry for the new attempt, so
             // remove only the original id. A clear-all here would delete the
             // fresh intents too.
@@ -139,6 +151,68 @@ pub async fn restore_recovery(app: AppHandle, state: State<'_, AppState>) -> Res
 #[tauri::command]
 pub async fn dismiss_recovery(state: State<'_, AppState>) -> Result<(), String> {
     crate::recovery::clear(&state.data_dir).map_err(|e| e.to_string())
+}
+
+/// Drain links forwarded by a second instance that arrived before mount.
+#[tauri::command]
+pub async fn take_pending_links(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let links = state
+        .pending_links
+        .lock()
+        .map_err(|_| "pending links locked".to_string())?
+        .drain(..)
+        .collect();
+    Ok(links)
+}
+
+/// Queue every http(s) link found in a UTF-8 text file. One link per line or
+/// separated by whitespace. At most 500 links per file.
+#[tauri::command]
+pub async fn import_links_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<usize, String> {
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| format!("Could not read the link file: {e}"))?;
+    let mut links: Vec<String> = Vec::new();
+    for token in text.split_whitespace() {
+        let token = token.trim().trim_matches(['\'', '"', ',', ';']);
+        if (token.starts_with("http://") || token.starts_with("https://"))
+            && !links.iter().any(|l| l == token)
+        {
+            links.push(token.to_string());
+        }
+    }
+    if links.len() > 500 {
+        return Err("This file has more than 500 links. Split it first.".to_string());
+    }
+    let quality = state
+        .settings
+        .lock()
+        .map(|s| s.video_quality.clone())
+        .unwrap_or_else(|_| "best".to_string());
+    let mut added = 0usize;
+    for url in links {
+        let options = StartOptions {
+            url: url.clone(),
+            download_mode: "auto".to_string(),
+            quality: quality.clone(),
+            format_id: None,
+            playlist_items: None,
+            output_dir: None,
+            start_at: None,
+        };
+        if state
+            .queue
+            .start_counted(&app, &url, &options)
+            .map(|(_, inserted)| inserted)
+            .unwrap_or(false)
+        {
+            added += 1;
+        }
+    }
+    Ok(added)
 }
 
 #[tauri::command]
@@ -417,6 +491,16 @@ pub async fn settings_update(
     crate::settings::save(&state.data_dir, &merged).map_err(|e| e.to_string())?;
     *settings = merged.clone();
     drop(settings);
+    // Keep the OS autostart entry in step with the persisted setting.
+    if patch.get("autostart").is_some() {
+        use tauri_plugin_autostart::AutoLaunchManager;
+        if merged.autostart {
+            let _ = app.autolaunch().enable();
+        } else {
+            let _ = app.autolaunch().disable();
+        }
+    }
+    crate::tray::rebuild(&app, &merged.language);
     if let Some(state) = app.try_state::<AppState>() {
         state.queue.try_start_next(&app);
     }
@@ -430,6 +514,13 @@ pub async fn settings_reset(app: AppHandle, state: State<'_, AppState>) -> Resul
         let mut settings = state.settings.lock().map_err(|_| "settings locked".to_string())?;
         *settings = fresh.clone();
     }
+    use tauri_plugin_autostart::AutoLaunchManager;
+    if fresh.autostart {
+        let _ = app.autolaunch().enable();
+    } else {
+        let _ = app.autolaunch().disable();
+    }
+    crate::tray::rebuild(&app, &fresh.language);
     state.queue.try_start_next(&app);
     Ok(fresh)
 }

@@ -62,6 +62,8 @@ Getta adalah implementasi asli di bawah lisensi MIT.
 | **Ikuti channel** | Ikuti channel publik mana pun; Getta mendeteksi unggahan baru dan mengantrekannya. Opsional: auto-unduh latar |
 | **Aturan unduhan** | Rute link ke folder berdasarkan pola, yang pertama cocok menang |
 | **Profil situs** | Aturan per link juga menimpa kualitas dan mode, misalnya audio saja dari satu situs |
+| **Unduhan terjadwal** | Pilih waktu mulai di Beranda; item menunggu di antrean dan bisa dimulai lebih awal |
+| **Impor link dari file** | Baca file teks UTF-8 berisi link dan antrekan hingga 500 sekaligus |
 | **Pola nama file** | Template field yt-dlp dengan default yang aman, misalnya `%(title).200s [%(id)s].%(ext)s` |
 
 ### Antrean yang bisa diandalkan

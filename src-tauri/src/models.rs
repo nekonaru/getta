@@ -118,6 +118,8 @@ pub struct QueueItemInfo {
     pub format_id: Option<String>,
     pub playlist_items: Option<String>,
     pub output_dir: Option<String>,
+    #[serde(default)]
+    pub scheduled_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -161,6 +163,8 @@ pub struct RecoveryEntry {
     pub format_id: Option<String>,
     pub playlist_items: Option<String>,
     pub output_dir: Option<String>,
+    #[serde(default)]
+    pub start_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -205,6 +209,9 @@ pub struct StartOptions {
     pub playlist_items: Option<String>,
     #[serde(default)]
     pub output_dir: Option<String>,
+    /// Unix seconds. When in the future the item waits in the queue.
+    #[serde(default)]
+    pub start_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

@@ -87,8 +87,14 @@ pub fn import_queue(app: &AppHandle, state: &AppState, path: &Path) -> Result<us
             format_id: entry.format_id,
             playlist_items: entry.playlist_items,
             output_dir: entry.output_dir,
+            start_at: None,
         };
-        if state.queue.start(app, &options.url, &options).is_ok() {
+        if state
+            .queue
+            .start_counted(app, &options.url, &options)
+            .map(|(_, inserted)| inserted)
+            .unwrap_or(false)
+        {
             added += 1;
         }
     }

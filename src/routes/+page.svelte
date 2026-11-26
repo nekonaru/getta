@@ -20,6 +20,8 @@
 	let playlistSelected = $state<Set<number>>(new Set());
 	let analyzeTimer: ReturnType<typeof setTimeout> | undefined;
 	let analyzeSeq = 0;
+	let scheduleEnabled = $state(false);
+	let scheduleAt = $state("");
 
 	const links = $derived(parseLinks(url));
 	const singleLink = $derived(links.length === 1 ? links[0] : null);
@@ -67,6 +69,41 @@
 	const statusText = (status: string) =>
 		t(`queue.status${status.charAt(0).toUpperCase()}${status.slice(1)}`);
 
+	function scheduledStart(): number | null {
+		if (!scheduleEnabled) return null;
+		const ms = new Date(scheduleAt).getTime();
+		return Number.isFinite(ms) && ms > Date.now() ? Math.floor(ms / 1000) : null;
+	}
+
+	function guardSchedule(): boolean {
+		if (!scheduleEnabled || scheduledStart() !== null) return true;
+		errorMessage = t("home.scheduleHint");
+		busy = "error";
+		return false;
+	}
+
+	function resetSchedule() {
+		scheduleEnabled = false;
+		scheduleAt = "";
+	}
+
+	async function importLinks() {
+		try {
+			const { open } = await import("@tauri-apps/plugin-dialog");
+			const picked = await open({
+				multiple: false,
+				directory: false,
+				filters: [{ name: "Text files", extensions: ["txt"] }]
+			});
+			if (typeof picked !== "string" || !picked) return;
+			const count = await api.importLinksFile(picked);
+			toastStore.push(t("home.imported", { count }), "info");
+			await goto("/queue");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	function onInput() {
 		clearTimeout(analyzeTimer);
 		analyzeSeq += 1;
@@ -101,7 +138,7 @@
 
 	async function startDownload(playlistItems?: string) {
 		const target = downloadTarget;
-		if (!target) return;
+		if (!target || !guardSchedule()) return;
 		busy = "starting";
 		try {
 			const alwaysAsk = settingsStore.value?.always_ask_path;
@@ -121,10 +158,12 @@
 				quality,
 				format_id: null,
 				playlist_items: playlistItems ?? null,
-				output_dir: dir
+				output_dir: dir,
+				start_at: scheduledStart()
 			});
 			url = "";
 			analysis = null;
+			resetSchedule();
 			busy = "idle";
 			await goto("/queue");
 		} catch (e) {
@@ -135,7 +174,7 @@
 
 	async function startPlaylistDownload() {
 		const indices = [...playlistSelected].sort((a, b) => a - b);
-		if (indices.length === 0) return;
+		if (indices.length === 0 || !guardSchedule()) return;
 		const ranges: string[] = [];
 		let rangeStart = indices[0];
 		let previous = indices[0];
@@ -151,6 +190,8 @@
 	}
 
 	async function startBatch() {
+		if (!guardSchedule()) return;
+		const startAt = scheduledStart();
 		for (const link of links) {
 			try {
 				await api.startDownload({
@@ -159,13 +200,15 @@
 					quality,
 					format_id: null,
 					playlist_items: null,
-					output_dir: null
+					output_dir: null,
+					start_at: startAt
 				});
 			} catch (e) {
 				toastStore.push(e instanceof Error ? e.message : String(e), "error");
 			}
 		}
 		url = "";
+		resetSchedule();
 		await goto("/queue");
 	}
 
@@ -235,6 +278,18 @@
 				<button class="btn btn-accent fetch-btn" onclick={() => startDownload()} disabled={busy === "analyzing" || busy === "starting" || !downloadTarget}>
 					{busy === "starting" ? t("home.fetching") : t("home.button")}
 				</button>
+			</div>
+
+			<div class="schedule-row">
+				<label class="schedule-toggle">
+					<input type="checkbox" bind:checked={scheduleEnabled} />
+					<span>{t("home.scheduleLabel")}</span>
+				</label>
+				{#if scheduleEnabled}
+					<input class="input schedule-input" type="datetime-local" bind:value={scheduleAt} aria-label={t("home.scheduleLabel")} />
+					<span class="muted hint">{t("home.scheduleHint")}</span>
+				{/if}
+				<button class="btn btn-sm btn-ghost" onclick={importLinks}>{t("home.importLinks")}</button>
 			</div>
 
 			<p class="hint hotkey-hint">
@@ -376,6 +431,25 @@
 </div>
 
 <style>
+	.schedule-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		margin-top: 12px;
+	}
+
+	.schedule-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		cursor: pointer;
+	}
+
+	.schedule-input {
+		max-width: 230px;
+	}
+
 	.home-inner {
 		display: grid;
 		grid-template-columns: 1.25fr 0.75fr;

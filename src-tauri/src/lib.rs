@@ -26,6 +26,8 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub settings: Mutex<settings::AppSettings>,
     pub queue: queue::QueueManager,
+    /// Links forwarded by a second instance before the UI mounted.
+    pub pending_links: Mutex<Vec<String>>,
 }
 
 /// Run both engines and report whether they work. Called once at launch;
@@ -72,16 +74,28 @@ pub fn run() {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
             }
-            // A second instance carrying a link forwards it into the running app.
-            if let Some(url) = argv.iter().find(|arg| {
-                arg.starts_with("http://")
-                    || arg.starts_with("https://")
-                    || arg.starts_with("magnet:")
-                    || arg.starts_with("p2p:")
-                    || arg.starts_with("getta://")
-            }) {
-                use tauri::Emitter;
-                let _ = app.emit("deep-link-request", url.clone());
+            // Forward every link from a second instance. Buffer them as well:
+            // the UI listener may not be mounted yet, and an emitted event is
+            // lost when nobody is listening.
+            let urls: Vec<String> = argv
+                .iter()
+                .filter(|arg| {
+                    arg.starts_with("http://")
+                        || arg.starts_with("https://")
+                        || arg.starts_with("magnet:")
+                        || arg.starts_with("p2p:")
+                        || arg.starts_with("getta://")
+                })
+                .cloned()
+                .collect();
+            if let Some(state) = app.try_state::<AppState>() {
+                if let Ok(mut pending) = state.pending_links.lock() {
+                    pending.extend(urls.iter().cloned());
+                }
+            }
+            use tauri::Emitter;
+            for url in urls {
+                let _ = app.emit("deep-link-request", url);
             }
         }))
         .plugin(tauri_plugin_shell::init())
@@ -127,6 +141,7 @@ pub fn run() {
                 data_dir: data_dir.clone(),
                 settings: Mutex::new(settings),
                 queue: queue::QueueManager::new(data_dir),
+                pending_links: Mutex::new(Vec::new()),
             });
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_title("Getta");
@@ -142,6 +157,17 @@ pub fn run() {
             let poll_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 crate::follows::poll_auto(poll_app).await;
+            });
+
+            // Release scheduled downloads even when the UI is idle.
+            let schedule_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    if let Some(state) = schedule_app.try_state::<AppState>() {
+                        state.queue.tick_scheduled(&schedule_app);
+                    }
+                }
             });
 
             // Verify the engines still run; tell the UI when they do not.
@@ -179,6 +205,7 @@ pub fn run() {
             commands::resume_download,
             commands::cancel_download,
             commands::retry_download,
+            commands::clear_schedule,
             commands::remove_download,
             commands::clear_finished,
             commands::pause_all,
@@ -213,6 +240,8 @@ pub fn run() {
             commands::settings_get,
             commands::settings_update,
             commands::settings_reset,
+            commands::take_pending_links,
+            commands::import_links_file,
             commands::engine_status,
             commands::engine_install,
             commands::reveal_in_folder,

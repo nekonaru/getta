@@ -71,6 +71,8 @@ struct QueueItem {
     next_attempt_at: Option<i64>,
     file_paths: Vec<String>,
     started_at: Option<i64>,
+    /// Unix seconds. None means start as soon as a slot is free.
+    not_before: Option<i64>,
     output_dir: Option<String>,
     playlist_items: Option<String>,
 }
@@ -101,6 +103,7 @@ impl QueueItem {
             format_id: self.format_id.clone(),
             playlist_items: self.playlist_items.clone(),
             output_dir: self.output_dir.clone(),
+            scheduled_at: self.not_before,
         }
     }
 }
@@ -147,8 +150,11 @@ impl QueueManager {
         self.inner.lock().unwrap_or_else(|e| e.into_inner()).items.iter().map(QueueItem::info).collect()
     }
 
-    pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {
+    /// Returns the item id and whether a new item was actually inserted.
+    pub fn start_counted(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<(u64, bool), String> {
         let trimmed = validate_url(url)?;
+        let now = now_secs();
+        let scheduled = options.start_at.filter(|at| *at > now);
         // Site profiles can override quality and mode for matching links.
         let profile = app
             .try_state::<AppState>()
@@ -217,6 +223,7 @@ impl QueueManager {
             next_attempt_at: None,
             file_paths: Vec::new(),
             started_at: None,
+            not_before: scheduled,
             output_dir: options.output_dir.clone().filter(|d| !d.trim().is_empty()),
             playlist_items: options
                 .playlist_items
@@ -237,10 +244,12 @@ impl QueueManager {
                 i.url == trimmed
                     && matches!(i.status, QueueStatus::Queued | QueueStatus::Active)
                     && i.download_mode == mode
+                    && scheduled.is_none()
+                    && i.not_before.is_none()
             })
             .map(|i| i.id)
         {
-            return Ok(existing);
+            return Ok((existing, false));
         }
         let item_title = item.title.clone();
         let id = item.id;
@@ -257,11 +266,16 @@ impl QueueManager {
             format_id: options.format_id.clone(),
             playlist_items: options.playlist_items.clone(),
             output_dir: options.output_dir.clone(),
+            start_at: scheduled,
         };
         let _ = recovery::push(&self.data_dir, recovery_entry);
         emit_queue(app);
         self.try_start_next(app);
-        Ok(id)
+        Ok((id, true))
+    }
+
+    pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {
+        self.start_counted(app, url, options).map(|(id, _)| id)
     }
 
     pub fn try_start_next(&self, app: &tauri::AppHandle) {
@@ -283,6 +297,7 @@ impl QueueManager {
                 // A retrying item must wait for its own backoff deadline,
                 // even if other queue activity calls try_start_next.
                 .filter(|i| i.next_attempt_at.map_or(true, |at| at <= now))
+                .filter(|i| i.not_before.map_or(true, |at| at <= now))
                 .map(|i| (i.id, i.generation))
                 .collect();
             // Keep the user's manual order (drag / move up/down): spawn in Vec order.
@@ -300,6 +315,44 @@ impl QueueManager {
             spawn_job(app.clone(), id, generation);
         }
         sync_prevent_sleep(app);
+    }
+
+    /// Wake the scheduler when a scheduled item becomes due. Called by a
+    /// lightweight background tick so scheduled jobs start without any UI
+    /// interaction. Does nothing when nothing is due.
+    /// Turn a scheduled item into an ordinary queued item.
+    pub fn clear_schedule(&self, app: &tauri::AppHandle, id: u64) {
+        let changed = {
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                if item.status == QueueStatus::Queued && item.not_before.is_some() {
+                    item.not_before = None;
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        };
+        if changed {
+            emit_queue(app);
+            self.try_start_next(app);
+        }
+    }
+
+    pub fn tick_scheduled(&self, app: &tauri::AppHandle) {
+        let now = now_secs();
+        let due = {
+            let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+            inner.items.iter().any(|i| {
+                i.status == QueueStatus::Queued && i.not_before.map_or(false, |at| at <= now)
+            })
+        };
+        if due {
+            self.try_start_next(app);
+            emit_queue(app);
+        }
     }
 
     pub fn pause(&self, app: &tauri::AppHandle, id: u64) -> Result<(), String> {

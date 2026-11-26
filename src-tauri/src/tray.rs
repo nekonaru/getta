@@ -55,7 +55,12 @@ pub fn setup(app: &tauri::App, show_label: &str, clipboard_label: &str, quit_lab
             } = event
             {
                 if let Some(window) = tray.app_handle().get_webview_window("main") {
-                    if window.is_visible().unwrap_or(false) {
+                    if window.is_minimized().unwrap_or(false) {
+                        // A minimized window still reports is_visible() == true.
+                        let _ = window.unminimize();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    } else if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
                         let _ = window.unminimize();
@@ -70,6 +75,27 @@ pub fn setup(app: &tauri::App, show_label: &str, clipboard_label: &str, quit_lab
     // The tray must outlive the setup closure; Tauri keeps it alive for the session.
     std::mem::forget(tray);
     Ok(())
+}
+
+/// Rebuild the tray menu so labels follow a language change at runtime.
+pub fn rebuild(app: &AppHandle, language: &str) {
+    let Some(tray) = app.tray_by_id("main-tray") else {
+        return;
+    };
+    let (show_label, clipboard_label, quit_label) = tray_labels(language);
+    let Ok(show) = MenuItemBuilder::with_id("show", show_label).build(app) else {
+        return;
+    };
+    let Ok(clipboard) = MenuItemBuilder::with_id("clipboard", clipboard_label).build(app) else {
+        return;
+    };
+    let Ok(quit) = MenuItemBuilder::with_id("quit", quit_label).build(app) else {
+        return;
+    };
+    let Ok(menu) = MenuBuilder::new(app).item(&show).item(&clipboard).item(&quit).build() else {
+        return;
+    };
+    let _ = tray.set_menu(&menu);
 }
 
 fn show_window(app: &AppHandle) {

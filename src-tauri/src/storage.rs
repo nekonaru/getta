@@ -44,8 +44,25 @@ pub fn write_json_atomic<T: serde::Serialize>(path: &Path, value: &T) -> io::Res
     Ok(())
 }
 
-/// Load a JSON file or return `T::default()` when it does not exist or is
-/// corrupt. A corrupt file is moved aside once so the next read starts clean.
+/// Write UTF-8 text atomically via a sibling temp file and rename.
+pub fn write_text_atomic(path: &Path, text: &str) -> io::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    static TMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let suffix = TMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = path.with_extension(format!("tmp-{}-{nanos}-{suffix}", std::process::id()));
+    fs::write(&tmp, text)?;
+    fs::rename(&tmp, path)
+}
+
+/// Load a JSON file or return `T::default()` when it does not exist. When the
+/// file is corrupt, keep it as `.bad` and salvage the records that still
+/// deserialize instead of losing the whole file.
 pub fn read_json_or_default<T>(path: &Path) -> T
 where
     T: serde::de::DeserializeOwned + Default,
@@ -54,9 +71,26 @@ where
         Ok(value) => value,
         Err(e) if e.kind() == io::ErrorKind::NotFound => T::default(),
         Err(e) => {
-            tracing::warn!("settings/state file unreadable ({e}); starting from defaults");
+            tracing::warn!("state file unreadable ({e}); recovering valid records");
+            let text = fs::read_to_string(path).unwrap_or_default();
             let quarantine = path.with_extension("bad");
             let _ = fs::rename(path, &quarantine);
+            if let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(&text) {
+                let valid: Vec<serde_json::Value> = items
+                    .iter()
+                    .filter(|item| {
+                        serde_json::from_value::<T>(serde_json::Value::Array(vec![(*item).clone()])).is_ok()
+                    })
+                    .cloned()
+                    .collect();
+                if !valid.is_empty() || items.is_empty() {
+                    if let Ok(recovered) =
+                        serde_json::from_value::<T>(serde_json::Value::Array(valid))
+                    {
+                        return recovered;
+                    }
+                }
+            }
             T::default()
         }
     }

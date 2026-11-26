@@ -47,11 +47,18 @@
 	async function onDrop(event: DragEvent) {
 		event.preventDefault();
 		dragDepth = 0;
-		const text =
+			const text =
 			event.dataTransfer?.getData("text/uri-list") ||
 			event.dataTransfer?.getData("text/plain") ||
 			"";
-		if (text.trim()) await enqueueFromClipboardText(text);
+		// A dropped URI list can carry several links. Extract each one so none
+		// are silently dropped.
+		const tokens = text
+			.split(/[\r\n]+/)
+			.flatMap((line) => line.split(/\s+/))
+			.map((token) => token.trim())
+			.filter((token) => /^(https?:\/\/|magnet:|p2p:)/i.test(token));
+		for (const token of tokens) await enqueueFromClipboardText(token);
 	}
 
 	const nav = [
@@ -70,9 +77,21 @@
 		void settingsStore.load();
 		void downloadsStore.start();
 		void api.engineStatus().then((engine) => (engineReady = engine.ytdlp.found));
+		void api.takePendingLinks().then((urls) => {
+			for (const url of urls) void handleDeepUrl(url);
+		}).catch(() => {});
 
 		const handledDeep = new Map<string, number>();
-		const handleDeepUrl = async (raw: string) => {
+		const handleEnqueue = async (raw: string, key = raw) => {
+			const now = Date.now();
+			for (const [k, at] of handledDeep) {
+				if (now - at > 2500) handledDeep.delete(k);
+			}
+			if (handledDeep.has(key)) return;
+			handledDeep.set(key, now);
+			await enqueueFromClipboardText(raw);
+		};
+		const handleDeepUrl = (raw: string) => {
 			const decoded = (() => {
 				try {
 					return decodeURIComponent(raw.replace(/^getta:\/\//, ""));
@@ -80,20 +99,14 @@
 					return raw.replace(/^getta:\/\//, "");
 				}
 			})();
-			const now = Date.now();
-			for (const [key, at] of handledDeep) {
-				if (now - at > 2500) handledDeep.delete(key);
-			}
-			if (handledDeep.has(decoded)) return;
-			handledDeep.set(decoded, now);
-			await enqueueFromClipboardText(decoded);
+			return handleEnqueue(decoded);
 		};
 
 		// CmdOrCtrl+Shift+D is registered on the Rust side and arrives as an event.
 		const unlistenGlobalShortcut = listen("global-download-requested", async () => {
 			try {
 				const text = await api.getClipboardText();
-				await enqueueFromClipboardText(text);
+				await handleEnqueue(text);
 			} catch (e) {
 				const detail = e instanceof Error ? e.message : String(e);
 				toastStore.push(detail || t("enqueue.emptyClipboard"), "error");
@@ -131,7 +144,7 @@
 			<LogoMark size={34} />
 			<span>
 				<span class="wordmark-name">getta</span>
-				<span class="wordmark-meta">link in · file out</span>
+				<span class="wordmark-meta">{t("layout.tagline")}</span>
 			</span>
 		</a>
 
@@ -150,7 +163,7 @@
 		<div class="sidebar-foot">
 			<a class="engine-chip" class:engine-ready={engineReady === true} class:engine-checking={engineReady === null} href="/settings" style="text-decoration:none">
 				<span class="engine-dot"></span>
-				<span>{engineReady === null ? t("home.engineChecking") : engineReady ? "engine ready" : t("home.engineMissing")}</span>
+				<span>{engineReady === null ? t("home.engineChecking") : engineReady ? t("layout.engineReady") : t("home.engineMissing")}</span>
 			</a>
 			<div class="sidebar-links">
 				<button class="sidebar-link" onclick={() => openExternal("https://github.com/nekonaru/getta")}>GitHub</button>

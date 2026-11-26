@@ -59,6 +59,14 @@
 		}
 	}
 
+	const formatSchedule = (at: number) =>
+		new Date(at * 1000).toLocaleString(settingsStore.value?.language === "id" ? "id-ID" : "en-US", {
+			month: "short",
+			day: "numeric",
+			hour: "2-digit",
+			minute: "2-digit"
+		});
+
 	const relativeLabels = () => ({
 		justNow: t("time.justNow"),
 		minutesAgo: t("time.minutesAgo"),
@@ -405,6 +413,7 @@
 													{#if item.status === "active" && item.speed_bps > 0}<span class="mono">· {formatSpeed(item.speed_bps)}</span>{/if}
 													{#if item.status === "active" && item.eta_seconds != null}<span>· {t("queue.eta", { time: formatEta(item.eta_seconds) })}</span>{/if}
 									{#if (item.status === "active" || item.status === "queued") && item.phase && item.phase !== "downloading"}<span class="phase-chip mono">{item.phase}</span>{/if}
+									{#if item.status === "queued" && item.scheduled_at}<span class="phase-chip mono">{t("queue.scheduledFor", { time: formatSchedule(item.scheduled_at) })}</span>{/if}
 												</div>
 												{#if item.error_message}
 													<div class="error-box">{item.error_message}</div>
@@ -427,6 +436,9 @@
 													<button class="btn-icon" title={t("queue.resume")} aria-label={t("queue.resume")} onclick={() => api.resumeDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" /></svg></button>
 													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "queued"}
+													{#if item.scheduled_at}
+														<button class="btn-icon" title={t("queue.cancelSchedule")} aria-label={t("queue.cancelSchedule")} onclick={() => api.clearSchedule(item.id)}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg></button>
+													{/if}
 													<button class="btn-icon" title={t("queue.moveUp")} aria-label={t("queue.moveUp")} onclick={() => api.moveItem(item.id, -1)}><svg viewBox="0 0 24 24"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg></button>
 													<button class="btn-icon" title={t("queue.moveDown")} aria-label={t("queue.moveDown")} onclick={() => api.moveItem(item.id, 1)}><svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m18 13-6 6-6-6" /></svg></button>
 													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
