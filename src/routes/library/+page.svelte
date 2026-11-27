@@ -27,6 +27,7 @@
 	let showStats = $state(false);
 	let renameOpen = $state(false);
 	let renameTemplate = $state("{title}");
+	let undoEntries = $state<HistoryEntry[]>([]);
 	// The first entry of each group is the one we keep, so only extra
 	// copies carry the duplicate badge.
 	const dupIds = $derived(new Set(dupGroups.flatMap((group) => group.slice(1))));
@@ -263,6 +264,7 @@
 		const ids = [...selected];
 		if (ids.length === 0) return;
 		if (!window.confirm(t("library.removeSelectedConfirm", { count: ids.length }))) return;
+		undoEntries = entries.filter((entry) => ids.includes(entry.id));
 		for (const id of ids) {
 			try {
 				await api.historyRemove(id);
@@ -274,6 +276,19 @@
 		if (active && selected.has(active.id)) active = null;
 		toastStore.push(t("library.removedSelection", { count: ids.length }));
 		cancelSelection();
+	}
+
+	async function undoRemove() {
+		const rows = undoEntries;
+		if (rows.length === 0) return;
+		try {
+			for (const entry of rows) await api.historyRestore(entry);
+			entries = await api.historyList();
+			undoEntries = [];
+			toastStore.push(t("library.undoDone", { count: rows.length }), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
 	}
 
 	async function deleteDuplicateFiles() {
@@ -373,6 +388,14 @@
 							<span class="mono">{row.count}</span>
 						</div>
 					{/each}
+				</div>
+			{/if}
+
+			{#if undoEntries.length > 0}
+				<div class="card undo-bar" role="status">
+					<span>{t("library.undoHint", { count: undoEntries.length })}</span>
+					<button class="btn btn-sm" onclick={undoRemove}>{t("library.undo")}</button>
+					<button class="btn btn-sm btn-ghost" onclick={() => (undoEntries = [])}>{t("library.dismiss")}</button>
 				</div>
 			{/if}
 
@@ -517,6 +540,14 @@
 {/if}
 
 <style>
+	.undo-bar {
+		padding: 12px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin: 12px 0;
+	}
+
 	.stats-panel,
 	.rename-panel,
 	.meta-panel {

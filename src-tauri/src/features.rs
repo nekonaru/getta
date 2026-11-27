@@ -166,7 +166,9 @@ pub fn health(data_dir: &Path, output_dir: &Path, needed_bytes: u64) -> HealthRe
         output_dir: output_dir.to_string_lossy().into_owned(),
         disk_free_bytes: free,
         disk_total_bytes: total,
-        enough_space: free >= needed_bytes.max(512 * 1024 * 1024),
+        // Zero means the platform cannot report free space. Treat it as
+        // unknown rather than blocking every download.
+        enough_space: free == 0 || free >= needed_bytes.max(512 * 1024 * 1024),
         output_writable: writable,
         history_count: history::list(data_dir).len(),
         audit_count: read_audit(data_dir).len(),
@@ -314,4 +316,24 @@ pub fn load_profile(data_dir: &Path, name: &str) -> Result<crate::settings::AppS
         .collect();
     storage::read_json(&profile_dir(data_dir).join(format!("{safe}.json")))
         .map_err(|e| format!("Could not load profile: {e}"))
+}
+
+
+/// Create a ZIP with diagnostic data only. Tokens and cookies are excluded.
+pub fn diagnostic_bundle(data_dir: &Path, dest: &Path, health: &HealthReport) -> Result<(), String> {
+    let file = std::fs::File::create(dest).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+    use std::io::Write;
+    for (name, text) in [
+        ("health.json", serde_json::to_string_pretty(health).unwrap_or_default()),
+        ("audit.jsonl", std::fs::read_to_string(audit_path(data_dir)).unwrap_or_default()),
+        ("version.txt", format!("getta {}", env!("CARGO_PKG_VERSION"))),
+    ] {
+        zip.start_file(name, options).map_err(|e| e.to_string())?;
+        zip.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
 }

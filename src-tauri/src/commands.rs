@@ -495,6 +495,47 @@ pub async fn delete_files(state: State<'_, AppState>, paths: Vec<String>) -> Res
 }
 
 #[tauri::command]
+pub async fn history_restore(
+    state: State<'_, AppState>,
+    entry: crate::models::HistoryEntry,
+) -> Result<(), String> {
+    {
+        let guard = crate::history::lock();
+        let _ = guard;
+    }
+    crate::history::push(&state.data_dir, entry);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reset_safe_mode(state: State<'_, AppState>) -> Result<AppSettings, String> {
+    let mut settings = state
+        .settings
+        .lock()
+        .map_err(|_| "settings locked".to_string())?;
+    settings.safe_mode = false;
+    settings.automation_errors = 0;
+    crate::settings::save(&state.data_dir, &settings).map_err(|e| e.to_string())?;
+    Ok(settings.clone())
+}
+
+#[tauri::command]
+pub async fn create_diagnostic_bundle(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    let output = state
+        .settings
+        .lock()
+        .map(|s| std::path::PathBuf::from(&s.output_dir))
+        .unwrap_or_else(|_| state.data_dir.clone());
+    let report = crate::features::health(&state.data_dir, &output, 0);
+    let _ = &app;
+    crate::features::diagnostic_bundle(&state.data_dir, std::path::Path::new(&path), &report)
+}
+
+#[tauri::command]
 pub async fn history_clear(state: State<'_, AppState>) -> Result<(), String> {
     history::clear(&state.data_dir).map_err(|e| e.to_string())
 }

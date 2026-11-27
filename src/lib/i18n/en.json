@@ -136,7 +136,9 @@
 		"cancelSchedule": "Cancel schedule",
 		"priority": "Priority",
 		"groupFilter": "Filter by group",
-		"allGroups": "All groups"
+		"allGroups": "All groups",
+		"health": "Health",
+		"healthHint": "Lower score means repeated errors or stalled transfer"
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -201,7 +203,10 @@
 		"favorite": "Favorite",
 		"unfavorite": "Remove favorite",
 		"watchLater": "Watch later",
-		"removeWatchLater": "Remove from watch later"
+		"removeWatchLater": "Remove from watch later",
+		"undoHint": "{count} entries removed",
+		"undo": "Undo",
+		"undoDone": "Restored {count} entries"
 	},
 	"tools": {
 		"kicker": "Workbench",
@@ -459,7 +464,11 @@
 		"profileLoaded": "Loaded {name}",
 		"localApi": "Local API",
 		"apiHint": "Loopback only, port 17842. Requires the token as Authorization header.",
-		"generateToken": "Generate token"
+		"generateToken": "Generate token",
+		"retryStormCap": "Max retries in flight",
+		"diskGuard": "Minimum free disk (GB, 0 = off)",
+		"safeMode": "Safe mode",
+		"resetSafeMode": "Reset safe mode"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",
@@ -500,7 +509,9 @@
 		"unknown": "unknown",
 		"yes": "yes",
 		"no": "no",
-		"lowSpace": "Disk space is low. Some downloads may fail."
+		"lowSpace": "Disk space is low. Some downloads may fail.",
+		"createBundle": "Diagnostic bundle",
+		"bundleDone": "Diagnostic bundle created"
 	},
 	"recovery": {
 		"title": "Unfinished downloads",

@@ -53,6 +53,18 @@
 		}
 	}
 
+	async function createBundle() {
+		try {
+			const { save } = await import("@tauri-apps/plugin-dialog");
+			const path = await save({ filters: [{ name: "ZIP", extensions: ["zip"] }], defaultPath: "getta-diagnostics.zip" });
+			if (!path) return;
+			await api.createDiagnosticBundle(path);
+			toastStore.push(t("about.bundleDone"), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function runHealth() {
 		try {
 			health = await api.getHealth(0);
@@ -131,6 +143,7 @@
 			</nav>
 			<div class="card health-block">
 				<button class="btn btn-sm" onclick={runHealth}>{t("about.runHealth")}</button>
+				<button class="btn btn-sm btn-ghost" onclick={createBundle}>{t("about.createBundle")}</button>
 				{#if health}
 					<p class="muted">{t("about.diskFree", { size: health.disk_free_bytes ? `${Math.round(health.disk_free_bytes / 1073741824)} GB` : t("about.unknown") })}</p>
 					<p class="muted">{t("about.writable", { ok: health.output_writable ? t("about.yes") : t("about.no") })}</p>

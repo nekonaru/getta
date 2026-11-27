@@ -174,6 +174,10 @@ export interface AppSettings {
 	shortcuts: Record<string, string>;
 	rss_feeds: RssFeed[];
 	active_profile: string;
+	safe_mode: boolean;
+	automation_errors: number;
+	retry_storm_cap: number;
+	disk_guard_gb: number;
 }
 
 export interface RssFeed {
@@ -403,7 +407,10 @@ export const api = {
 	restoreBackup: (path: string) => call(() => invoke<number>("restore_backup", { path })),
 	listProfiles: () => call(() => invoke<string[]>("list_profiles")),
 	saveProfile: (name: string) => call(() => invoke<void>("save_profile", { name })),
-	loadProfile: (name: string) => call(() => invoke<AppSettings>("load_profile", { name }))
+	loadProfile: (name: string) => call(() => invoke<AppSettings>("load_profile", { name })),
+	historyRestore: (entry: HistoryEntry) => call(() => invoke<void>("history_restore", { entry })),
+	resetSafeMode: () => call(() => invoke<AppSettings>("reset_safe_mode")),
+	createDiagnosticBundle: (path: string) => call(() => invoke<void>("create_diagnostic_bundle", { path }))
 };
 
 export function onQueueChanged(callback: (items: QueueItemInfo[]) => void): Promise<UnlistenFn> {

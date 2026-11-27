@@ -115,6 +115,8 @@ Getta is an original implementation under the MIT license.
 | **Autostart** | Optional start with the system in Settings |
 | **Close to tray** | Optional: close hides to tray instead of quitting; bring it back via the tray icon |
 | **Interrupted recovery** | Crash or kill mid-download? Launch offers to resume from the `.part` files |
+| **Safe mode** | Automation disables itself after repeated failures until reset |
+| **Undo and disk guard** | Undo library removals and pause new downloads when disk space is low |
 | **Manual queue order** | Move queued items up and down with buttons or by dragging a grip; the scheduler spawns them in your order |
 | **No account, no telemetry** | Getta does not collect anything about what you download |
 | **Self-updating engine** | Optional verified install of yt-dlp and FFmpeg, with SHA-256 checking |

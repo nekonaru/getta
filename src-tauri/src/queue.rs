@@ -301,19 +301,34 @@ impl QueueManager {
     }
 
     pub fn try_start_next(&self, app: &tauri::AppHandle) {
-        let (max_concurrent, quiet) = app
+        let (max_concurrent, quiet, disk_guard) = app
             .try_state::<AppState>()
             .and_then(|state| {
                 state.settings.lock().ok().map(|s| {
                     (
                         s.max_concurrent.max(1),
                         s.quiet_hours_enabled && in_quiet_hours(s.quiet_start_hour, s.quiet_end_hour),
+                        s.disk_guard_gb,
                     )
                 })
             })
-            .unwrap_or((2, false));
+            .unwrap_or((2, false, 0));
         if quiet {
             return;
+        }
+        if disk_guard > 0 {
+            if let Some(state) = app.try_state::<AppState>() {
+                let needed = disk_guard as u64 * 1024 * 1024 * 1024;
+                let output = state
+                    .settings
+                    .lock()
+                    .map(|s| std::path::PathBuf::from(&s.output_dir))
+                    .unwrap_or_else(|_| state.data_dir.clone());
+                let report = crate::features::health(&state.data_dir, &output, needed);
+                if !report.enough_space {
+                    return;
+                }
+            }
         }
         let mut to_spawn: Vec<(u64, u64)> = Vec::new();
         {
@@ -1556,14 +1571,19 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
 }
 
 fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
-    let (max_retries, base_delay, multiplier) = app
+    let (max_retries, base_delay, multiplier, storm_cap) = app
         .try_state::<AppState>()
         .and_then(|state| {
             state.settings.lock().ok().map(|s| {
-                (s.max_retries, s.retry_delay_secs.max(1), s.retry_multiplier.max(1.0))
+                (
+                    s.max_retries,
+                    s.retry_delay_secs.max(1),
+                    s.retry_multiplier.max(1.0),
+                    s.retry_storm_cap.max(1),
+                )
             })
         })
-        .unwrap_or((3, 2, 2.0));
+        .unwrap_or((3, 2, 2.0, 3));
 
     let (category, retryable) = ytdlp::classify_error(message);
     let retry_count = {
@@ -1579,6 +1599,27 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
         && retry_count < max_retries;
 
     if can_retry {
+        let in_flight = app
+            .try_state::<AppState>()
+            .and_then(|state| {
+                state.queue.inner.lock().ok().map(|inner| {
+                    inner
+                        .items
+                        .iter()
+                        .filter(|i| {
+                            i.status == QueueStatus::Queued
+                                && i.phase
+                                    .as_deref()
+                                    .map(|p| p.starts_with("retrying"))
+                                    .unwrap_or(false)
+                        })
+                        .count() as u32
+                })
+            })
+            .unwrap_or(0);
+        if in_flight >= storm_cap {
+            return;
+        }
         let delay_secs = ((base_delay as f64) * multiplier.powi(retry_count.min(6) as i32))
             .round()
             .max(1.0)

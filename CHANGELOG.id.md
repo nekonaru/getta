@@ -3,6 +3,19 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.1.0
+
+Wave keandalan: mode aman, undo, proteksi badai retry, penjaga disk, dan berkas diagnostik.
+
+## Fitur baru
+
+- **Mode aman.** Setelah lima kegagalan otomasi, Getta mematikan RSS, watch folder, dan monitor clipboard sampai Anda meresetnya. Penghitung menunjukkan berapa kegagalan yang memicunya.
+- **Undo penghapusan.** Menghapus entri dari Pustaka kini bisa dibatalkan dari banner sebelum banner hilang.
+- **Proteksi badai retry.** Batas yang bisa diatur membatasi jumlah item yang menunggu retry secara bersamaan.
+- **Penjaga disk.** Atur ruang disk minimum dalam GB. Unduhan baru berhenti saat ambang terlampaui; nol mematikannya.
+- **Skor kesehatan unduhan.** Item dengan transfer mandek atau error berulang menampilkan skor kesehatan di antrean.
+- **Berkas diagnostik.** Buat satu ZIP berisi data kesehatan, log audit, dan versi aplikasi tanpa token atau cookie untuk laporan bug.
+
 ## v1.0.0
 
 Titik stabil: API lokal, perintah CLI, dan integrasi akhir.

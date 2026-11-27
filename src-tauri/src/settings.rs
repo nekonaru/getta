@@ -39,6 +39,10 @@ fn default_retry_multiplier() -> f64 {
     2.0
 }
 
+fn default_retry_storm_cap() -> u32 {
+    3
+}
+
 fn default_compact() -> bool {
     false
 }
@@ -272,6 +276,14 @@ pub struct AppSettings {
     pub rss_feeds: Vec<RssFeed>,
     #[serde(default)]
     pub active_profile: String,
+    #[serde(default)]
+    pub safe_mode: bool,
+    #[serde(default)]
+    pub automation_errors: u32,
+    #[serde(default = "default_retry_storm_cap")]
+    pub retry_storm_cap: u32,
+    #[serde(default)]
+    pub disk_guard_gb: u32,
 }
 
 impl Default for AppSettings {
@@ -332,6 +344,10 @@ impl Default for AppSettings {
             shortcuts: std::collections::HashMap::new(),
             rss_feeds: Vec::new(),
             active_profile: String::new(),
+            safe_mode: false,
+            automation_errors: 0,
+            retry_storm_cap: 3,
+            disk_guard_gb: 1,
         }
     }
 }

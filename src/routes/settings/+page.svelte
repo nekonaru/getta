@@ -685,6 +685,18 @@
 							<input class="input" type="number" min="0" max="23" value={settings.quiet_end_hour} aria-label={t("settings.quietEnd")} onchange={(e) => patch({ quiet_end_hour: Number(e.currentTarget.value) })} />
 						</div>
 						<div class="row">
+							<label class="field-label">{t("settings.retryStormCap")}<input class="input" type="number" min="1" max="20" value={settings.retry_storm_cap} onchange={(e) => patch({ retry_storm_cap: Number(e.currentTarget.value) })} /></label>
+						</div>
+						<div class="row">
+							<label class="field-label">{t("settings.diskGuard")}<input class="input" type="number" min="0" max="100" value={settings.disk_guard_gb} onchange={(e) => patch({ disk_guard_gb: Number(e.currentTarget.value) })} /></label>
+						</div>
+						<div class="row">
+							<span class="switch-label">{t("settings.safeMode")}</span>
+							<button disabled={patching} class="switch" role="switch" aria-checked={settings.safe_mode} aria-label={t("settings.safeMode")} onclick={() => patch({ safe_mode: !settings.safe_mode })}></button>
+							{#if settings.automation_errors > 0}<span class="muted">({settings.automation_errors})</span>{/if}
+							{#if settings.safe_mode}<button class="btn btn-sm" onclick={async () => { await api.resetSafeMode(); await settingsStore.load(); }}>{t("settings.resetSafeMode")}</button>{/if}
+						</div>
+						<div class="row">
 							<label class="field-label">{t("settings.postAction")}<select class="input" value={settings.post_action} onchange={(e) => patch({ post_action: e.currentTarget.value })}>
 								<option value="none">{t("settings.postNone")}</option>
 								<option value="move">{t("settings.postMove")}</option>

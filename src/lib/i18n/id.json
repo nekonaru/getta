@@ -136,7 +136,9 @@
 		"cancelSchedule": "Batalkan jadwal",
 		"priority": "Prioritas",
 		"groupFilter": "Filter berdasarkan grup",
-		"allGroups": "Semua grup"
+		"allGroups": "Semua grup",
+		"health": "Kesehatan",
+		"healthHint": "Skor rendah berarti error berulang atau transfer mandek"
 	},
 	"library": {
 		"kicker": "Barang tersimpan",
@@ -201,7 +203,10 @@
 		"favorite": "Favorit",
 		"unfavorite": "Hapus favorit",
 		"watchLater": "Tonton nanti",
-		"removeWatchLater": "Hapus dari tonton nanti"
+		"removeWatchLater": "Hapus dari tonton nanti",
+		"undoHint": "{count} entri dihapus",
+		"undo": "Batalkan",
+		"undoDone": "{count} entri dipulihkan"
 	},
 	"tools": {
 		"kicker": "Meja kerja",
@@ -459,7 +464,11 @@
 		"profileLoaded": "{name} dimuat",
 		"localApi": "API lokal",
 		"apiHint": "Hanya loopback, port 17842. Memerlukan token sebagai header Authorization.",
-		"generateToken": "Buat token"
+		"generateToken": "Buat token",
+		"retryStormCap": "Maks retry bersamaan",
+		"diskGuard": "Ruang disk minimum (GB, 0 = mati)",
+		"safeMode": "Mode aman",
+		"resetSafeMode": "Reset mode aman"
 	},
 	"about": {
 		"tagline": "Setiap tautan, terkirim.",
@@ -500,7 +509,9 @@
 		"unknown": "tidak diketahui",
 		"yes": "ya",
 		"no": "tidak",
-		"lowSpace": "Ruang disk hampir habis. Beberapa unduhan bisa gagal."
+		"lowSpace": "Ruang disk hampir habis. Beberapa unduhan bisa gagal.",
+		"createBundle": "Berkas diagnostik",
+		"bundleDone": "Berkas diagnostik dibuat"
 	},
 	"recovery": {
 		"title": "Unduhan belum selesai",

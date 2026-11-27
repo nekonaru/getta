@@ -3,6 +3,19 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.1.0
+
+Reliability wave: safe mode, undo, retry storm protection, disk guard and a diagnostic bundle.
+
+## New features
+
+- **Safe mode.** After five automation failures, Getta disables RSS, watch folder and clipboard monitoring until you reset it. A counter shows how many failures triggered it.
+- **Undo removal.** Deleting entries from the Library can now be undone from a banner before it disappears.
+- **Retry storm protection.** A configurable cap limits how many items may wait for retry at the same time.
+- **Disk guard.** Set a minimum free disk space in GB. New downloads pause when the threshold is crossed; zero disables it.
+- **Download health score.** Items with stalled transfers or repeated errors show a health score in the queue.
+- **Diagnostic bundle.** Create one ZIP with health data, the audit log and the app version, without tokens or cookies, for bug reports.
+
 ## v1.0.0
 
 Stable milestone: local API, CLI verbs and final integrations.

@@ -60,6 +60,15 @@
 		}
 	}
 
+	const healthScore = (item: QueueItemInfo) => {
+		let score = 100;
+		if (item.status === "error") score -= 50;
+		if (item.retryable) score -= 10;
+		if (item.status === "active" && item.speed_bps === 0) score -= 20;
+		if (item.total_bytes && item.downloaded_bytes > item.total_bytes) score -= 30;
+		return Math.max(0, Math.min(100, score));
+	};
+
 	const formatSchedule = (at: number) =>
 		new Date(at * 1000).toLocaleString(settingsStore.value?.language === "id" ? "id-ID" : "en-US", {
 			month: "short",
@@ -441,6 +450,7 @@
 									{#if item.status === "queued" && item.scheduled_at}<span class="phase-chip mono">{t("queue.scheduledFor", { time: formatSchedule(item.scheduled_at) })}</span>{/if}
 									{#if (item.priority ?? 0) > 0}<span class="phase-chip mono">{t("queue.priority")}: {item.priority}</span>{/if}
 									{#if item.group_id}<span class="phase-chip mono">{item.group_id}</span>{/if}
+									{#if healthScore(item) < 100}<span class="phase-chip mono" title={t("queue.healthHint")}>{t("queue.health")}: {healthScore(item)}</span>{/if}
 												</div>
 												{#if item.error_message}
 													<div class="error-box">{item.error_message}</div>

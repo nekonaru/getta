@@ -53,6 +53,9 @@ pub async fn resolve(raw: &str) -> String {
 pub async fn poll_watch_folder(app: tauri::AppHandle) {
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        if !automation_allowed(&app) {
+            continue;
+        }
         let (folder, enabled) = app
             .try_state::<crate::AppState>()
             .and_then(|state| {
@@ -85,6 +88,7 @@ pub async fn poll_watch_folder(app: tauri::AppHandle) {
                 continue;
             }
             let Ok(text) = std::fs::read_to_string(&path) else {
+                record_error(&app);
                 continue;
             };
             let mut queued = 0usize;
@@ -133,17 +137,40 @@ pub async fn poll_watch_folder(app: tauri::AppHandle) {
 }
 
 
+/// Automation is disabled by safe mode after repeated failures.
+fn automation_allowed(app: &tauri::AppHandle) -> bool {
+    app.try_state::<crate::AppState>()
+        .and_then(|state| state.settings.lock().ok().map(|s| !s.safe_mode))
+        .unwrap_or(false)
+}
+
+fn record_error(app: &tauri::AppHandle) {
+    let Some(state) = app.try_state::<crate::AppState>() else { return };
+    let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
+    settings.automation_errors = settings.automation_errors.saturating_add(1);
+    if settings.automation_errors >= 5 {
+        settings.safe_mode = true;
+    }
+    let _ = crate::settings::save(&state.data_dir, &settings);
+}
+
 /// Poll RSS feeds and enqueue links from entries not seen before. XML is
 /// parsed with simple tag scanning so no extra dependency is needed.
 pub async fn poll_rss(app: tauri::AppHandle) {
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(300)).await;
+        if !automation_allowed(&app) {
+            continue;
+        }
         let feeds = app
             .try_state::<crate::AppState>()
             .and_then(|state| state.settings.lock().ok().map(|s| s.rss_feeds.clone()))
             .unwrap_or_default();
         for feed in feeds {
-            let Some(text) = fetch_text(&feed.url).await else { continue };
+            let Some(text) = fetch_text(&feed.url).await else {
+                record_error(&app);
+                continue;
+            };
             let links = extract_rss_links(&text);
             let mut new_seen = feed.seen.clone();
             let mut queued = 0usize;
@@ -237,6 +264,10 @@ pub async fn poll_clipboard(app: tauri::AppHandle) {
     let mut last = String::new();
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        if !automation_allowed(&app) {
+            last.clear();
+            continue;
+        }
         let enabled = app
             .try_state::<crate::AppState>()
             .and_then(|state| state.settings.lock().ok().map(|s| s.clipboard_monitor))
