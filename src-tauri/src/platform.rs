@@ -58,7 +58,7 @@ pub fn detect(raw: &str) -> Platform {
     let trimmed_lower = trimmed.to_ascii_lowercase();
     let torrent_path = url::Url::parse(trimmed)
         .ok()
-        .and_then(|parsed| parsed.path().to_ascii_lowercase())
+        .map(|parsed| parsed.path().to_ascii_lowercase())
         .unwrap_or_default();
     if trimmed.starts_with("magnet:")
         || trimmed_lower.ends_with(".torrent")

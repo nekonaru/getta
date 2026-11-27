@@ -80,7 +80,7 @@ fn write_bytes_atomic(path: &Path, tmp: PathBuf, bytes: &[u8]) -> io::Result<()>
 /// deserialize instead of losing the whole file.
 pub fn read_json_or_default<T>(path: &Path) -> T
 where
-    T: serde::de::DeserializeOwned + Default,
+    T: serde::de::DeserializeOwned + serde::Serialize + Default,
 {
     match read_json(path) {
         Ok(value) => value,
