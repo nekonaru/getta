@@ -3,6 +3,36 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.2.1
+
+Deep native audit and performance pass. No new features.
+
+## Bug fixes
+
+- **History tab always showed empty on first visit.** The history field in the download store was not reactive, so the derived list cached the initial value.
+- **Reordering while filtering by group moved the wrong items.** Reorder is now disabled during group filtering because the visible index no longer matches the queue index.
+- **A failed clipboard enqueue showed two toasts.** The real IPC error and a misleading invalid-link message appeared together.
+- **Leaving Home during analysis left a stray IPC call.** The debounce timer is now cleared on destroy.
+- **Preset switching kept stale priority or speed.** Zero values are now applied instead of being treated as unset.
+- **Post-action refreshes were no-ops.** Batch edits, imports and CLI pause/resume now call a real snapshot refresh.
+- **Speed charts rebuilt every sample.** Only changed item ids are appended and pruned with a set, removing an O(n²) cleanup per tick.
+- **Queue rows no longer do an O(n²) index lookup.** The each loop supplies the drag index directly.
+- **The media dialog did not manage focus.** Opening it moves focus inside, traps Tab and restores focus on close.
+- **Identical audit lines broke the log list.** The list is keyed by index.
+- **Dismissed toasts still had live timers.** Timeout ids are stored and cleared on manual dismiss.
+- **Queue action failures were silent.** Pause, cancel, retry and move now report errors through a toast.
+- **Disk space worked only on Windows.** macOS and Linux now query `statvfs`, and the scheduler uses a five-second cached result instead of reading history and audit files on every start.
+- **Checksum verification loaded whole files into memory.** Large downloads are now hashed in 1 MiB chunks, and a mismatch records exactly one failure with no spurious retry.
+- **Direct downloads ignored the proxy setting.** The configured proxy is now applied to the native downloader.
+- **Direct downloads ignored checksums.** The `.part` file is hashed before rename when an expected SHA-256 is set.
+- **Backup restore raced with downloads and stale settings.** Restore now takes the history lock and reloads settings into memory.
+- **Follow channels were marked seen when their link was already queued.** Only genuinely inserted enqueues advance the baseline, and a channel removed during a fetch is not resurrected.
+- **Watch folder files with only duplicates were reprocessed forever.** Processed files are always renamed aside.
+- **Clipboard monitor reacted to arbitrary text.** It now accepts only link-like content.
+- **Webhook clients had no timeout.** A shared ten-second client prevents leaked sockets.
+- **The local API could truncate large request bodies.** It now reads the declared `Content-Length` with a hard cap.
+- **History fetches repeated asset-scope calls.** Allowed paths are cached in app state.
+
 ## v1.2.0
 
 Power tools: batch import, bulk queue edits and a focus mode toggle.

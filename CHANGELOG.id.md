@@ -3,6 +3,36 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.2.1
+
+Audit native mendalam dan putaran optimalisasi. Tidak ada fitur baru.
+
+## Perbaikan bug
+
+- **Tab Riwayat selalu kosong saat pertama dibuka.** Field history di store unduhan tidak reaktif, sehingga daftar turunan menyimpan nilai awal.
+- **Mengurutkan saat filter grup memindahkan item yang salah.** Urutan kini dimatikan saat filter grup aktif karena indeks tampilan tidak sama dengan indeks antrean.
+- **Enqueue clipboard gagal menampilkan dua toast.** Error IPC asli dan pesan link tidak valid muncul bersamaan.
+- **Keluar dari Beranda saat analisis menyisakan IPC.** Timer debounce kini dibersihkan saat komponen dihancurkan.
+- **Ganti preset menyisakan prioritas atau kecepatan lama.** Nilai nol kini diterapkan, bukan dianggap belum diatur.
+- **Refresh setelah aksi tidak berpengaruh.** Edit massal, impor, serta CLI pause/resume kini benar-benar mengambil snapshot baru.
+- **Grafik kecepatan dibangun ulang tiap sampel.** Hanya id yang berubah yang ditambahkan dan dipangkas memakai set, menghilangkan pembersihan O(n²) per tick.
+- **Baris antrean tidak lagi melakukan pencarian indeks O(n²).** Loop each langsung memberikan indeks drag.
+- **Dialog media tidak mengelola fokus.** Saat dibuka fokus masuk ke dalam, Tab dibatasi, dan fokus dikembalikan saat ditutup.
+- **Baris audit yang identik merusak daftar.** Daftar kini memakai kunci indeks.
+- **Toast yang ditutup masih punya timer aktif.** Id timeout disimpan dan dibatalkan saat ditutup manual.
+- **Aksi antrean yang gagal tidak terlihat.** Pause, batal, retry, dan pindah kini melaporkan error lewat toast.
+- **Penjaga disk hanya bekerja di Windows.** macOS dan Linux kini memakai `statvfs`, dan penjadwal memakai hasil cache lima detik alih-alih membaca riwayat dan log tiap awal unduhan.
+- **Verifikasi checksum memuat seluruh file ke memori.** Unduhan besar kini dihash per 1 MiB, dan ketidakcocokan hanya mencatat satu kegagalan tanpa retry palsu.
+- **Unduhan langsung mengabaikan proxy.** Proxy yang dikonfigurasi kini diterapkan ke downloader native.
+- **Unduhan langsung mengabaikan checksum.** File `.part` dihash sebelum diganti nama bila SHA-256 diharapkan ada.
+- **Pemulihan cadangan bentrok dengan unduhan dan pengaturan basi.** Pemulihan kini mengambil lock riwayat dan memuat ulang pengaturan ke memori.
+- **Kanal follow ditandai sudah dilihat saat linknya sudah antre.** Hanya enqueue baru yang benar-benar masuk yang maju, dan kanal yang dihapus saat fetch tidak dihidupkan lagi.
+- **File watch folder berisi duplikat diproses terus.** File yang diproses selalu diganti ke samping.
+- **Monitor clipboard bereaksi pada teks sembarangan.** Kini hanya menerima konten yang menyerupai link.
+- **Client webhook tanpa timeout.** Client bersama sepuluh detik mencegah socket bocor.
+- **API lokal bisa memotong body besar.** Permintaan kini membaca `Content-Length` dengan batas keras.
+- **Pengambilan riwayat mengulang izin aset berkali-kali.** Path yang diizinkan kini di-cache di state aplikasi.
+
 ## v1.2.0
 
 Alat daya: impor massal, edit antrean banyak, dan toggle mode fokus.
