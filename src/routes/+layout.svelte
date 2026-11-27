@@ -77,14 +77,16 @@
 	onMount(() => {
 		void settingsStore.load();
 		void downloadsStore.start();
-		void api.engineStatus().then((engine) => (engineReady = engine.ytdlp.found));
+		void api.engineStatus().then((engine) => (engineReady = engine.ytdlp.found)).catch(() => (engineReady = false));
 		void api.takePendingLinks().then((urls) => {
 			for (const url of urls) void handleDeepUrl(url);
 		}).catch(() => {});
 		void api.takePendingVerbs().then((verbs) => {
 			for (const verb of verbs) {
-				if (verb === "pause") void api.pauseAll().then(() => downloadsStore.refresh());
-				else if (verb === "resume") void api.resumeAll().then(() => downloadsStore.refresh());
+				const action = verb === "pause" ? api.pauseAll() : api.resumeAll();
+				void action.then(() => downloadsStore.refresh()).catch((e) => {
+					toastStore.push(e instanceof Error ? e.message : String(e), "error");
+				});
 			}
 		}).catch(() => {});
 
@@ -127,17 +129,18 @@
 		const unlistenEngineBroken = listen("engine-broken", () => {
 			toastStore.push(t("layout.engineBroken"), "error");
 		});
-		const unlistenCliPause = listen("cli-pause", () => {
-			void api.pauseAll().then(() => downloadsStore.start());
-		});
-		const unlistenCliResume = listen("cli-resume", () => {
-			void api.resumeAll().then(() => downloadsStore.start());
-		});
+		const handleCli = (action: () => Promise<void>) => {
+			void action().then(() => downloadsStore.refresh()).catch((e) => {
+				toastStore.push(e instanceof Error ? e.message : String(e), "error");
+			});
+		};
+		const unlistenCliPause = listen("cli-pause", () => handleCli(api.pauseAll));
+		const unlistenCliResume = listen("cli-resume", () => handleCli(api.resumeAll));
 
 		// getta://<url> links land here from the OS.
 		void getCurrent().then((urls) => {
 			for (const url of urls ?? []) void handleDeepUrl(url);
-		});
+		}).catch(() => {});
 		const unlisten = onOpenUrl(async (urls) => {
 			for (const url of urls) await handleDeepUrl(url);
 		});

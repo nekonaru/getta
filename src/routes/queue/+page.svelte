@@ -278,7 +278,7 @@
 		if (!window.confirm(t("queue.clearHistoryConfirm"))) return;
 		try {
 			await api.historyClear();
-			await downloadsStore.loadHistory();
+			await downloadsStore.loadHistory(true);
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -302,7 +302,7 @@
 
 	async function switchTab(next: Tab) {
 		tab = next;
-		if (next === "history") await downloadsStore.loadHistory();
+		if (next === "history") await downloadsStore.loadHistory(true);
 	}
 
 	function statusLabel(item: QueueItemInfo): string {
@@ -461,8 +461,8 @@
 													onkeydown={(e) => {
 												if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
 												e.preventDefault();
-												if (e.key === "ArrowUp" && dragIndex > 0) void api.moveItemTo(item.id, dragIndex - 1);
-												else if (e.key === "ArrowDown") void api.moveItemTo(item.id, Math.min(dragIndex + 1, section.list.length - 1));
+												if (e.key === "ArrowUp" && dragIndex > 0) runAction(() => api.moveItemTo(item.id, dragIndex - 1));
+												else if (e.key === "ArrowDown") runAction(() => api.moveItemTo(item.id, Math.min(dragIndex + 1, section.list.length - 1)));
 											}}
 												><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h6M9 12h6M9 19h6" /></svg></span>
 											{/if}
@@ -512,7 +512,7 @@
 													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => runAction(() => api.cancelDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "queued"}
 													{#if item.scheduled_at}
-														<button class="btn-icon" title={t("queue.cancelSchedule")} aria-label={t("queue.cancelSchedule")} onclick={() => api.clearSchedule(item.id)}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg></button>
+														<button class="btn-icon" title={t("queue.cancelSchedule")} aria-label={t("queue.cancelSchedule")} onclick={() => runAction(() => api.clearSchedule(item.id))}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg></button>
 													{/if}
 													<button class="btn-icon" title={t("queue.moveUp")} aria-label={t("queue.moveUp")} onclick={() => runAction(() => api.moveItem(item.id, -1))}><svg viewBox="0 0 24 24"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg></button>
 													<button class="btn-icon" title={t("queue.moveDown")} aria-label={t("queue.moveDown")} onclick={() => runAction(() => api.moveItem(item.id, 1))}><svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m18 13-6 6-6-6" /></svg></button>

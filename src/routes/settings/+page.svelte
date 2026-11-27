@@ -694,7 +694,7 @@
 							<span class="switch-label">{t("settings.safeMode")}</span>
 							<button disabled={patching} class="switch" role="switch" aria-checked={settings.safe_mode} aria-label={t("settings.safeMode")} onclick={() => patch({ safe_mode: !settings.safe_mode })}></button>
 							{#if settings.automation_errors > 0}<span class="muted">({settings.automation_errors})</span>{/if}
-							{#if settings.safe_mode}<button class="btn btn-sm" onclick={async () => { await api.resetSafeMode(); await settingsStore.load(); }}>{t("settings.resetSafeMode")}</button>{/if}
+							{#if settings.safe_mode}<button class="btn btn-sm" onclick={async () => { try { await api.resetSafeMode(); await settingsStore.load(); } catch (e) { toastStore.push(e instanceof Error ? e.message : String(e), "error"); } }}>{t("settings.resetSafeMode")}</button>{/if}
 						</div>
 						<div class="row">
 							<label class="field-label">{t("settings.postAction")}<select class="input" value={settings.post_action} onchange={(e) => patch({ post_action: e.currentTarget.value })}>

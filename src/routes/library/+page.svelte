@@ -79,7 +79,15 @@
 			const ok = await api.historyPatch(id, patch);
 			if (ok) {
 				entries = entries.map((e) => (e.id === id ? { ...e, ...patch, tags: patch.tags ?? e.tags, rating: patch.rating ?? e.rating, note: patch.note ?? e.note } : e));
-				if (active?.id === id) active = entries.find((e) => e.id === id) ?? null;
+				// Mutate in place so the focus effect does not re-run and move
+				// focus away from the control being edited.
+				if (active?.id === id) {
+					if (patch.tags !== undefined) active.tags = patch.tags;
+					if (patch.rating !== undefined) active.rating = patch.rating;
+					if (patch.note !== undefined) active.note = patch.note;
+					if (patch.favorite !== undefined) active.favorite = patch.favorite;
+					if (patch.watch_later !== undefined) active.watch_later = patch.watch_later;
+				}
 			}
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");

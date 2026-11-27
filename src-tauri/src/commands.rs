@@ -521,14 +521,21 @@ pub async fn history_restore(
 
 #[tauri::command]
 pub async fn reset_safe_mode(state: State<'_, AppState>) -> Result<AppSettings, String> {
-    let mut settings = state
-        .settings
-        .lock()
-        .map_err(|_| "settings locked".to_string())?;
-    settings.safe_mode = false;
-    settings.automation_errors = 0;
-    crate::settings::save(&state.data_dir, &settings).map_err(|e| e.to_string())?;
-    Ok(settings.clone())
+    let updated = {
+        let mut settings = state
+            .settings
+            .lock()
+            .map_err(|_| "settings locked".to_string())?
+            .clone();
+        settings.safe_mode = false;
+        settings.automation_errors = 0;
+        settings
+    };
+    crate::settings::save(&state.data_dir, &updated).map_err(|e| e.to_string())?;
+    if let Ok(mut current) = state.settings.lock() {
+        *current = updated.clone();
+    }
+    Ok(updated)
 }
 
 #[tauri::command]

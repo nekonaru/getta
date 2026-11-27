@@ -89,6 +89,8 @@ pub async fn poll_watch_folder(app: tauri::AppHandle) {
             }
             let Ok(text) = std::fs::read_to_string(&path) else {
                 record_error(&app);
+                let done = path.with_extension("done.txt");
+                let _ = std::fs::rename(&path, &done);
                 continue;
             };
             let mut queued = 0usize;
@@ -146,12 +148,17 @@ fn automation_allowed(app: &tauri::AppHandle) -> bool {
 
 fn record_error(app: &tauri::AppHandle) {
     let Some(state) = app.try_state::<crate::AppState>() else { return };
-    let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
-    settings.automation_errors = settings.automation_errors.saturating_add(1);
-    if settings.automation_errors >= 5 {
-        settings.safe_mode = true;
-    }
-    let _ = crate::settings::save(&state.data_dir, &settings);
+    let updated = {
+        let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
+        settings.automation_errors = settings.automation_errors.saturating_add(1);
+        if settings.automation_errors >= 5 {
+            settings.safe_mode = true;
+        }
+        settings.clone()
+    };
+    // Guard is dropped before the fsync-heavy write so queue progress is not
+    // blocked while a state file is flushed to disk.
+    let _ = crate::settings::save(&state.data_dir, &updated);
 }
 
 /// Poll RSS feeds and enqueue links from entries not seen before. XML is
@@ -213,12 +220,15 @@ pub async fn poll_rss(app: tauri::AppHandle) {
                 let label = format!("{}: {queued} new", feed.url);
                 if let Some(state) = app.try_state::<crate::AppState>() {
                     crate::features::audit(&state.data_dir, "rss", &label);
-                    let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
-                    if let Some(row) = settings.rss_feeds.iter_mut().find(|f| f.id == feed.id) {
-                        row.seen = new_seen;
-                        row.last_checked_at = crate::queue::now_secs();
-                    }
-                    let _ = crate::settings::save(&state.data_dir, &settings);
+                    let updated = {
+                        let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
+                        if let Some(row) = settings.rss_feeds.iter_mut().find(|f| f.id == feed.id) {
+                            row.seen = new_seen;
+                            row.last_checked_at = crate::queue::now_secs();
+                        }
+                        settings.clone()
+                    };
+                    let _ = crate::settings::save(&state.data_dir, &updated);
                 }
             }
         }

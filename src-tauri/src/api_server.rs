@@ -14,13 +14,21 @@ pub async fn serve(app: tauri::AppHandle, port: u16, token: String) {
             return;
         }
     };
+    static CONN_SEM: std::sync::OnceLock<std::sync::Arc<tokio::sync::Semaphore>> =
+        std::sync::OnceLock::new();
+    let sem = CONN_SEM.get_or_init(|| std::sync::Arc::new(tokio::sync::Semaphore::new(8)));
     loop {
         let Ok((mut stream, _)) = listener.accept().await else {
+            continue;
+        };
+        let Ok(permit) = sem.clone().try_acquire_owned() else {
+            // Too many open connections. Close this one immediately.
             continue;
         };
         let app = app.clone();
         let token = token.clone();
         tauri::async_runtime::spawn(async move {
+            let _permit = permit;
             handle(&app, &mut stream, &token).await;
         });
     }
@@ -32,7 +40,12 @@ async fn handle(app: &tauri::AppHandle, stream: &mut tokio::net::TcpStream, toke
     let mut chunk = [0u8; 4096];
     // Read until the header terminator, then keep reading the declared body.
     loop {
-        let Ok(size) = stream.read(&mut chunk).await else {
+        let Ok(Ok(size)) = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            stream.read(&mut chunk),
+        )
+        .await
+        else {
             return;
         };
         if size == 0 {

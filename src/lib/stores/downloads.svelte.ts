@@ -45,6 +45,7 @@ class DownloadsStore {
 	private started = false;
 	private unlisten: (() => void) | null = null;
 	private historyLoaded = false;
+	private lastEventAt = 0;
 
 	get activeCount(): number {
 		return this.items.filter((i) => i.status === "active").length;
@@ -75,17 +76,24 @@ class DownloadsStore {
 		} catch {
 			/* backend not ready; listener below will populate */
 		}
-		this.unlisten = await onQueueChanged((items) => {
-			// On a cold start the snapshot may have failed. Seed the first
-			// event instead of treating every existing item as a new completion.
-			const seeded = !this.loaded;
-			const source = seeded ? items : this.items;
-			const previous = new Map(source.map((i) => [i.id, i.status]));
-			this.items = items;
-			this.loaded = true;
-			this.recordSpeed(items);
-			if (!seeded) this.trackTransitions(previous, items);
-		});
+		try {
+			this.unlisten = await onQueueChanged((items) => {
+				this.lastEventAt = Date.now();
+				// On a cold start the snapshot may have failed. Seed the first
+				// event instead of treating every existing item as a new completion.
+				const seeded = !this.loaded;
+				const source = seeded ? items : this.items;
+				const previous = new Map(source.map((i) => [i.id, i.status]));
+				this.items = items;
+				this.loaded = true;
+				this.recordSpeed(items);
+				if (!seeded) this.trackTransitions(previous, items);
+			});
+		} catch {
+			// Registration failed. Allow a later retry instead of latching
+			// forever with no live updates.
+			this.started = false;
+		}
 	}
 
 	private recordSpeed(items: QueueItemInfo[]): void {
@@ -111,8 +119,13 @@ class DownloadsStore {
 	/// Re-read the queue snapshot. Needed after backend actions that do not
 	/// emit queue-changed (batch updates, imports, CLI pause/resume).
 	async refresh(): Promise<void> {
+		const requestedAt = Date.now();
 		try {
-			this.items = await api.queueSnapshot();
+			const items = await api.queueSnapshot();
+			// A completion event may have arrived while the snapshot was in
+			// flight. Never overwrite newer state with an older snapshot.
+			if (this.lastEventAt > requestedAt) return;
+			this.items = items;
 			this.loaded = true;
 		} catch {
 			/* backend not ready */
@@ -158,8 +171,12 @@ class DownloadsStore {
 
 	async loadHistory(force = false): Promise<void> {
 		if (this.historyLoaded && !force) return;
-		this.historyLoaded = true;
-		this.history = await api.historyList();
+		try {
+			this.history = await api.historyList();
+			this.historyLoaded = true;
+		} catch {
+			/* keep the flag false so a later tab visit retries */
+		}
 	}
 }
 

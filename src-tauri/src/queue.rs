@@ -85,6 +85,8 @@ struct QueueItem {
     preset_id: Option<String>,
     direct: bool,
     post_done: bool,
+    /// Partial file created by the native direct downloader.
+    part_path: Option<String>,
 }
 
 impl QueueItem {
@@ -259,6 +261,7 @@ impl QueueManager {
             preset_id: options.preset_id.clone().filter(|s| !s.trim().is_empty()),
             direct: options.direct,
             post_done: false,
+            part_path: None,
         };
         // Coalesce a double click or repeated enqueue of the same link while
         // it is still active or queued. Two jobs writing the same file is a
@@ -494,19 +497,22 @@ impl QueueManager {
     }
 
     pub fn resume(&self, app: &tauri::AppHandle, id: u64) -> Result<(), String> {
-        let (pid, active_now, max_concurrent) = {
+        // Read settings before taking the queue lock. The reverse order can
+        // deadlock when a settings write holds the settings lock while a
+        // download completion waits on the queue lock.
+        let max_concurrent = app
+            .try_state::<AppState>()
+            .and_then(|state| state.settings.lock().ok().map(|s| s.max_concurrent))
+            .unwrap_or(2)
+            .max(1);
+        let (pid, active_now) = {
             let inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let item = inner.items.iter().find(|i| i.id == id).ok_or("item not found")?;
             if item.status != QueueStatus::Paused {
                 return Err("Only paused downloads can be resumed.".to_string());
             }
             let active = inner.items.iter().filter(|i| i.status == QueueStatus::Active).count() as u32;
-            let max = app
-                .try_state::<AppState>()
-                .and_then(|state| state.settings.lock().ok().map(|s| s.max_concurrent))
-                .unwrap_or(2)
-                .max(1);
-            (item.pid, active, max)
+            (item.pid, active)
         };
 
         // Pause freezing frees the concurrency slot; try_start_next fills it.
@@ -548,7 +554,7 @@ impl QueueManager {
     }
 
     pub fn cancel(&self, app: &tauri::AppHandle, id: u64) {
-        let (pid, was_running) = {
+        let (pid, was_running, part_path) = {
             let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             let Some(index) = inner.items.iter().position(|i| i.id == id) else {
                 return;
@@ -556,13 +562,17 @@ impl QueueManager {
             inner.items[index].cancelled = true;
             let running = matches!(inner.items[index].status, QueueStatus::Active | QueueStatus::Paused);
             let pid = if running { inner.items[index].pid } else { None };
+            let part = inner.items[index].part_path.clone();
             inner.items.remove(index);
-            (pid, running)
+            (pid, running, part)
         };
         if was_running {
             if let Some(pid) = pid {
                 kill_process(pid);
             }
+        }
+        if let Some(path) = part_path {
+            let _ = std::fs::remove_file(path);
         }
         let _ = recovery::remove(&self.data_dir, id);
         emit_queue(app);
@@ -610,6 +620,13 @@ impl QueueManager {
             if let Some(path) = item.file_path {
                 if !paths.contains(&path) {
                     paths.push(path);
+                }
+            }
+            // A native direct download keeps its .part file outside the
+            // finished paths. Clean it up together with the item.
+            if let Some(part) = item.part_path {
+                if !paths.contains(&part) {
+                    paths.push(part);
                 }
             }
             (pid, running, if delete_file { paths } else { Vec::new() })
@@ -918,6 +935,14 @@ fn notify_webhook(app: &tauri::AppHandle, event: &str, title: &str, url: &str, e
         "at": now_secs(),
     });
     static WEBHOOK_CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    static WEBHOOK_SEM: std::sync::OnceLock<std::sync::Arc<tokio::sync::Semaphore>> =
+        std::sync::OnceLock::new();
+    let sem = WEBHOOK_SEM.get_or_init(|| std::sync::Arc::new(tokio::sync::Semaphore::new(4)));
+    let Ok(permit) = sem.clone().try_acquire_owned() else {
+        // Too many webhook deliveries in flight. Drop this one rather than
+        // accumulating detached tasks forever.
+        return;
+    };
     let client = WEBHOOK_CLIENT.get_or_init(|| {
         reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
@@ -926,6 +951,7 @@ fn notify_webhook(app: &tauri::AppHandle, event: &str, title: &str, url: &str, e
     })
     .clone();
     tauri::async_runtime::spawn(async move {
+        let _permit = permit;
         let _ = client.post(&endpoint).json(&payload).send().await;
     });
 }
@@ -1174,6 +1200,12 @@ async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
         "{}.part",
         final_path.extension().and_then(|e| e.to_str()).unwrap_or("")
     ));
+    if let Some(state) = app.try_state::<AppState>() {
+        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+            item.part_path = Some(part_path.to_string_lossy().into_owned());
+        }
+    }
     let existing = std::fs::metadata(&part_path).ok().map(|m| m.len()).unwrap_or(0);
     let mut builder = reqwest::Client::builder().timeout(std::time::Duration::from_secs(300));
     if !proxy.is_empty() {
@@ -1276,6 +1308,12 @@ async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
     if std::fs::rename(&part_path, &final_path).is_err() {
         finalize_error(&app, id, "Could not finalize the downloaded file.", false);
         return;
+    }
+    if let Some(state) = app.try_state::<AppState>() {
+        let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+            item.part_path = None;
+        }
     }
     let size = std::fs::metadata(&final_path).ok().map(|m| m.len());
     let (title, platform, thumbnail, quality) = {
@@ -1717,43 +1755,47 @@ fn finalize_maybe_retry(app: &tauri::AppHandle, id: u64, message: &str) {
         && retry_count < max_retries;
 
     if can_retry {
-        let in_flight = app
-            .try_state::<AppState>()
-            .and_then(|state| {
-                state.queue.inner.lock().ok().map(|inner| {
-                    inner
-                        .items
-                        .iter()
-                        .filter(|i| {
-                            i.status == QueueStatus::Queued
-                                && i.phase
-                                    .as_deref()
-                                    .map(|p| p.starts_with("retrying"))
-                                    .unwrap_or(false)
-                        })
-                        .count() as u32
-                })
-            })
-            .unwrap_or(0);
-        if in_flight >= storm_cap {
-            return;
-        }
         let delay_secs = ((base_delay as f64) * multiplier.powi(retry_count.min(6) as i32))
             .round()
             .max(1.0)
             .min(600.0) as u64;
-        if let Some(state) = app.try_state::<AppState>() {
-            let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
-            if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
-                item.generation = next_generation();
-                item.next_attempt_at = Some(now_secs() + delay_secs as i64);
-                item.status = QueueStatus::Queued;
-                item.retry_count += 1;
-                item.pid = None;
-                item.phase = Some(format!("retrying in {delay_secs}s"));
-                item.speed_bps = 0;
-                item.eta_seconds = None;
-            }
+        // Count and claim the retry slot under one lock. Checking first and
+        // writing later lets several failures all see a free slot.
+        let claimed = app
+            .try_state::<AppState>()
+            .map(|state| {
+                let mut inner = state.queue.inner.lock().unwrap_or_else(|e| e.into_inner());
+                let in_flight = inner
+                    .items
+                    .iter()
+                    .filter(|i| {
+                        i.status == QueueStatus::Queued
+                            && i.phase
+                                .as_deref()
+                                .map(|p| p.starts_with("retrying"))
+                                .unwrap_or(false)
+                    })
+                    .count() as u32;
+                if in_flight >= storm_cap {
+                    return false;
+                }
+                if let Some(item) = inner.items.iter_mut().find(|i| i.id == id) {
+                    item.generation = next_generation();
+                    item.next_attempt_at = Some(now_secs() + delay_secs as i64);
+                    item.status = QueueStatus::Queued;
+                    item.retry_count += 1;
+                    item.pid = None;
+                    item.phase = Some(format!("retrying in {delay_secs}s"));
+                    item.speed_bps = 0;
+                    item.eta_seconds = None;
+                    true
+                } else {
+                    false
+                }
+            })
+            .unwrap_or(false);
+        if !claimed {
+            return;
         }
         emit_queue(app);
         let retry_app = app.clone();
@@ -2185,14 +2227,31 @@ fn default_output(request: &crate::models::ToolRequest) -> std::path::PathBuf {
 }
 
 async fn probe_duration_secs(app_ffprobe: &std::path::Path, input: &std::path::Path) -> Option<f64> {
-    let mut command = std::process::Command::new(app_ffprobe);
-    command
-        .args(["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"])
-        .arg(input)
-        .stdin(Stdio::null());
-    ytdlp::hide_console_std(&mut command);
-    let output = command.output().ok()?;
-    String::from_utf8_lossy(&output.stdout).trim().parse::<f64>().ok().filter(|d| *d > 0.0)
+    let probe = app_ffprobe.to_path_buf();
+    let file = input.to_path_buf();
+    // A hanging ffprobe must not hold an async worker forever. The blocking
+    // process call runs on the blocking pool under a hard timeout.
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(20),
+        tokio::task::spawn_blocking(move || {
+            let mut command = std::process::Command::new(&probe);
+            command
+                .args(["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"])
+                .arg(&file)
+                .stdin(Stdio::null());
+            ytdlp::hide_console_std(&mut command);
+            command.output()
+        }),
+    )
+    .await
+    .ok()?
+    .ok()?
+    .ok()?;
+    String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|d| *d > 0.0)
 }
 
 pub async fn run_tool(app: &tauri::AppHandle, mut request: crate::models::ToolRequest) -> Result<String, String> {

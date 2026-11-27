@@ -18,10 +18,19 @@ pub fn audit(data_dir: &Path, action: &str, detail: &str) {
         "detail": detail,
     })
     .to_string();
+    let path = audit_path(data_dir);
+    if let Ok(meta) = std::fs::metadata(&path) {
+        // Keep the local audit log bounded so long sessions do not grow it
+        // without limit.
+        if meta.len() > 2 * 1024 * 1024 {
+            let rotated = path.with_extension("old.jsonl");
+            let _ = std::fs::rename(&path, &rotated);
+        }
+    }
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(audit_path(data_dir))
+        .open(&path)
     {
         use std::io::Write;
         let _ = writeln!(file, "{line}");
@@ -78,11 +87,13 @@ pub fn patch_history(
 }
 
 /// Apply a name template to selected history rows and move the files on disk.
+/// The state file is written before any file is moved; if a move fails the
+/// state is rolled back so paths always match what exists on disk.
 pub fn batch_rename(data_dir: &Path, ids: &[String], template: &str) -> Result<usize, String> {
     let _guard = crate::history::lock();
     let mut entries = history::list(data_dir);
-    let mut changed = 0usize;
-    for entry in entries.iter_mut() {
+    let mut plan: Vec<(usize, PathBuf, PathBuf)> = Vec::new();
+    for (index, entry) in entries.iter().enumerate() {
         if !ids.contains(&entry.id) {
             continue;
         }
@@ -115,16 +126,30 @@ pub fn batch_rename(data_dir: &Path, ids: &[String], template: &str) -> Result<u
             target = parent.join(format!("{safe} ({counter}).{ext}"));
             counter += 1;
         }
-        if target == source {
-            continue;
-        }
-        if std::fs::rename(&source, &target).is_ok() {
-            entry.file_path = Some(target.to_string_lossy().into_owned());
-            changed += 1;
+        if target != source {
+            plan.push((index, source, target));
         }
     }
-    storage::write_json_atomic(&data_dir.join("history.json"), &entries)
-        .map_err(|e| e.to_string())?;
+    if plan.is_empty() {
+        return Ok(0);
+    }
+    for (index, _, target) in &plan {
+        entries[*index].file_path = Some(target.to_string_lossy().into_owned());
+    }
+    let path = data_dir.join("history.json");
+    storage::write_json_atomic(&path, &entries).map_err(|e| e.to_string())?;
+    let mut changed = 0usize;
+    for (index, source, target) in &plan {
+        if std::fs::rename(source, target).is_ok() {
+            changed += 1;
+        } else {
+            // Keep state consistent with the file that actually exists.
+            entries[*index].file_path = Some(source.to_string_lossy().into_owned());
+        }
+    }
+    if changed != plan.len() {
+        let _ = storage::write_json_atomic(&path, &entries);
+    }
     Ok(changed)
 }
 
@@ -281,7 +306,10 @@ fn html_escape(value: &str) -> String {
 }
 
 pub fn create_backup(data_dir: &Path, dest: &Path) -> Result<(), String> {
-    let file = std::fs::File::create(dest).map_err(|e| e.to_string())?;
+    // Build the ZIP at a sibling temp path. A failure before finish() must
+    // never leave a truncated archive at the final destination.
+    let temp = dest.with_extension("zip.tmp");
+    let file = std::fs::File::create(&temp).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
     let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
@@ -296,23 +324,37 @@ pub fn create_backup(data_dir: &Path, dest: &Path) -> Result<(), String> {
         }
     }
     zip.finish().map_err(|e| e.to_string())?;
+    std::fs::rename(&temp, dest).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 pub fn restore_backup(data_dir: &Path, source: &Path) -> Result<usize, String> {
     let file = std::fs::File::open(source).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
-    let mut restored = 0usize;
+    // Read and validate every member before replacing anything on disk. This
+    // prevents a partially restored data directory.
+    let mut payloads: Vec<(String, Vec<u8>)> = Vec::new();
     for name in ["settings.json", "history.json", "follows.json", "recovery.json"] {
         if let Ok(mut entry) = archive.by_name(name) {
             let mut bytes = Vec::new();
             use std::io::Read;
             entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
-            let temp = data_dir.join(format!("{name}.restore-tmp"));
-            std::fs::write(&temp, &bytes).map_err(|e| e.to_string())?;
-            std::fs::rename(&temp, data_dir.join(name)).map_err(|e| e.to_string())?;
-            restored += 1;
+            if bytes.is_empty() {
+                return Err(format!("Backup member {name} is empty."));
+            }
+            if let Ok(text) = std::str::from_utf8(&bytes) {
+                if serde_json::from_str::<serde_json::Value>(text).is_err() {
+                    return Err(format!("Backup member {name} is not valid JSON."));
+                }
+            }
+            payloads.push((name.to_string(), bytes));
         }
+    }
+    let restored = payloads.len();
+    for (name, bytes) in payloads {
+        let temp = data_dir.join(format!("{name}.restore-tmp"));
+        std::fs::write(&temp, &bytes).map_err(|e| e.to_string())?;
+        std::fs::rename(&temp, data_dir.join(&name)).map_err(|e| e.to_string())?;
     }
     Ok(restored)
 }
