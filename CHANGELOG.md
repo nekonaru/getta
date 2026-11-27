@@ -3,6 +3,34 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.2.2
+
+Second deep audit: modal ownership, durable state, faster startup and lighter runtime. No new features.
+
+## Bug fixes
+
+- **Escape closed two dialogs at once.** On first launch, pressing Ctrl+K then Escape also skipped onboarding or discarded recovery items. A central modal stack now routes shortcuts only to the topmost dialog.
+- **The command palette had no focus trap.** Tab could reach the page behind it and Enter could trigger both a palette action and a background button. Focus is now trapped and restored on close.
+- **Escape during engine install skipped onboarding.** It is now ignored while installation is busy.
+- **Follow interval changes were silent on failure.** They now show an error and revert the select; rapid toggles are ignored while a request is in flight.
+- **Update install re-checked for updates.** The already fetched update object is reused, avoiding a second network call.
+- **Health and bundle buttons could be spammed.** Each now has an in-flight guard.
+- **Recovery dismissal hid backend errors.** A failed dismiss keeps the dialog open and shows the error.
+- **State writes were not flushed before rename.** Settings, history and recovery now call `sync_all()` before the rename and sync the parent directory, so power loss cannot leave an empty file.
+- **Corrupt state files lost salvaged records on the next launch.** Recovered values are written back to the original path.
+- **Queue import of 500 links rewrote recovery 500 times.** Import now batches insertion, writes recovery once, emits once and schedules once, and reports skipped entries.
+- **Diagnostics blocked an async worker.** It now runs in `spawn_blocking`.
+- **Queue export dropped scheduling and priority fields.** All enqueue fields are now preserved.
+- **Older settings files got wrong defaults.** Field-level defaults now use the intended values instead of type defaults, so webhooks, shortlink resolution and quiet hours keep their defaults after upgrade.
+- **Download rules matched the whole URL.** They now match the parsed host, so a redirect parameter cannot apply a rule to an unrelated site.
+- **FFmpeg install was unverified.** Tiny archives are rejected and each extracted binary must run `-version` before it is accepted; ffprobe failure no longer aborts a working ffmpeg.
+- **yt-dlp install temp names could collide.** They now include a nanosecond and counter suffix.
+- **FFmpeg absence triggered the engine-broken banner.** The banner now depends on yt-dlp only; FFmpeg is reported separately.
+- **Expired cookies were reported as healthy.** A cookie file where every session is expired is now marked unhealthy.
+- **The local API token changed on every restart.** A generated token is now persisted in settings.
+- **CLI pause and resume could be lost before the UI mounted.** They are buffered alongside deep links.
+- **Torrent URLs with query strings were classified inconsistently.** Detection now uses the parsed path.
+
 ## v1.2.1
 
 Deep native audit and performance pass. No new features.

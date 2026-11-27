@@ -3,6 +3,34 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.2.2
+
+Audit mendalam kedua: kepemilikan modal, state yang tahan mati listrik, startup lebih cepat, dan runtime lebih ringan. Tidak ada fitur baru.
+
+## Perbaikan bug
+
+- **Escape menutup dua dialog sekaligus.** Saat pertama kali buka, Ctrl+K lalu Escape juga melewati onboarding atau membuang item pemulihan. Stack modal terpusat kini meneruskan pintasan hanya ke dialog teratas.
+- **Palette perintah tidak menjebak fokus.** Tab bisa mencapai halaman di belakang dan Enter bisa memicu aksi palette serta tombol latar. Fokus kini dibatasi dan dikembalikan saat ditutup.
+- **Escape saat instalasi engine melewati onboarding.** Kini diabaikan saat instalasi berjalan.
+- **Perubahan interval follow gagal tanpa pesan.** Kini menampilkan error dan mengembalikan pilihan; klik cepat diabaikan saat permintaan berjalan.
+- **Instalasi update melakukan pengecekan ulang.** Objek update yang sudah didapat dipakai ulang, menghindari permintaan jaringan kedua.
+- **Tombol health dan berkas diagnostik bisa diklik berulang.** Masing-masing punya penjaga saat proses berjalan.
+- **Pembatalan pemulihan menyembunyikan error backend.** Gagal membatalkan menjaga dialog tetap terbuka dan menampilkan error.
+- **Tulisan state tidak disiram sebelum diganti nama.** Pengaturan, riwayat, dan pemulihan kini memanggil `sync_all()` sebelum rename serta menyiram direktori induk, sehingga mati listrik tidak meninggalkan berkas kosong.
+- **Berkas state rusak kehilangan data yang berhasil diselamatkan.** Nilai hasil pemulihan kini ditulis kembali ke jalur aslinya.
+- **Impor antrean 500 link menulis ulang recovery 500 kali.** Impor kini mengumpulkan dulu, menulis recovery sekali, emit sekali, dan menjadwalkan sekali, serta melaporkan link yang dilewati.
+- **Diagnostik memblokir worker async.** Kini dijalankan di `spawn_blocking`.
+- **Ekspor antrean kehilangan jadwal dan prioritas.** Semua field enqueue kini dipertahankan.
+- **Berkas pengaturan lama mendapat default salah.** Default tiap field kini memakai nilai yang dimaksud, sehingga webhook, pemendek tautan, dan jam hening tetap benar setelah upgrade.
+- **Aturan unduhan mencocokkan seluruh URL.** Kini mencocokkan host hasil parsing, sehingga parameter redirect tidak bisa menerapkan aturan ke situs lain.
+- **Instalasi FFmpeg tidak diverifikasi.** Arsip terlalu kecil ditolak dan tiap biner hasil ekstraksi harus menjalankan `-version` sebelum diterima; kegagalan ffprobe tidak menggagalkan ffmpeg yang sudah bekerja.
+- **Nama file sementara instalasi yt-dlp bisa bentrok.** Kini memakai suffix nanodetik dan penghitung.
+- **Tidak adanya FFmpeg memicu peringatan engine rusak.** Peringatan kini hanya bergantung pada yt-dlp; FFmpeg dilaporkan terpisah.
+- **Cookie kedaluwarsa dilaporkan sehat.** Berkas cookie yang semua sesinya kedaluwarsa kini ditandai tidak sehat.
+- **Token API lokal berubah tiap restart.** Token yang dibuat kini disimpan di pengaturan.
+- **Perintah CLI pause dan resume bisa hilang sebelum UI siap.** Kini dibuffer bersama tautan dalam.
+- **URL torrent dengan query diklasifikasikan tidak konsisten.** Deteksi kini memakai jalur hasil parsing.
+
 ## v1.2.1
 
 Audit native mendalam dan putaran optimalisasi. Tidak ada fitur baru.
