@@ -156,22 +156,28 @@ pub struct HealthReport {
 
 /// Cheap, cached free-space query for the scheduler. Avoids reading history
 /// and audit files on every download start.
-static DISK_CACHE: std::sync::Mutex<(std::time::Instant, u64, u64)> =
-    std::sync::Mutex::new((
-        std::time::Instant::now() - std::time::Duration::from_secs(60),
-        0,
-        0,
-    ));
+static DISK_CACHE: std::sync::OnceLock<std::sync::Mutex<(std::time::Instant, u64, u64)>> =
+    std::sync::OnceLock::new();
+
+fn disk_cache() -> &'static std::sync::Mutex<(std::time::Instant, u64, u64)> {
+    DISK_CACHE.get_or_init(|| {
+        std::sync::Mutex::new((
+            std::time::Instant::now() - std::time::Duration::from_secs(60),
+            0,
+            0,
+        ))
+    })
+}
 
 pub fn disk_free_cached(path: &Path) -> u64 {
     let now = std::time::Instant::now();
-    if let Ok(cache) = DISK_CACHE.lock() {
+    if let Ok(cache) = disk_cache().lock() {
         if now.duration_since(cache.0) < std::time::Duration::from_secs(5) {
             return cache.1;
         }
     }
     let (free, total) = disk_space(path);
-    if let Ok(mut cache) = DISK_CACHE.lock() {
+    if let Ok(mut cache) = disk_cache().lock() {
         *cache = (now, free, total);
     }
     free
@@ -243,8 +249,8 @@ fn disk_space(path: &Path) -> (u64, u64) {
             return (0, 0);
         }
         (
-            stat.f_bavail.saturating_mul(stat.f_frsize),
-            stat.f_blocks.saturating_mul(stat.f_frsize),
+            (stat.f_bavail as u64).saturating_mul(stat.f_frsize as u64),
+            (stat.f_blocks as u64).saturating_mul(stat.f_frsize as u64),
         )
     }
 }
