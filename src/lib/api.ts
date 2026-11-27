@@ -354,6 +354,7 @@ export const api = {
 	resumeAll: () => call(() => invoke<void>("resume_all")),
 	queueSnapshot: () => call(() => invoke<QueueItemInfo[]>("queue_snapshot")),
 	takePendingLinks: () => call(() => invoke<string[]>("take_pending_links")),
+	takePendingVerbs: () => call(() => invoke<string[]>("take_pending_verbs")),
 	importLinksFile: (path: string) => call(() => invoke<number>("import_links_file", { path })),
 	moveItem: (id: number, delta: number) => call(() => invoke<void>("move_item", { id, delta })),
 	retryAllFailed: () => call(() => invoke<number>("retry_all_failed")),

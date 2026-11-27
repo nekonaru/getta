@@ -4,6 +4,7 @@
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { downloadsStore } from "#lib/stores/downloads.svelte";
 	import { t } from "#lib/i18n.svelte";
+	import { modalStore } from "#lib/stores/modal.svelte";
 
 	let items = $state<RecoveryEntry[]>([]);
 	let open = $state(false);
@@ -38,17 +39,23 @@
 		}
 	}
 
+	$effect(() => {
+		if (open) modalStore.push("recovery");
+		else modalStore.pop("recovery");
+	});
+
 	async function dismiss() {
 		try {
 			await api.dismissRecovery();
-		} catch {
-			/* silent */
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+			return;
 		}
 		open = false;
 	}
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === "Escape" && open && !busy) void dismiss(); }} />
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && open && !busy && modalStore.isTop("recovery")) void dismiss(); }} />
 
 {#if open}
 	<div bind:this={dialogEl} class="veil" role="dialog" aria-modal="true" aria-label={t("recovery.title")} tabindex="-1">

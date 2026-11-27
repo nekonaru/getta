@@ -80,11 +80,13 @@ pub fn check_file(path: &Path) -> CookieReport {
         let _ = index;
     }
 
-    let ok = malformed == 0 && total > 0;
+    let ok = malformed == 0 && total > 0 && expired < total;
     let error = if total == 0 {
         Some("no cookies found".to_string())
     } else if malformed > 0 {
         Some(format!("{malformed} malformed line(s)"))
+    } else if expired == total {
+        Some("all cookies are expired".to_string())
     } else {
         None
     };

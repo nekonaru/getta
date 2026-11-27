@@ -12,6 +12,7 @@
 	let busy = $state(false);
 	let checking = $state<string | null>(null);
 	let checkingAll = $state(false);
+	let pendingAuto = $state<Set<string>>(new Set());
 
 	onMount(refresh);
 
@@ -84,12 +85,18 @@
 	}
 
 	async function toggleAuto(follow: FollowChannel) {
+		if (pendingAuto.has(follow.id)) return;
 		const next = !follow.auto_download;
+		pendingAuto = new Set([...pendingAuto, follow.id]);
 		try {
 			await api.followSetAuto(follow.id, next);
 			follows = follows.map((f) => (f.id === follow.id ? { ...f, auto_download: next } : f));
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		} finally {
+			const rest = new Set(pendingAuto);
+			rest.delete(follow.id);
+			pendingAuto = rest;
 		}
 	}
 
@@ -172,12 +179,19 @@
 						<div class="follow-actions">
 							<label class="auto-toggle">
 								<span class="auto-label muted">{t("follows.auto")}</span>
-								<button class="switch" role="switch" aria-checked={follow.auto_download} aria-label={t("follows.auto")} onclick={() => toggleAuto(follow)}></button>
+								<button class="switch" role="switch" aria-checked={follow.auto_download} aria-label={t("follows.auto")} disabled={pendingAuto.has(follow.id)} onclick={() => toggleAuto(follow)}></button>
 							</label>
 							<select class="input interval-select" aria-label={t("follows.interval")} value={follow.check_interval_secs ?? 21600} onchange={async (e) => {
-								const secs = Number((e.currentTarget as HTMLSelectElement).value);
-								await api.followSetInterval(follow.id, secs);
-								follows = follows.map((f) => (f.id === follow.id ? { ...f, check_interval_secs: secs } : f));
+								const select = e.currentTarget as HTMLSelectElement;
+								const secs = Number(select.value);
+								const previous = follow.check_interval_secs ?? 21600;
+								try {
+									await api.followSetInterval(follow.id, secs);
+									follows = follows.map((f) => (f.id === follow.id ? { ...f, check_interval_secs: secs } : f));
+								} catch (err) {
+									select.value = String(previous);
+									toastStore.push(err instanceof Error ? err.message : String(err), "error");
+								}
 							}}>
 								<option value={900}>{t("follows.interval15m")}</option>
 								<option value={3600}>{t("follows.interval1h")}</option>

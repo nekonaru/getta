@@ -6,6 +6,7 @@
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { enqueueFromClipboardText } from "#lib/enqueue";
 	import { t } from "#lib/i18n.svelte";
+	import { modalStore } from "#lib/stores/modal.svelte";
 
 	type ActionGroup = "nav" | "actions";
 	interface Action {
@@ -20,6 +21,8 @@
 	let query = $state("");
 	let selected = $state(0);
 	let inputEl = $state<HTMLInputElement | null>(null);
+	let lastFocused: HTMLElement | null = null;
+	let dialogEl = $state<HTMLDivElement | null>(null);
 
 	const actions: Action[] = [
 		{ id: "home", group: "nav", label: () => t("palette.goHome"), run: () => goto("/") },
@@ -128,7 +131,10 @@
 	}
 
 	function openPalette() {
+		if (modalStore.hasBlocking()) return;
+		lastFocused = document.activeElement as HTMLElement | null;
 		open = true;
+		modalStore.push("palette");
 		query = "";
 		selected = 0;
 		queueMicrotask(() => inputEl?.focus());
@@ -136,6 +142,26 @@
 
 	function closePalette() {
 		open = false;
+		modalStore.pop("palette");
+		queueMicrotask(() => lastFocused?.focus());
+		lastFocused = null;
+	}
+
+	function trapFocus(event: KeyboardEvent) {
+		if (!open || event.key !== "Tab" || !dialogEl) return;
+		const focusable = dialogEl.querySelectorAll<HTMLElement>(
+			'input, button, a[href], [tabindex]:not([tabindex="-1"])'
+		);
+		if (focusable.length === 0) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
 	}
 
 	function runAction(action: Action) {
@@ -151,7 +177,8 @@
 			else openPalette();
 			return;
 		}
-		if (!open) return;
+		if (!open || !modalStore.isTop("palette")) return;
+		trapFocus(event);
 		if (event.key === "Escape") {
 			event.preventDefault();
 			closePalette();
@@ -179,6 +206,7 @@
 	>
 		<div
 			class="palette"
+			bind:this={dialogEl}
 			role="dialog"
 			aria-modal="true"
 			aria-label={t("palette.placeholder")}

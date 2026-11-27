@@ -343,7 +343,17 @@ pub async fn export_history_csv(state: State<'_, AppState>, path: String) -> Res
 
 #[tauri::command]
 pub async fn get_diagnostics(state: State<'_, AppState>) -> Result<crate::maintenance::Diagnostics, String> {
-    Ok(crate::maintenance::diagnostics(&state))
+    let data_dir = state.data_dir.clone();
+    let settings = state
+        .settings
+        .lock()
+        .map(|s| s.clone())
+        .unwrap_or_default();
+    tokio::task::spawn_blocking(move || {
+        crate::maintenance::diagnostics_from(&data_dir, &settings)
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

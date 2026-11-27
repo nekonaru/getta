@@ -5,6 +5,7 @@
 	import { settingsStore } from "#lib/stores/settings.svelte";
 	import { toastStore } from "#lib/stores/toast.svelte";
 	import { t } from "#lib/i18n.svelte";
+	import { modalStore } from "#lib/stores/modal.svelte";
 
 	const settings = $derived(settingsStore.value);
 	const show = $derived(settings != null && !settings.onboarding_completed);
@@ -19,6 +20,11 @@
 
 	onMount(() => {
 		void refreshEngine();
+	});
+
+	$effect(() => {
+		if (show) modalStore.push("onboarding");
+		else modalStore.pop("onboarding");
 	});
 
 	$effect(() => {
@@ -94,7 +100,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === "Escape" && show) void skip(); }} />
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && show && !installBusy && modalStore.isTop("onboarding")) void skip(); }} />
 
 {#if show}
 	<div bind:this={dialogEl} class="veil" role="dialog" aria-modal="true" aria-label="Getta setup" tabindex="-1">

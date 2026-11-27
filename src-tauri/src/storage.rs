@@ -39,9 +39,7 @@ pub fn write_json_atomic<T: serde::Serialize>(path: &Path, value: &T) -> io::Res
     let tmp = path.with_extension(format!("tmp-{}-{nanos}-{suffix}", std::process::id()));
     let text = serde_json::to_string_pretty(value)
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
-    fs::write(&tmp, text)?;
-    fs::rename(&tmp, path)?;
-    Ok(())
+    write_bytes_atomic(path, tmp, text.as_bytes())
 }
 
 /// Write UTF-8 text atomically via a sibling temp file and rename.
@@ -56,8 +54,25 @@ pub fn write_text_atomic(path: &Path, text: &str) -> io::Result<()> {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let tmp = path.with_extension(format!("tmp-{}-{nanos}-{suffix}", std::process::id()));
-    fs::write(&tmp, text)?;
-    fs::rename(&tmp, path)
+    write_bytes_atomic(path, tmp, text.as_bytes())
+}
+
+/// Flush the temp file to disk before the rename. A rename can be durable
+/// while its data is not, which used to leave an empty state file after a
+/// sudden power loss.
+fn write_bytes_atomic(path: &Path, tmp: PathBuf, bytes: &[u8]) -> io::Result<()> {
+    use std::io::Write;
+    let mut file = fs::File::create(&tmp)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
+    fs::rename(&tmp, path)?;
+    if let Some(parent) = path.parent() {
+        if let Ok(dir) = fs::File::open(parent) {
+            let _ = dir.sync_all();
+        }
+    }
+    Ok(())
 }
 
 /// Load a JSON file or return `T::default()` when it does not exist. When the
@@ -87,6 +102,7 @@ where
                     if let Ok(recovered) =
                         serde_json::from_value::<T>(serde_json::Value::Array(valid))
                     {
+                        let _ = write_json_atomic(path, &recovered);
                         return recovered;
                     }
                 }

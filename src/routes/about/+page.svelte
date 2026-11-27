@@ -18,6 +18,9 @@
 	let checkingEngines = $state(false);
 	let diagnosticsError = $state(false);
 	let health = $state<HealthReport | null>(null);
+	let updateObject = $state<Awaited<ReturnType<typeof check>> | null>(null);
+	let healthBusy = $state(false);
+	let bundleBusy = $state(false);
 
 	onMount(async () => {
 		try {
@@ -54,6 +57,8 @@
 	}
 
 	async function createBundle() {
+		if (bundleBusy) return;
+		bundleBusy = true;
 		try {
 			const { save } = await import("@tauri-apps/plugin-dialog");
 			const path = await save({ filters: [{ name: "ZIP", extensions: ["zip"] }], defaultPath: "getta-diagnostics.zip" });
@@ -62,10 +67,14 @@
 			toastStore.push(t("about.bundleDone"), "info");
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		} finally {
+			bundleBusy = false;
 		}
 	}
 
 	async function runHealth() {
+		if (healthBusy) return;
+		healthBusy = true;
 		try {
 			health = await api.getHealth(0);
 		} catch (e) {
@@ -79,6 +88,8 @@
 			await api.revealInFolder(diagnostics.data_dir);
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		} finally {
+			healthBusy = false;
 		}
 	}
 
@@ -88,6 +99,7 @@
 		try {
 			const update = await check();
 			if (update) {
+				updateObject = update;
 				updateVersion = update.version;
 				updateState = "available";
 			} else {
@@ -103,7 +115,7 @@
 		updateState = "installing";
 		updateError = null;
 		try {
-			const update = await check();
+			const update = updateObject ?? (await check());
 			if (!update) {
 				updateState = "uptodate";
 				return;

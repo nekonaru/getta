@@ -55,7 +55,15 @@ const DIRECT_FILE_EXTENSIONS: &[&str] = &[
 pub fn detect(raw: &str) -> Platform {
     let trimmed = raw.trim();
 
-    if trimmed.starts_with("magnet:") || trimmed.to_ascii_lowercase().ends_with(".torrent") {
+    let trimmed_lower = trimmed.to_ascii_lowercase();
+    let torrent_path = url::Url::parse(trimmed)
+        .ok()
+        .and_then(|parsed| parsed.path().to_ascii_lowercase())
+        .unwrap_or_default();
+    if trimmed.starts_with("magnet:")
+        || trimmed_lower.ends_with(".torrent")
+        || torrent_path.ends_with(".torrent")
+    {
         return Platform {
             id: "magnet".to_string(),
             display_name: "Torrent / Magnet".to_string(),

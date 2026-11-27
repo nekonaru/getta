@@ -22,6 +22,13 @@ pub fn push(data_dir: &Path, entry: RecoveryEntry) -> io::Result<()> {
     storage::write_json_atomic(&recovery_path(data_dir), &entries)
 }
 
+pub fn push_many(data_dir: &Path, new_entries: Vec<RecoveryEntry>) -> io::Result<()> {
+    let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut entries = list(data_dir);
+    entries.extend(new_entries);
+    storage::write_json_atomic(&recovery_path(data_dir), &entries)
+}
+
 pub fn remove(data_dir: &Path, id: u64) -> io::Result<()> {
     let _guard = STATE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let entries = list(data_dir).into_iter().filter(|e| e.id != id).collect::<Vec<_>>();

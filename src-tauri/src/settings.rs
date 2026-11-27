@@ -35,6 +35,38 @@ fn default_language() -> String {
     "en".to_string()
 }
 
+fn default_retry_delay() -> u64 {
+    2
+}
+
+fn default_quiet_start() -> u32 {
+    23
+}
+
+fn default_quiet_end() -> u32 {
+    7
+}
+
+fn default_post_action() -> String {
+    "none".to_string()
+}
+
+fn default_webhook_events() -> String {
+    "done,error".to_string()
+}
+
+fn default_resolve_shortlinks() -> bool {
+    true
+}
+
+fn default_accent() -> String {
+    "#00C896".to_string()
+}
+
+fn default_disk_guard() -> u32 {
+    1
+}
+
 fn default_retry_multiplier() -> f64 {
     2.0
 }
@@ -174,23 +206,40 @@ impl Default for SmartFolder {
 }
 
 /// First matching rule wins. An empty field means no override.
+fn rule_matches(pattern: &str, url: &str) -> bool {
+    let pattern = pattern.trim().to_ascii_lowercase();
+    if pattern.is_empty() {
+        return false;
+    }
+    let Ok(parsed) = url::Url::parse(url) else {
+        return false;
+    };
+    let Some(host) = parsed.host_str() else {
+        return false;
+    };
+    let host = host.trim_start_matches("www.").to_ascii_lowercase();
+    if host == pattern || host.ends_with(&format!(".{pattern}")) || host.contains(&pattern) {
+        return true;
+    }
+    // A pattern with an explicit path is matched against the full URL, but
+    // only after the host check, so a redirect parameter cannot fake a host.
+    pattern.contains('/') && parsed.to_string().to_ascii_lowercase().contains(&pattern)
+}
+
 pub fn resolve_profile<'a>(settings: &'a AppSettings, url: &str) -> Option<&'a DownloadRule> {
-    let lower = url.to_ascii_lowercase();
-    settings.download_rules.iter().find(|rule| {
-        let pattern = rule.pattern.trim().to_ascii_lowercase();
-        !pattern.is_empty() && lower.contains(&pattern)
-    })
+    settings
+        .download_rules
+        .iter()
+        .find(|rule| rule_matches(&rule.pattern, url))
 }
 
 /// First matching rule wins; an explicitly chosen folder always beats a rule.
 pub fn resolve_download_dir(settings: &AppSettings, url: &str, fallback: &str) -> String {
-    let lower = url.to_ascii_lowercase();
     for rule in &settings.download_rules {
-        let pattern = rule.pattern.trim().to_ascii_lowercase();
-        if pattern.is_empty() || rule.dir.trim().is_empty() {
+        if rule.dir.trim().is_empty() {
             continue;
         }
-        if lower.contains(&pattern) {
+        if rule_matches(&rule.pattern, url) {
             return rule.dir.clone();
         }
     }
@@ -238,23 +287,23 @@ pub struct AppSettings {
     pub presets: Vec<DownloadPreset>,
     #[serde(default)]
     pub smart_folders: Vec<SmartFolder>,
-    #[serde(default)]
+    #[serde(default = "default_retry_delay")]
     pub retry_delay_secs: u64,
     #[serde(default = "default_retry_multiplier")]
     pub retry_multiplier: f64,
     #[serde(default)]
     pub quiet_hours_enabled: bool,
-    #[serde(default)]
+    #[serde(default = "default_quiet_start")]
     pub quiet_start_hour: u32,
-    #[serde(default)]
+    #[serde(default = "default_quiet_end")]
     pub quiet_end_hour: u32,
-    #[serde(default)]
+    #[serde(default = "default_post_action")]
     pub post_action: String,
     #[serde(default)]
     pub post_action_dir: String,
     #[serde(default)]
     pub webhook_url: String,
-    #[serde(default)]
+    #[serde(default = "default_webhook_events")]
     pub webhook_events: String,
     #[serde(default)]
     pub api_enabled: bool,
@@ -264,9 +313,9 @@ pub struct AppSettings {
     pub watch_folder: String,
     #[serde(default)]
     pub clipboard_monitor: bool,
-    #[serde(default)]
+    #[serde(default = "default_resolve_shortlinks")]
     pub resolve_shortlinks: bool,
-    #[serde(default)]
+    #[serde(default = "default_accent")]
     pub accent: String,
     #[serde(default = "default_compact")]
     pub compact_mode: bool,
@@ -282,7 +331,7 @@ pub struct AppSettings {
     pub automation_errors: u32,
     #[serde(default = "default_retry_storm_cap")]
     pub retry_storm_cap: u32,
-    #[serde(default)]
+    #[serde(default = "default_disk_guard")]
     pub disk_guard_gb: u32,
 }
 

@@ -164,8 +164,15 @@ impl QueueManager {
         self.inner.lock().unwrap_or_else(|e| e.into_inner()).items.iter().map(QueueItem::info).collect()
     }
 
-    /// Returns the item id and whether a new item was actually inserted.
-    pub fn start_counted(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<(u64, bool), String> {
+    /// Returns the item id, whether it was inserted and its recovery entry.
+    /// When `defer_io` is true the caller flushes recovery and emits once.
+    fn start_inner(
+        &self,
+        app: &tauri::AppHandle,
+        url: &str,
+        options: &crate::models::StartOptions,
+        defer_io: bool,
+    ) -> Result<(u64, bool, Option<RecoveryEntry>), String> {
         let trimmed = validate_url(url)?;
         let now = now_secs();
         let scheduled = options.start_at.filter(|at| *at > now);
@@ -271,7 +278,7 @@ impl QueueManager {
             })
             .map(|i| i.id)
         {
-            return Ok((existing, false));
+            return Ok((existing, false, None));
         }
         let item_title = item.title.clone();
         let id = item.id;
@@ -290,10 +297,37 @@ impl QueueManager {
             output_dir: options.output_dir.clone(),
             start_at: scheduled,
         };
+        if defer_io {
+            return Ok((id, true, Some(recovery_entry)));
+        }
         let _ = recovery::push(&self.data_dir, recovery_entry);
         emit_queue(app);
         self.try_start_next(app);
-        Ok((id, true))
+        Ok((id, true, None))
+    }
+
+    /// Admit one item from a bulk import without per-item disk writes or emits.
+    pub fn start_batch_item(
+        &self,
+        app: &tauri::AppHandle,
+        options: &crate::models::StartOptions,
+    ) -> Result<(u64, bool, Option<RecoveryEntry>), String> {
+        self.start_inner(app, &options.url, options, true)
+    }
+
+    /// Flush recovery and notify the UI once after a bulk import.
+    pub fn finish_batch(&self, app: &tauri::AppHandle, entries: Vec<RecoveryEntry>) {
+        if !entries.is_empty() {
+            let _ = recovery::push_many(&self.data_dir, entries);
+        }
+        emit_queue(app);
+        self.try_start_next(app);
+    }
+
+    /// Returns the item id and whether a new item was actually inserted.
+    pub fn start_counted(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<(u64, bool), String> {
+        self.start_inner(app, url, options, false)
+            .map(|(id, inserted, _)| (id, inserted))
     }
 
     pub fn start(&self, app: &tauri::AppHandle, url: &str, options: &crate::models::StartOptions) -> Result<u64, String> {

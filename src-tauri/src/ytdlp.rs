@@ -213,7 +213,13 @@ pub async fn install_ytdlp(data_dir: &Path) -> Result<PathBuf, EngineError> {
     std::fs::create_dir_all(target.parent().expect("bin dir")).map_err(|_| EngineError::DownloadFailed)?;
     // Write and verify a sibling temp file, then rename. A crash mid-install
     // never leaves a truncated binary at the managed path.
-    let tmp = target.with_extension(format!("tmp-{}", std::process::id()));
+    static TMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let suffix = TMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = target.with_extension(format!("tmp-{}-{nanos}-{suffix}", std::process::id()));
     let _ = std::fs::remove_file(&tmp);
     std::fs::write(&tmp, &bytes).map_err(|_| EngineError::DownloadFailed)?;
     #[cfg(unix)]
@@ -273,6 +279,12 @@ pub async fn install_ffmpeg(data_dir: &Path) -> Result<PathBuf, EngineError> {
 
     for url in urls {
         let bytes = fetch_bytes(url).await?;
+        // A valid FFmpeg archive is several megabytes. A tiny response is
+        // treated as a bad mirror or an error page rather than executed.
+        if bytes.len() < 1_000_000 {
+            tracing::warn!("implausibly small FFmpeg archive from {url}");
+            continue;
+        }
         let reader = std::io::Cursor::new(bytes);
         let mut archive = zip::ZipArchive::new(reader).map_err(|_| EngineError::DownloadFailed)?;
         for i in 0..archive.len() {
@@ -290,15 +302,29 @@ pub async fn install_ffmpeg(data_dir: &Path) -> Result<PathBuf, EngineError> {
                 continue;
             }
             let dest = bin_dir.join(&leaf);
-            let mut out = std::fs::File::create(&dest).map_err(|_| EngineError::DownloadFailed)?;
+            let staging = dest.with_extension("install-tmp");
+            let mut out = std::fs::File::create(&staging).map_err(|_| EngineError::DownloadFailed)?;
             std::io::copy(&mut file, &mut out).map_err(|_| EngineError::DownloadFailed)?;
+            drop(out);
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                let mut perms = std::fs::metadata(&dest).map_err(|_| EngineError::DownloadFailed)?.permissions();
+                let mut perms = std::fs::metadata(&staging).map_err(|_| EngineError::DownloadFailed)?.permissions();
                 perms.set_mode(0o755);
-                let _ = std::fs::set_permissions(&dest, perms);
+                let _ = std::fs::set_permissions(&staging, perms);
             }
+            let mut check = std::process::Command::new(&staging);
+            check.arg("-version");
+            hide_console_std(&mut check);
+            let ok = check
+                .output()
+                .map(|out| out.status.success())
+                .unwrap_or(false);
+            if !ok {
+                let _ = std::fs::remove_file(&staging);
+                continue;
+            }
+            let _ = std::fs::rename(&staging, &dest);
         }
     }
 

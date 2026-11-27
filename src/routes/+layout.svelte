@@ -81,6 +81,12 @@
 		void api.takePendingLinks().then((urls) => {
 			for (const url of urls) void handleDeepUrl(url);
 		}).catch(() => {});
+		void api.takePendingVerbs().then((verbs) => {
+			for (const verb of verbs) {
+				if (verb === "pause") void api.pauseAll().then(() => downloadsStore.refresh());
+				else if (verb === "resume") void api.resumeAll().then(() => downloadsStore.refresh());
+			}
+		}).catch(() => {});
 
 		const handledDeep = new Map<string, number>();
 		const handleEnqueue = async (raw: string, key = raw) => {
