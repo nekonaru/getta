@@ -324,8 +324,9 @@ impl QueueManager {
                     .lock()
                     .map(|s| std::path::PathBuf::from(&s.output_dir))
                     .unwrap_or_else(|_| state.data_dir.clone());
-                let report = crate::features::health(&state.data_dir, &output, needed);
-                if !report.enough_space {
+                let free = crate::features::disk_free_cached(&output);
+                // Zero means the platform could not answer; allow the start.
+                if free > 0 && free < needed {
                     return;
                 }
             }
@@ -838,6 +839,29 @@ fn title_from_url(url: &str) -> String {
     url.chars().take(80).collect()
 }
 
+/// Hash a file in bounded chunks so large downloads never load into RAM.
+fn hash_file(path: &str) -> Option<String> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).ok()?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut hasher = sha2::Sha256::new();
+    let mut buffer = [0u8; 1024 * 1024];
+    loop {
+        let read = reader.read(&mut buffer).ok()?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Some(hex::encode(hasher.finalize()))
+}
+
+/// A checksum mismatch is deterministic: record one failure and do not retry.
+fn checksum_failure(app: &tauri::AppHandle, id: u64, message: &str) {
+    finalize_error(app, id, message, false);
+    emit_queue(app);
+}
+
 /// Fire an opt-in webhook for a queue event. The request is spawned and
 /// never blocks a download. Failures are ignored by design.
 fn notify_webhook(app: &tauri::AppHandle, event: &str, title: &str, url: &str, error: Option<&str>) {
@@ -859,8 +883,16 @@ fn notify_webhook(app: &tauri::AppHandle, event: &str, title: &str, url: &str, e
         "error": error,
         "at": now_secs(),
     });
+    static WEBHOOK_CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    let client = WEBHOOK_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new())
+    })
+    .clone();
     tauri::async_runtime::spawn(async move {
-        let _ = reqwest::Client::new().post(&endpoint).json(&payload).send().await;
+        let _ = client.post(&endpoint).json(&payload).send().await;
     });
 }
 
@@ -1074,7 +1106,7 @@ fn spawn_job(app: tauri::AppHandle, id: u64, generation: u64) {
 /// file, resumes an existing partial file with a Range request, and reports
 /// progress through the same queue snapshot as yt-dlp jobs.
 async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
-    let (url, output_dir, limit) = {
+    let (url, output_dir, limit, proxy, expected_sha256) = {
         let Some(state) = app.try_state::<AppState>() else { return };
         let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner()).clone();
         let Some(item) = state
@@ -1090,7 +1122,13 @@ async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
             return;
         };
         let dir = item.output_dir.clone().unwrap_or_else(|| settings.output_dir.clone());
-        (item.url, dir, if item.speed_limit_mbps > 0 { item.speed_limit_mbps } else { settings.speed_limit_mbps })
+        (
+            item.url,
+            dir,
+            if item.speed_limit_mbps > 0 { item.speed_limit_mbps } else { settings.speed_limit_mbps },
+            settings.proxy.trim().to_string(),
+            item.expected_sha256.clone(),
+        )
     };
     if std::fs::create_dir_all(&output_dir).is_err() {
         finalize_error(&app, id, "The download folder cannot be created.", false);
@@ -1103,7 +1141,14 @@ async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
         final_path.extension().and_then(|e| e.to_str()).unwrap_or("")
     ));
     let existing = std::fs::metadata(&part_path).ok().map(|m| m.len()).unwrap_or(0);
-    let mut request = reqwest::Client::new().get(&url);
+    let mut builder = reqwest::Client::builder().timeout(std::time::Duration::from_secs(300));
+    if !proxy.is_empty() {
+        if let Ok(proxy_obj) = reqwest::Proxy::all(&proxy) {
+            builder = builder.proxy(proxy_obj);
+        }
+    }
+    let client = builder.build().unwrap_or_else(|_| reqwest::Client::new());
+    let mut request = client.get(&url);
     if existing > 0 {
         request = request.header("Range", format!("bytes={existing}-"));
     }
@@ -1178,6 +1223,22 @@ async fn run_direct_job(app: tauri::AppHandle, id: u64, generation: u64) {
         }
     }
     drop(file);
+    if let Some(expected) = expected_sha256.as_ref() {
+        let actual = hash_file(&part_path.to_string_lossy());
+        let matched = actual
+            .as_deref()
+            .map(|digest| digest.eq_ignore_ascii_case(expected.trim()))
+            .unwrap_or(false);
+        if !matched {
+            let message = format!(
+                "Checksum mismatch. Expected {}, got {}.",
+                expected,
+                actual.unwrap_or_else(|| "no readable file".to_string())
+            );
+            checksum_failure(&app, id, &message);
+            return;
+        }
+    }
     if std::fs::rename(&part_path, &final_path).is_err() {
         finalize_error(&app, id, "Could not finalize the downloaded file.", false);
         return;
@@ -1461,9 +1522,7 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
             };
             if let Some(expected) = expected_sha256.as_ref() {
                 let target = file_paths.first().or(fallback_path.as_ref());
-                let actual = target
-                    .and_then(|path| std::fs::read(path).ok())
-                    .map(|bytes| hex::encode(sha2::Sha256::digest(&bytes)));
+                let actual = target.and_then(|path| hash_file(path));
                 let matched = actual
                     .as_deref()
                     .map(|digest| digest.eq_ignore_ascii_case(expected.trim()))
@@ -1474,9 +1533,7 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
                         expected,
                         actual.unwrap_or_else(|| "no readable file".to_string())
                     );
-                    finalize_error(&app, id, &message, false);
-                    finalize_maybe_retry(&app, id, &message);
-                    emit_queue(&app);
+                    checksum_failure(&app, id, &message);
                     return;
                 }
             }

@@ -41,8 +41,10 @@ class DownloadsStore {
 	loaded = $state(false);
 	/** Ring buffer of recent speed samples (bytes/s), per item id. */
 	speedHistory = $state<Map<number, number[]>>(new Map());
-	history: HistoryEntry[] = [];
+	history = $state<HistoryEntry[]>([]);
 	private started = false;
+	private unlisten: (() => void) | null = null;
+	private historyLoaded = false;
 
 	get activeCount(): number {
 		return this.items.filter((i) => i.status === "active").length;
@@ -73,7 +75,7 @@ class DownloadsStore {
 		} catch {
 			/* backend not ready; listener below will populate */
 		}
-		await onQueueChanged((items) => {
+		this.unlisten = await onQueueChanged((items) => {
 			// On a cold start the snapshot may have failed. Seed the first
 			// event instead of treating every existing item as a new completion.
 			const seeded = !this.loaded;
@@ -88,15 +90,33 @@ class DownloadsStore {
 
 	private recordSpeed(items: QueueItemInfo[]): void {
 		const next = new Map(this.speedHistory);
+		const active = new Set<number>();
 		for (const item of items) {
 			if (item.status !== "active") continue;
-			const history = next.get(item.id) ?? [];
-			next.set(item.id, [...history, item.speed_bps].slice(-HISTORY_LEN));
+			active.add(item.id);
+			const history = next.get(item.id);
+			if (history) {
+				history.push(item.speed_bps);
+				if (history.length > HISTORY_LEN) history.splice(0, history.length - HISTORY_LEN);
+			} else {
+				next.set(item.id, [item.speed_bps]);
+			}
 		}
-		for (const id of [...next.keys()]) {
-			if (!items.some((i) => i.id === id && i.status === "active")) next.delete(id);
+		for (const id of next.keys()) {
+			if (!active.has(id)) next.delete(id);
 		}
 		this.speedHistory = next;
+	}
+
+	/// Re-read the queue snapshot. Needed after backend actions that do not
+	/// emit queue-changed (batch updates, imports, CLI pause/resume).
+	async refresh(): Promise<void> {
+		try {
+			this.items = await api.queueSnapshot();
+			this.loaded = true;
+		} catch {
+			/* backend not ready */
+		}
 	}
 
 	private trackTransitions(previous: Map<number, QueueStatusName>, items: QueueItemInfo[]): void {
@@ -136,7 +156,9 @@ class DownloadsStore {
 		}
 	}
 
-	async loadHistory(): Promise<void> {
+	async loadHistory(force = false): Promise<void> {
+		if (this.historyLoaded && !force) return;
+		this.historyLoaded = true;
 		this.history = await api.historyList();
 	}
 }

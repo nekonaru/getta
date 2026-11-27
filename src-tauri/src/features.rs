@@ -154,6 +154,25 @@ pub struct HealthReport {
     pub audit_count: usize,
 }
 
+/// Cheap, cached free-space query for the scheduler. Avoids reading history
+/// and audit files on every download start.
+static DISK_CACHE: std::sync::Mutex<(std::time::Instant, u64, u64)> =
+    std::sync::Mutex::new((std::time::UNIX_EPOCH, 0, 0));
+
+pub fn disk_free_cached(path: &Path) -> u64 {
+    let now = std::time::Instant::now();
+    if let Ok(cache) = DISK_CACHE.lock() {
+        if now.duration_since(cache.0) < std::time::Duration::from_secs(5) {
+            return cache.1;
+        }
+    }
+    let (free, total) = disk_space(path);
+    if let Ok(mut cache) = DISK_CACHE.lock() {
+        *cache = (now, free, total);
+    }
+    free
+}
+
 pub fn health(data_dir: &Path, output_dir: &Path, needed_bytes: u64) -> HealthReport {
     let (free, total) = disk_space(output_dir);
     let probe = output_dir.join(".getta-write-test");
@@ -207,10 +226,22 @@ extern "system" {
     ) -> i32;
 }
 
-#[cfg(not(windows))]
+#[cfg(unix)]
 fn disk_space(path: &Path) -> (u64, u64) {
-    let _ = path;
-    (0, 0)
+    use std::ffi::CString;
+    let Ok(c_path) = CString::new(path.as_os_str().as_bytes()) else {
+        return (0, 0);
+    };
+    unsafe {
+        let mut stat: libc::statvfs = std::mem::zeroed();
+        if libc::statvfs(c_path.as_ptr(), &mut stat) != 0 {
+            return (0, 0);
+        }
+        (
+            stat.f_bavail.saturating_mul(stat.f_frsize),
+            stat.f_blocks.saturating_mul(stat.f_frsize),
+        )
+    }
 }
 
 pub fn export_library_html(data_dir: &Path, dest: &Path) -> Result<(), String> {

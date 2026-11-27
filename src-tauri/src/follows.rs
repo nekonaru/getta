@@ -247,6 +247,12 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
     let value = fetch_flat_playlist(app, &target).await?;
     let (_title, entries) = entries_from_json(&value);
 
+    // The channel may have been removed while yt-dlp was fetching. Stop
+    // before enqueueing anything for a follow that no longer exists.
+    if !list(&data_dir).iter().any(|f| f.id == follow.id) {
+        return Ok(0);
+    }
+
     let seen: HashSet<String> = follow.seen_ids.iter().cloned().collect();
     let quality = app
         .try_state::<AppState>()
@@ -277,7 +283,13 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
         };
         let started = app
             .try_state::<AppState>()
-            .map(|state| state.queue.start(app, &entry.url, &options).is_ok())
+            .and_then(|state| {
+                state
+                    .queue
+                    .start_counted(app, &entry.url, &options)
+                    .map(|(_, inserted)| inserted)
+                    .ok()
+            })
             .unwrap_or(false);
         // Only successful enqueues are marked seen. A rejected link must be
         // offered again on the next check instead of being lost forever.
@@ -295,6 +307,10 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
     // Re-read the file now. A settings toggle during the 45s fetch may have
     // changed this record; overwrite only the fields this check owns.
     let mut updated = list(&data_dir);
+    // The channel may have been removed during the fetch. Do not resurrect it.
+    if !updated.iter().any(|f| f.id == follow.id) {
+        return Ok(enqueued);
+    }
     if let Some(current) = updated.iter_mut().find(|f| f.id == follow.id) {
         current.seen_ids = new_seen;
         current.last_checked_at = Some(now_secs());

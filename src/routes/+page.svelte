@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { onMount, onDestroy } from "svelte";
 	import { goto } from "$app/navigation";
 	import { api, type Analysis, type EngineStatus } from "#lib/api";
 	import { downloadsStore, readStats } from "#lib/stores/downloads.svelte";
@@ -78,10 +78,10 @@
 		presetId = id;
 		const preset = presets.find((p) => p.id === id);
 		if (!preset) return;
-		if (preset.quality) quality = preset.quality;
-		if (preset.mode) mode = preset.mode as typeof mode;
-		if (preset.priority) priority = preset.priority;
-		if (preset.speed_limit_mbps) itemSpeedLimit = preset.speed_limit_mbps;
+		quality = preset.quality || "best";
+		mode = (preset.mode || "auto") as typeof mode;
+		priority = preset.priority ?? 0;
+		itemSpeedLimit = preset.speed_limit_mbps ?? 0;
 	};
 
 	const statusText = (status: string) =>
@@ -282,6 +282,8 @@
 	);
 
 	const isPlaylist = $derived(analysis?.is_playlist === true && (analysis?.playlist_entries?.length ?? 0) > 0);
+
+	onDestroy(() => clearTimeout(analyzeTimer));
 </script>
 
 <div class="page">

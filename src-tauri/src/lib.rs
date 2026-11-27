@@ -33,6 +33,9 @@ pub struct AppState {
     pub queue: queue::QueueManager,
     /// Links forwarded by a second instance before the UI mounted.
     pub pending_links: Mutex<Vec<String>>,
+    /// Paths already added to the asset scope. Avoids repeating the IPC call
+    /// on every history list fetch.
+    pub allowed_assets: Mutex<std::collections::HashSet<String>>,
 }
 
 /// Run both engines and report whether they work. Called once at launch;
@@ -155,6 +158,7 @@ pub fn run() {
                 settings: Mutex::new(settings),
                 queue: queue::QueueManager::new(data_dir),
                 pending_links: Mutex::new(Vec::new()),
+                allowed_assets: Mutex::new(std::collections::HashSet::new()),
             });
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_title("Getta");

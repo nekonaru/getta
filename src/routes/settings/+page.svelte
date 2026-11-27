@@ -772,7 +772,7 @@
 						<div class="row"><button class="btn btn-sm" onclick={loadAudit}>{t("settings.loadAudit")}</button></div>
 						{#if auditLines.length > 0}
 							<ul class="audit-list">
-								{#each auditLines as line (line)}
+								{#each auditLines as line, i (i)}
 									<li class="mono">{line}</li>
 								{/each}
 							</ul>

@@ -256,10 +256,15 @@ pub async fn history_list(app: AppHandle, state: State<'_, AppState>) -> Result<
     let entries = history::list(&state.data_dir);
     // Files saved in a custom output folder are not in the static asset
     // scope. Allow each known file explicitly so inline playback works.
+    let mut allowed = state
+        .allowed_assets
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     for entry in &entries {
         if let Some(path) = entry.file_path.as_deref() {
-            if std::path::Path::new(path).is_file() {
+            if !allowed.contains(path) && std::path::Path::new(path).is_file() {
                 let _ = app.asset_protocol_scope().allow_file(path);
+                allowed.insert(path.to_string());
             }
         }
     }
@@ -617,7 +622,16 @@ pub async fn restore_backup(
     state: State<'_, AppState>,
     path: String,
 ) -> Result<usize, String> {
-    let count = crate::features::restore_backup(&state.data_dir, std::path::Path::new(&path))?;
+    let count = {
+        let _guard = crate::history::lock();
+        crate::features::restore_backup(&state.data_dir, std::path::Path::new(&path))?
+    };
+    // The in-memory settings must follow the restored file, otherwise the
+    // next settings change writes stale values back over it.
+    let restored = crate::settings::load(&state.data_dir);
+    if let Ok(mut current) = state.settings.lock() {
+        *current = restored;
+    }
     crate::features::audit(&state.data_dir, "restore", &count.to_string());
     Ok(count)
 }

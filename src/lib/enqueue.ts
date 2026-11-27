@@ -12,7 +12,7 @@ export interface EnqueueResult {
 }
 
 /** Why an enqueue attempt did not happen. */
-export type EnqueueFailure = "empty-clipboard" | "no-link" | "cancelled";
+export type EnqueueFailure = "empty-clipboard" | "no-link" | "cancelled" | "failed";
 
 export async function enqueueUrl(url: string, forceFolder?: boolean): Promise<EnqueueResult> {
 	const settings = settingsStore.value;
@@ -38,7 +38,7 @@ export async function enqueueUrl(url: string, forceFolder?: boolean): Promise<En
 		return { queued: true, url };
 	} catch (e) {
 		toastStore.push(e instanceof Error ? e.message : String(e), "error");
-		return { queued: false, url };
+		return { queued: false, url, reason: "failed" };
 	}
 }
 
@@ -64,7 +64,7 @@ export async function enqueueFromClipboardText(text: string, forceFolder?: boole
 		toastStore.push(t("enqueue.emptyClipboard"), "error");
 		return false;
 	}
-	if (result.reason === "cancelled") return false;
+	if (result.reason === "cancelled" || result.reason === "failed") return false;
 	toastStore.push(t("home.invalidUrl"), "error");
 	return false;
 }

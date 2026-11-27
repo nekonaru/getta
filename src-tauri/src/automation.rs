@@ -124,14 +124,14 @@ pub async fn poll_watch_folder(app: tauri::AppHandle) {
                     }
                 }
             }
-            if queued > 0 {
-                let label = format!("{queued} links from {}", path.display());
-                if let Some(state) = app.try_state::<crate::AppState>() {
-                    crate::features::audit(&state.data_dir, "watch_folder", &label);
-                }
-                let done = path.with_extension("done.txt");
-                let _ = std::fs::rename(&path, &done);
+            let label = format!("{queued} links from {}", path.display());
+            if let Some(state) = app.try_state::<crate::AppState>() {
+                crate::features::audit(&state.data_dir, "watch_folder", &label);
             }
+            // Always move the file aside. Otherwise a file with only
+            // duplicates is reprocessed every 30 seconds forever.
+            let done = path.with_extension("done.txt");
+            let _ = std::fs::rename(&path, &done);
         }
     }
 }
@@ -279,6 +279,14 @@ pub async fn poll_clipboard(app: tauri::AppHandle) {
         let Ok(text) = app.clipboard().read_text() else { continue };
         let trimmed = text.trim().to_string();
         if trimmed.is_empty() || trimmed == last {
+            continue;
+        }
+        let looks_like_link = trimmed.starts_with("http://")
+            || trimmed.starts_with("https://")
+            || trimmed.starts_with("getta://")
+            || trimmed.starts_with("magnet:")
+            || trimmed.starts_with("p2p:");
+        if !looks_like_link {
             continue;
         }
         last = trimmed.clone();

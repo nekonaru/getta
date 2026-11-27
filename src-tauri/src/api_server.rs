@@ -28,14 +28,36 @@ pub async fn serve(app: tauri::AppHandle, port: u16, token: String) {
 
 async fn handle(app: &tauri::AppHandle, stream: &mut tokio::net::TcpStream, token: &str) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let mut buffer = vec![0u8; 8192];
-    let Ok(size) = stream.read(&mut buffer).await else {
-        return;
-    };
-    if size == 0 {
-        return;
+    let mut buffer = Vec::with_capacity(8192);
+    let mut chunk = [0u8; 4096];
+    // Read until the header terminator, then keep reading the declared body.
+    loop {
+        let Ok(size) = stream.read(&mut chunk).await else {
+            return;
+        };
+        if size == 0 {
+            return;
+        }
+        buffer.extend_from_slice(&chunk[..size]);
+        if buffer.len() > 65536 {
+            return;
+        }
+        if let Some(pos) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
+            let header = String::from_utf8_lossy(&buffer[..pos]).to_ascii_lowercase();
+            let needed = header
+                .lines()
+                .find_map(|line| {
+                    line.strip_prefix("content-length:")
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                })
+                .unwrap_or(0)
+                .min(65536);
+            if buffer.len() >= pos + 4 + needed {
+                break;
+            }
+        }
     }
-    let request = String::from_utf8_lossy(&buffer[..size]).to_string();
+    let request = String::from_utf8_lossy(&buffer).to_string();
     let authorized = request.lines().any(|line| {
         line.to_ascii_lowercase()
             .starts_with("authorization:")

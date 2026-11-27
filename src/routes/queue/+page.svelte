@@ -17,7 +17,7 @@
 	let batchPriority = $state(0);
 	let dragId = $state<number | null>(null);
 	let dropIndex = $state<number | null>(null);
-	const reorderAllowed = $derived(query.trim().length === 0);
+	const reorderAllowed = $derived(query.trim().length === 0 && !groupFilter);
 
 	function onDragStart(event: DragEvent, id: number) {
 		dragId = id;
@@ -65,17 +65,23 @@
 			const count = await api.batchQueueUpdate([...batchIds], batchPriority, batchGroup || null);
 			toastStore.push(t("queue.batchApplied", { count }), "info");
 			batchIds = new Set();
-			await downloadsStore.start();
+			await downloadsStore.refresh();
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
+	}
+
+	function runAction(action: () => Promise<unknown>): void {
+		void action().catch((e) => {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		});
 	}
 
 	async function retryFailed() {
 		try {
 			const count = await api.retryAllFailed();
 			toastStore.push(t("queue.retryAllDone", { count }), "info");
-			void downloadsStore.start();
+			void downloadsStore.refresh();
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -239,7 +245,7 @@
 			if (typeof picked !== "string") return;
 			const count = await api.importQueue(picked);
 			toastStore.push(t("queue.queueImported", { count }));
-			void downloadsStore.start();
+			void downloadsStore.refresh();
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -435,8 +441,7 @@
 								<span class="section-count mono">{section.list.length}</span>
 							</div>
 							<div class="manifest card">
-								{#each section.list as item (item.id)}
-									{@const dragIndex = section.list.indexOf(item)}
+								{#each section.list as item, dragIndex (item.id)}
 									<div class="manifest-entry" class:is-active={item.status === "active"} class:is-drop-target={section.id === "queued" && dropIndex === dragIndex} role="listitem"
 										ondragover={(e) => { if (section.id === "queued" && reorderAllowed) { e.preventDefault(); dropIndex = dragIndex; } }}
 										ondragleave={() => { if (section.id === "queued") dropIndex = null; }}
@@ -500,25 +505,25 @@
 													<input type="checkbox" class="batch-check" checked={batchIds.has(item.id)} aria-label={t("queue.batchSelect")} onchange={() => toggleBatch(item.id)} />
 												<button class="btn-icon" title={t("queue.copyUrl")} aria-label={t("queue.copyUrl")} onclick={() => copySourceUrl(item.url)}><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg></button>
 												{#if item.status === "active"}
-													<button class="btn-icon" title={t("queue.pause")} aria-label={t("queue.pause")} onclick={() => api.pauseDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14" /></svg></button>
-													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+													<button class="btn-icon" title={t("queue.pause")} aria-label={t("queue.pause")} onclick={() => runAction(() => api.pauseDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14" /></svg></button>
+													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => runAction(() => api.cancelDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "paused"}
-													<button class="btn-icon" title={t("queue.resume")} aria-label={t("queue.resume")} onclick={() => api.resumeDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" /></svg></button>
-													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+													<button class="btn-icon" title={t("queue.resume")} aria-label={t("queue.resume")} onclick={() => runAction(() => api.resumeDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" /></svg></button>
+													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => runAction(() => api.cancelDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "queued"}
 													{#if item.scheduled_at}
 														<button class="btn-icon" title={t("queue.cancelSchedule")} aria-label={t("queue.cancelSchedule")} onclick={() => api.clearSchedule(item.id)}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg></button>
 													{/if}
-													<button class="btn-icon" title={t("queue.moveUp")} aria-label={t("queue.moveUp")} onclick={() => api.moveItem(item.id, -1)}><svg viewBox="0 0 24 24"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg></button>
-													<button class="btn-icon" title={t("queue.moveDown")} aria-label={t("queue.moveDown")} onclick={() => api.moveItem(item.id, 1)}><svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m18 13-6 6-6-6" /></svg></button>
-													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => api.cancelDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+													<button class="btn-icon" title={t("queue.moveUp")} aria-label={t("queue.moveUp")} onclick={() => runAction(() => api.moveItem(item.id, -1))}><svg viewBox="0 0 24 24"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg></button>
+													<button class="btn-icon" title={t("queue.moveDown")} aria-label={t("queue.moveDown")} onclick={() => runAction(() => api.moveItem(item.id, 1))}><svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m18 13-6 6-6-6" /></svg></button>
+													<button class="btn-icon" title={t("queue.cancel")} aria-label={t("queue.cancel")} onclick={() => runAction(() => api.cancelDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
 												{:else if item.status === "done"}
 													<button class="btn-icon" title={t("queue.reveal")} aria-label={t("queue.reveal")} onclick={() => reveal(item.file_path)}><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg></button>
 													<button class="btn-icon" title={t("queue.remove")} aria-label={t("queue.remove")} onclick={() => removeItem(item, false)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
 													<button class="btn-icon danger" title={t("queue.removeFile")} aria-label={t("queue.removeFile")} onclick={() => confirmRemoveFile(item)}><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1.5 13a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8L18 7" /></svg></button>
 												{:else if item.status === "error"}
 													{#if item.retryable}
-														<button class="btn-icon" title={t("queue.retry")} aria-label={t("queue.retry")} onclick={() => api.retryDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" /><path d="M3 3v5h5" /></svg></button>
+														<button class="btn-icon" title={t("queue.retry")} aria-label={t("queue.retry")} onclick={() => runAction(() => api.retryDownload(item.id))}><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" /><path d="M3 3v5h5" /></svg></button>
 													{/if}
 													<button class="btn-icon" title={t("queue.remove")} aria-label={t("queue.remove")} onclick={() => removeItem(item, false)}><svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l1-2h6l1 2" /></svg></button>
 												{/if}

@@ -28,6 +28,35 @@
 	let renameOpen = $state(false);
 	let renameTemplate = $state("{title}");
 	let undoEntries = $state<HistoryEntry[]>([]);
+	let dialogEl = $state<HTMLDivElement | null>(null);
+	let lastFocused: HTMLElement | null = null;
+
+	$effect(() => {
+		if (active) {
+			lastFocused = document.activeElement as HTMLElement | null;
+			queueMicrotask(() => dialogEl?.focus());
+		} else if (lastFocused) {
+			queueMicrotask(() => lastFocused?.focus());
+			lastFocused = null;
+		}
+	});
+
+	function trapFocus(event: KeyboardEvent) {
+		if (!active || event.key !== "Tab" || !dialogEl) return;
+		const focusable = dialogEl.querySelectorAll<HTMLElement>(
+			'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+		);
+		if (focusable.length === 0) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
+	}
 	// The first entry of each group is the one we keep, so only extra
 	// copies carry the duplicate badge.
 	const dupIds = $derived(new Set(dupGroups.flatMap((group) => group.slice(1))));
@@ -460,7 +489,7 @@
 </div>
 
 {#if active}
-	<div class="veil" role="dialog" aria-modal="true" aria-label={active.title} tabindex="-1" onclick={(e) => e.target === e.currentTarget && (active = null)} onkeydown={(e) => e.key === "Escape" && (active = null)}>
+	<div class="veil" bind:this={dialogEl} role="dialog" aria-modal="true" aria-label={active.title} tabindex="-1" onclick={(e) => e.target === e.currentTarget && (active = null)} onkeydown={(e) => { trapFocus(e); if (e.key === "Escape") active = null; }}>
 		<div class="modal media-modal">
 			<div class="media-modal-head">
 				<p class="media-modal-title" title={active.title}>{active.title}</p>
