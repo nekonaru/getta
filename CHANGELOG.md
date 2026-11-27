@@ -3,6 +3,23 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.2.4
+
+Feature-wiring audit: every declared command, event, setting and label is now connected. No new features.
+
+## Bug fixes
+
+- **Two Settings labels had no translation key.** The new smart-folder default name and preset quality label now resolve in both locales.
+- **Preset filename templates were saved but never used.** Applying a preset now overrides the download filename template, and the override can be edited in Advanced options and survives queue export/import.
+- **The active profile name was never recorded.** Loading a profile now stores its name, so the Settings screen can show which profile is in use.
+
+## Verification
+
+- All 48 IPC commands defined in Rust are registered and have a matching frontend method.
+- All events emitted by the backend have a frontend listener and vice versa.
+- No translation key used in code is missing from either locale.
+- Local checks: zero type errors and warnings, all unit tests passing, clean build, no em or en dashes.
+
 ## v1.2.3
 
 Third deep audit: concurrency, resource bounds and long-session stability. No new features.

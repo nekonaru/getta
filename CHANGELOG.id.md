@@ -3,6 +3,23 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.2.4
+
+Audit pengkabelan fitur: semua command, event, pengaturan, dan label yang dideklarasikan kini tersambung. Tidak ada fitur baru.
+
+## Perbaikan bug
+
+- **Dua label Pengaturan tidak punya kunci terjemahan.** Nama default folder pintar dan label kualitas preset kini tersedia di kedua bahasa.
+- **Template nama file preset tersimpan tapi tidak dipakai.** Menerapkan preset kini menimpa template nama unduhan, dan timpaan itu bisa diubah di Opsi lanjutan serta ikut tersimpan saat ekspor/impor antrean.
+- **Nama profil aktif tidak pernah dicatat.** Memuat profil kini menyimpan namanya, sehingga Pengaturan bisa menunjukkan profil yang sedang dipakai.
+
+## Verifikasi
+
+- Seluruh 48 command IPC yang didefinisikan di Rust terdaftar dan punya method frontend yang cocok.
+- Semua event yang dikirim backend punya pendengar frontend, dan sebaliknya.
+- Tidak ada kunci terjemahan yang dipakai kode tapi hilang di salah satu bahasa.
+- Pemeriksaan lokal: nol error dan warning tipe, seluruh unit test lulus, build bersih, tanpa em atau en dash.
+
 ## v1.2.3
 
 Audit mendalam ketiga: konkurensi, batas sumber daya, dan stabilitas sesi panjang. Tidak ada fitur baru.
