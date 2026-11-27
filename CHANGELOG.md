@@ -3,6 +3,33 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.2.3
+
+Third deep audit: concurrency, resource bounds and long-session stability. No new features.
+
+## Bug fixes
+
+- **Resume could deadlock the queue.** It read settings while holding the queue lock; the order is now settings first, queue second.
+- **Settings writes blocked progress updates.** Automation and safe-mode writes now clone and release the guard before the fsync-heavy save.
+- **The local API had unbounded connections.** Accepted sockets are now capped and each read has a five-second timeout.
+- **Webhook deliveries could accumulate.** A bounded semaphore drops excess deliveries instead of spawning detached tasks forever.
+- **Resetting safe mode could disagree with disk.** The file is saved first and memory is updated only on success.
+- **Batch rename could desync paths from files.** State is written first, files are moved second, and failed moves roll the state back.
+- **Backup restore could leave a partial state.** Every ZIP member is validated before any file is replaced, and backups are written to a temp file before rename.
+- **Cancelled direct downloads left `.part` files behind.** The partial path is now tracked on the item and removed on cancel or delete.
+- **A hanging ffprobe blocked a worker forever.** Duration probing now runs on the blocking pool under a 20-second timeout.
+- **Retry storms could exceed the cap.** Counting and claiming a retry slot now happen under one lock.
+- **The audit log grew without limit.** It rotates to `.old.jsonl` after 2 MB.
+- **Unreadable watch-folder files were retried forever.** They are now moved aside, which also prevents repeated failures from tripping safe mode.
+- **Listener registration failure latched the store forever.** A failed registration now allows a later retry.
+- **A stale snapshot could overwrite a newer completion.** Refreshes ignore snapshots requested before the last queue event.
+- **A failed history fetch permanently disabled retries.** The loaded flag is now set only after success, and callers force a refresh after clearing history.
+- **CLI pause and resume did not update the queue and could throw unhandled errors.** They now refresh correctly and report failures.
+- **Several cold-start IPC chains had no rejection handler.** They now catch and degrade instead of producing unhandled rejections.
+- **Editing library metadata moved keyboard focus away.** The active entry is updated in place instead of being replaced.
+- **Drag-handle and schedule-cancel IPC errors were silent.** They now route through the shared error handler.
+- **Resetting safe mode from Settings had no error feedback.** Failures now show a toast.
+
 ## v1.2.2
 
 Second deep audit: modal ownership, durable state, faster startup and lighter runtime. No new features.

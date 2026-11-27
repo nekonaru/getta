@@ -3,6 +3,33 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.2.3
+
+Audit mendalam ketiga: konkurensi, batas sumber daya, dan stabilitas sesi panjang. Tidak ada fitur baru.
+
+## Perbaikan bug
+
+- **Resume bisa menyebabkan deadlock antrean.** Pengaturan kini dibaca lebih dulu, baru kunci antrean.
+- **Tulisan pengaturan memblokir pembaruan progres.** Otomasi dan mode aman kini mengkloning dan melepas kunci sebelum menyimpan ke disk.
+- **API lokal memiliki koneksi tanpa batas.** Soket kini dibatasi dan tiap pembacaan punya timeout lima detik.
+- **Pengiriman webhook bisa menumpuk.** Semaphore membatasi jumlah pengiriman dan membuang kelebihannya.
+- **Reset mode aman bisa beda dengan isi disk.** Berkas disimpan dulu, memori diperbarui hanya jika berhasil.
+- **Ganti nama massal bisa memisahkan path dari file.** State ditulis dulu, file dipindah kemudian, dan kegagalan memindah mengembalikan state.
+- **Pulihkan cadangan bisa meninggalkan state setengah.** Semua anggota ZIP divalidasi sebelum ada file yang diganti, dan cadangan ditulis ke file sementara dulu.
+- **Unduhan langsung yang dibatalkan meninggalkan file `.part`.** Jalur partial kini disimpan di item dan dihapus saat batal atau hapus.
+- **ffprobe yang menggantung memblokir worker selamanya.** Probe kini berjalan di pool blocking dengan timeout 20 detik.
+- **Badai retry bisa melewati batas.** Penghitungan dan pengambilan slot retry kini terjadi dalam satu kunci.
+- **Log audit tumbuh tanpa batas.** Log kini diputar ke `.old.jsonl` setelah 2 MB.
+- **File watch folder yang tidak bisa dibaca diproses terus.** File kini dipindahkan ke samping, yang juga mencegah kegagalan berulang memicu mode aman.
+- **Gagal mendaftarkan listener membuat store mandek selamanya.** Kini percobaan ulang diizinkan.
+- **Snapshot basi bisa menimpa selesai yang lebih baru.** Refresh mengabaikan snapshot yang diminta sebelum event antrean terakhir.
+- **Gagal mengambil riwayat mematikan percobaan ulang.** Flag hanya ditetapkan setelah sukses, dan pembersihan riwayat memaksa muat ulang.
+- **CLI pause/resume tidak menyegarkan antrean dan bisa melempar error.** Kini menyegarkan dengan benar dan melaporkan kegagalan.
+- **Beberapa rantai IPC saat start tanpa penanggal error.** Kini menangkap error dan tetap berjalan.
+- **Mengedit metadata pustaka memindahkan fokus keyboard.** Entri aktif kini diperbarui di tempat.
+- **Error IPC pada gagang geser dan batal jadwal tidak terlihat.** Kini lewat penangan error bersama.
+- **Reset mode aman dari Pengaturan tanpa pesan error.** Kegagalan kini menampilkan toast.
+
 ## v1.2.2
 
 Audit mendalam kedua: kepemilikan modal, state yang tahan mati listrik, startup lebih cepat, dan runtime lebih ringan. Tidak ada fitur baru.
