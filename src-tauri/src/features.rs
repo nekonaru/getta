@@ -157,7 +157,11 @@ pub struct HealthReport {
 /// Cheap, cached free-space query for the scheduler. Avoids reading history
 /// and audit files on every download start.
 static DISK_CACHE: std::sync::Mutex<(std::time::Instant, u64, u64)> =
-    std::sync::Mutex::new((std::time::UNIX_EPOCH, 0, 0));
+    std::sync::Mutex::new((
+        std::time::Instant::now() - std::time::Duration::from_secs(60),
+        0,
+        0,
+    ));
 
 pub fn disk_free_cached(path: &Path) -> u64 {
     let now = std::time::Instant::now();
@@ -229,6 +233,7 @@ extern "system" {
 #[cfg(unix)]
 fn disk_space(path: &Path) -> (u64, u64) {
     use std::ffi::CString;
+    use std::os::unix::ffi::OsStrExt;
     let Ok(c_path) = CString::new(path.as_os_str().as_bytes()) else {
         return (0, 0);
     };
