@@ -660,6 +660,30 @@ pub async fn load_profile(
 }
 
 #[tauri::command]
+pub async fn import_link_file(
+    app: AppHandle,
+    path: String,
+) -> Result<usize, String> {
+    let links = crate::batch::extract_links(std::path::Path::new(&path))?;
+    let added = crate::batch::enqueue_links(&app, links);
+    if let Some(state) = app.try_state::<AppState>() {
+        crate::features::audit(&state.data_dir, "batch_import", &added.to_string());
+    }
+    Ok(added)
+}
+
+#[tauri::command]
+pub async fn batch_queue_update(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    ids: Vec<u64>,
+    priority: Option<i32>,
+    group: Option<String>,
+) -> Result<usize, String> {
+    Ok(state.queue.batch_update(&app, &ids, priority, group))
+}
+
+#[tauri::command]
 pub async fn settings_get(state: State<'_, AppState>) -> Result<AppSettings, String> {
     Ok(state.settings.lock().map_err(|_| "settings locked".to_string())?.clone())
 }

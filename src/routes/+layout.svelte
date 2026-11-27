@@ -28,6 +28,7 @@
 
 	let engineReady = $state<boolean | null>(null);
 	let dragDepth = $state(0);
+	const compact = $derived(settingsStore.value?.compact_mode === true);
 
 	function onDragEnter(event: DragEvent) {
 		event.preventDefault();
@@ -146,7 +147,7 @@
 	});
 </script>
 
-<div class="app-shell" class:drop-active={dragDepth > 0} role="group" aria-label={t("layout.dropHint")} ondragenter={onDragEnter} ondragover={onDragOver} ondragleave={onDragLeave} ondrop={onDrop}>
+<div class="app-shell" class:drop-active={dragDepth > 0} class:compact-shell={compact} role="group" aria-label={t("layout.dropHint")} ondragenter={onDragEnter} ondragover={onDragOver} ondragleave={onDragLeave} ondrop={onDrop}>
 	<aside class="sidebar">
 		<a class="wordmark" href="/">
 			<LogoMark size={34} />
@@ -174,6 +175,7 @@
 				<span>{engineReady === null ? t("home.engineChecking") : engineReady ? t("layout.engineReady") : t("home.engineMissing")}</span>
 			</a>
 			<div class="sidebar-links">
+				<button class="sidebar-link" onclick={() => settingsStore.update({ compact_mode: !compact })}>{compact ? t("layout.normalMode") : t("layout.focusMode")}</button>
 				<button class="sidebar-link" onclick={() => openExternal("https://github.com/nekonaru/getta")}>GitHub</button>
 				<a class="sidebar-link" href="/support">{t("nav.support")}</a>
 				<a class="sidebar-link" href="/about">v{pkg.version}</a>

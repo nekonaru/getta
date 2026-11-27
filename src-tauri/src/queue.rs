@@ -370,6 +370,33 @@ impl QueueManager {
         sync_prevent_sleep(app);
     }
 
+    /// Apply priority and group to many items at once.
+    pub fn batch_update(&self, app: &tauri::AppHandle, ids: &[u64], priority: Option<i32>, group: Option<String>) -> usize {
+        let changed = {
+            let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+            let mut count = 0usize;
+            for item in inner.items.iter_mut() {
+                if !ids.contains(&item.id) {
+                    continue;
+                }
+                if let Some(value) = priority {
+                    item.priority = value;
+                }
+                if let Some(value) = &group {
+                    let trimmed = value.trim();
+                    item.group_id = if trimmed.is_empty() { None } else { Some(trimmed.chars().take(40).collect()) };
+                }
+                count += 1;
+            }
+            count
+        };
+        if changed > 0 {
+            emit_queue(app);
+            self.try_start_next(app);
+        }
+        changed
+    }
+
     /// Turn a scheduled item into an ordinary queued item.
     pub fn clear_schedule(&self, app: &tauri::AppHandle, id: u64) {
         let changed = {

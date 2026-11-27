@@ -3,6 +3,16 @@
 All notable changes to Getta are documented here and in `CHANGELOG.id.md`.
 Newest version on top.
 
+## v1.2.0
+
+Power tools: batch import, bulk queue edits and a focus mode toggle.
+
+## New features
+
+- **Batch link import.** Read a `.txt`, `.json` or `.html` file from Home, extract unique links and queue up to 500 at once.
+- **Bulk queue edits.** Select multiple queue rows and apply a priority and group name to all of them at once.
+- **Focus mode.** Hide the sidebar with one click from the sidebar footer to get a wider working area.
+
 ## v1.1.0
 
 Reliability wave: safe mode, undo, retry storm protection, disk guard and a diagnostic bundle.

@@ -5,6 +5,7 @@
 
 mod api_server;
 mod automation;
+mod batch;
 mod commands;
 mod cookies;
 mod direct;
@@ -267,6 +268,8 @@ pub fn run() {
             commands::history_restore,
             commands::reset_safe_mode,
             commands::create_diagnostic_bundle,
+            commands::import_link_file,
+            commands::batch_queue_update,
             commands::remove_download,
             commands::clear_finished,
             commands::pause_all,

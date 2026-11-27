@@ -106,6 +106,19 @@
 		expectedSha = "";
 	}
 
+	async function importLinkFile() {
+		try {
+			const { open } = await import("@tauri-apps/plugin-dialog");
+			const picked = await open({ multiple: false, directory: false, filters: [{ name: "Links", extensions: ["txt", "json", "html", "htm"] }] });
+			if (typeof picked !== "string" || !picked) return;
+			const count = await api.importLinkFile(picked);
+			toastStore.push(t("home.batchImported", { count }), "info");
+			await goto("/queue");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
 	async function importLinks() {
 		try {
 			const { open } = await import("@tauri-apps/plugin-dialog");
@@ -321,6 +334,7 @@
 					<span class="muted hint">{t("home.scheduleHint")}</span>
 				{/if}
 				<button class="btn btn-sm btn-ghost" onclick={importLinks}>{t("home.importLinks")}</button>
+				<button class="btn btn-sm btn-ghost" onclick={importLinkFile}>{t("home.importFile")}</button>
 			</div>
 
 			{#if presets.length > 0}

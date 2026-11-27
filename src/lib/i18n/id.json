@@ -75,7 +75,9 @@
 		"priorityImmediate": "Segera",
 		"itemSpeed": "Batas kecepatan (MB/s)",
 		"direct": "Unduh file langsung (tanpa yt-dlp)",
-		"sha256": "SHA-256 yang diharapkan"
+		"sha256": "SHA-256 yang diharapkan",
+		"importFile": "Impor file link",
+		"batchImported": "{count} link diimpor"
 	},
 	"queue": {
 		"kicker": "Manifest kargo",
@@ -138,7 +140,12 @@
 		"groupFilter": "Filter berdasarkan grup",
 		"allGroups": "Semua grup",
 		"health": "Kesehatan",
-		"healthHint": "Skor rendah berarti error berulang atau transfer mandek"
+		"healthHint": "Skor rendah berarti error berulang atau transfer mandek",
+		"batchSelect": "Pilih untuk batch",
+		"batchGroup": "Nama grup",
+		"batchPriority": "Prioritas",
+		"batchApply": "Terapkan ke {count}",
+		"batchApplied": "{count} item diperbarui"
 	},
 	"library": {
 		"kicker": "Barang tersimpan",
@@ -551,7 +558,9 @@
 		"engineBroken": "Mesin unduhan tidak bekerja. Pasang ulang di Pengaturan, Mesin.",
 		"dropHint": "Jatuhkan link ke mana saja untuk mengambilnya",
 		"tagline": "link masuk · file keluar",
-		"engineReady": "mesin siap"
+		"engineReady": "mesin siap",
+		"focusMode": "Mode fokus",
+		"normalMode": "Tata letak normal"
 	},
 	"common": {
 		"ok": "OK",

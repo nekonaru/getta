@@ -410,7 +410,10 @@ export const api = {
 	loadProfile: (name: string) => call(() => invoke<AppSettings>("load_profile", { name })),
 	historyRestore: (entry: HistoryEntry) => call(() => invoke<void>("history_restore", { entry })),
 	resetSafeMode: () => call(() => invoke<AppSettings>("reset_safe_mode")),
-	createDiagnosticBundle: (path: string) => call(() => invoke<void>("create_diagnostic_bundle", { path }))
+	createDiagnosticBundle: (path: string) => call(() => invoke<void>("create_diagnostic_bundle", { path })),
+	importLinkFile: (path: string) => call(() => invoke<number>("import_link_file", { path })),
+	batchQueueUpdate: (ids: number[], priority: number | null, group: string | null) =>
+		call(() => invoke<number>("batch_queue_update", { ids, priority, group }))
 };
 
 export function onQueueChanged(callback: (items: QueueItemInfo[]) => void): Promise<UnlistenFn> {

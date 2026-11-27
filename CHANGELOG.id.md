@@ -3,6 +3,16 @@
 Semua perubahan penting Getta didokumentasikan di sini dan di `CHANGELOG.md`.
 Versi terbaru di atas.
 
+## v1.2.0
+
+Alat daya: impor massal, edit antrean banyak, dan toggle mode fokus.
+
+## Fitur baru
+
+- **Impor link massal.** Baca file `.txt`, `.json`, atau `.html` dari Beranda, ambil link unik, dan antrekan hingga 500 sekaligus.
+- **Edit antrean massal.** Pilih beberapa baris antrean dan terapkan prioritas serta nama grup ke semuanya sekaligus.
+- **Mode fokus.** Sembunyikan sidebar dengan satu klik dari bagian bawah sidebar untuk area kerja yang lebih luas.
+
 ## v1.1.0
 
 Wave keandalan: mode aman, undo, proteksi badai retry, penjaga disk, dan berkas diagnostik.

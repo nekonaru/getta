@@ -75,7 +75,9 @@
 		"priorityImmediate": "Immediate",
 		"itemSpeed": "Speed limit (MB/s)",
 		"direct": "Direct file download (no yt-dlp)",
-		"sha256": "Expected SHA-256"
+		"sha256": "Expected SHA-256",
+		"importFile": "Import link file",
+		"batchImported": "Imported {count} links"
 	},
 	"queue": {
 		"kicker": "Cargo manifest",
@@ -138,7 +140,12 @@
 		"groupFilter": "Filter by group",
 		"allGroups": "All groups",
 		"health": "Health",
-		"healthHint": "Lower score means repeated errors or stalled transfer"
+		"healthHint": "Lower score means repeated errors or stalled transfer",
+		"batchSelect": "Select for batch",
+		"batchGroup": "Group name",
+		"batchPriority": "Priority",
+		"batchApply": "Apply to {count}",
+		"batchApplied": "Updated {count} items"
 	},
 	"library": {
 		"kicker": "Saved goods",
@@ -551,7 +558,9 @@
 		"engineBroken": "The download engine is not working. Reinstall it in Settings, Engine.",
 		"dropHint": "Drop a link anywhere to fetch it",
 		"tagline": "link in · file out",
-		"engineReady": "engine ready"
+		"engineReady": "engine ready",
+		"focusMode": "Focus mode",
+		"normalMode": "Normal layout"
 	},
 	"common": {
 		"ok": "OK",

@@ -12,6 +12,9 @@
 	let tab = $state<Tab>("queue");
 	let query = $state("");
 	let groupFilter = $state("");
+	let batchIds = $state<Set<number>>(new Set());
+	let batchGroup = $state("");
+	let batchPriority = $state(0);
 	let dragId = $state<number | null>(null);
 	let dropIndex = $state<number | null>(null);
 	const reorderAllowed = $derived(query.trim().length === 0);
@@ -45,6 +48,24 @@
 		try {
 			await api.setClipboardText(url);
 			toastStore.push(t("queue.urlCopied"), "info");
+		} catch (e) {
+			toastStore.push(e instanceof Error ? e.message : String(e), "error");
+		}
+	}
+
+	function toggleBatch(id: number) {
+		const next = new Set(batchIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		batchIds = next;
+	}
+
+	async function applyBatch() {
+		try {
+			const count = await api.batchQueueUpdate([...batchIds], batchPriority, batchGroup || null);
+			toastStore.push(t("queue.batchApplied", { count }), "info");
+			batchIds = new Set();
+			await downloadsStore.start();
 		} catch (e) {
 			toastStore.push(e instanceof Error ? e.message : String(e), "error");
 		}
@@ -362,6 +383,17 @@
 				</select>
 			{/if}
 			<span class="pill mono queue-stats">{queueStats.active} / {queueStats.queued} / {queueStats.done} / {queueStats.failed} · {formatBytes(queueStats.bytes)}</span>
+			{#if batchIds.size > 0}
+				<input class="input batch-group" bind:value={batchGroup} placeholder={t("queue.batchGroup")} aria-label={t("queue.batchGroup")} />
+				<select class="input batch-priority" bind:value={batchPriority} aria-label={t("queue.batchPriority")}>
+					<option value={-1}>{t("home.priorityLow")}</option>
+					<option value={0}>{t("home.priorityNormal")}</option>
+					<option value={1}>{t("home.priorityHigh")}</option>
+					<option value={2}>{t("home.priorityImmediate")}</option>
+				</select>
+				<button class="btn btn-sm btn-accent" onclick={applyBatch}>{t("queue.batchApply", { count: batchIds.size })}</button>
+				<button class="btn btn-sm btn-ghost" onclick={() => (batchIds = new Set())}>{t("library.cancel")}</button>
+			{/if}
 			{#if query.trim()}
 				<span class="pill mono queue-search-count">{transit.length + queued.length + delivered.length + failed.length}</span>
 				<button class="btn btn-sm btn-ghost" onclick={() => (query = "")}>{t("library.dismiss")}</button>
@@ -465,6 +497,7 @@
 												{/if}
 											</div>
 											<div class="row-actions">
+													<input type="checkbox" class="batch-check" checked={batchIds.has(item.id)} aria-label={t("queue.batchSelect")} onchange={() => toggleBatch(item.id)} />
 												<button class="btn-icon" title={t("queue.copyUrl")} aria-label={t("queue.copyUrl")} onclick={() => copySourceUrl(item.url)}><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg></button>
 												{#if item.status === "active"}
 													<button class="btn-icon" title={t("queue.pause")} aria-label={t("queue.pause")} onclick={() => api.pauseDownload(item.id)}><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14" /></svg></button>

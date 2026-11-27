@@ -59,6 +59,7 @@ Getta is an original implementation under the MIT license.
 | **Playlist picker** | Playlists analyze with a checkbox list; download everything or only the entries you want |
 | **Modes** | Video + audio, audio only (m4a), video only, or subtitles only |
 | **Batch pastes** | Many links at once: Getta queues them all |
+| **Batch file import** | Read links from a text, JSON or HTML file and queue up to 500 |
 | **Channel following** | Follow any public channel; Getta spots new uploads and queues them. Optional background auto-download |
 | **RSS feeds** | Queue new feed entries automatically with a local seen list |
 | **Clipboard monitor** | Optional automatic enqueue when a new link appears on the clipboard |
@@ -118,6 +119,7 @@ Getta is an original implementation under the MIT license.
 | **Safe mode** | Automation disables itself after repeated failures until reset |
 | **Undo and disk guard** | Undo library removals and pause new downloads when disk space is low |
 | **Manual queue order** | Move queued items up and down with buttons or by dragging a grip; the scheduler spawns them in your order |
+| **Bulk queue edits** | Apply priority and group to several selected rows in one action |
 | **No account, no telemetry** | Getta does not collect anything about what you download |
 | **Self-updating engine** | Optional verified install of yt-dlp and FFmpeg, with SHA-256 checking |
 | **Auto-update** | Check from About; Getta downloads and installs the signed release and relaunches. AppImage only on Linux |
