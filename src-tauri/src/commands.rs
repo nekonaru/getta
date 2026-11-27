@@ -499,10 +499,7 @@ pub async fn history_restore(
     state: State<'_, AppState>,
     entry: crate::models::HistoryEntry,
 ) -> Result<(), String> {
-    {
-        let guard = crate::history::lock();
-        let _ = guard;
-    }
+    // history::push takes its own state lock.
     crate::history::push(&state.data_dir, entry);
     Ok(())
 }
