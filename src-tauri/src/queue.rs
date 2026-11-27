@@ -87,6 +87,7 @@ struct QueueItem {
     post_done: bool,
     /// Partial file created by the native direct downloader.
     part_path: Option<String>,
+    filename_template: Option<String>,
 }
 
 impl QueueItem {
@@ -262,6 +263,10 @@ impl QueueManager {
             direct: options.direct,
             post_done: false,
             part_path: None,
+            filename_template: options
+                .filename_template
+                .clone()
+                .filter(|s| !s.trim().is_empty()),
         };
         // Coalesce a double click or repeated enqueue of the same link while
         // it is still active or queued. Two jobs writing the same file is a
@@ -1383,6 +1388,9 @@ async fn run_job(app: tauri::AppHandle, id: u64, generation: u64) {
         // A per-item cap overrides the global one without mutating settings.
         if item.speed_limit_mbps > 0 {
             settings.speed_limit_mbps = item.speed_limit_mbps;
+        }
+        if let Some(template) = item.filename_template.as_ref() {
+            settings.filename_template = template.clone();
         }
         // Rules redirect the folder only when the user did not pick one for this item.
         let output_dir = item

@@ -48,6 +48,7 @@ pub fn enqueue_links(app: &tauri::AppHandle, links: Vec<String>) -> usize {
             after_id: None,
             preset_id: None,
             direct: false,
+            filename_template: None,
         };
         if state
             .queue

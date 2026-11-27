@@ -77,7 +77,8 @@
 		"direct": "Direct file download (no yt-dlp)",
 		"sha256": "Expected SHA-256",
 		"importFile": "Import link file",
-		"batchImported": "Imported {count} links"
+		"batchImported": "Imported {count} links",
+		"filenameTemplate": "Filename template"
 	},
 	"queue": {
 		"kicker": "Cargo manifest",
@@ -475,7 +476,9 @@
 		"retryStormCap": "Max retries in flight",
 		"diskGuard": "Minimum free disk (GB, 0 = off)",
 		"safeMode": "Safe mode",
-		"resetSafeMode": "Reset safe mode"
+		"resetSafeMode": "Reset safe mode",
+		"newSmartFolder": "New smart folder",
+		"videoQuality": "Quality"
 	},
 	"about": {
 		"tagline": "Every link, delivered.",

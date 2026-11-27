@@ -28,6 +28,7 @@
 	let directDownload = $state(false);
 	let expectedSha = $state("");
 	let advancedOpen = $state(false);
+	let templateOverride = $state("");
 
 	const links = $derived(parseLinks(url));
 	const singleLink = $derived(links.length === 1 ? links[0] : null);
@@ -82,6 +83,7 @@
 		mode = (preset.mode || "auto") as typeof mode;
 		priority = preset.priority ?? 0;
 		itemSpeedLimit = preset.speed_limit_mbps ?? 0;
+		templateOverride = preset.template ?? "";
 	};
 
 	const statusText = (status: string) =>
@@ -104,6 +106,7 @@
 		scheduleEnabled = false;
 		scheduleAt = "";
 		expectedSha = "";
+		templateOverride = "";
 	}
 
 	async function importLinkFile() {
@@ -174,7 +177,8 @@
 			speed_limit_mbps: itemSpeedLimit,
 			expected_sha256: expectedSha.trim() || null,
 			direct: directDownload,
-			preset_id: presetId || null
+			preset_id: presetId || null,
+			filename_template: templateOverride.trim() || null
 		};
 	}
 
@@ -376,6 +380,10 @@
 					<label class="adv-field">
 						<span>{t("home.sha256")}</span>
 						<input class="input mono" type="text" placeholder="optional" bind:value={expectedSha} spellcheck="false" />
+					</label>
+					<label class="adv-field">
+						<span>{t("home.filenameTemplate")}</span>
+						<input class="input mono" type="text" placeholder="%(title).200s [%(id)s].%(ext)s" bind:value={templateOverride} spellcheck="false" />
 					</label>
 				</div>
 			{/if}

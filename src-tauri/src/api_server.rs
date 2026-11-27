@@ -110,6 +110,7 @@ async fn handle(app: &tauri::AppHandle, stream: &mut tokio::net::TcpStream, toke
             after_id: None,
             preset_id: None,
             direct: false,
+            filename_template: None,
         };
         let added = app
             .try_state::<crate::AppState>()

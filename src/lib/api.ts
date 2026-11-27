@@ -273,6 +273,7 @@ export interface StartOptions {
 	after_id?: number | null;
 	preset_id?: string | null;
 	direct?: boolean;
+	filename_template?: string | null;
 }
 
 export type ToolName =

@@ -77,7 +77,8 @@
 		"direct": "Unduh file langsung (tanpa yt-dlp)",
 		"sha256": "SHA-256 yang diharapkan",
 		"importFile": "Impor file link",
-		"batchImported": "{count} link diimpor"
+		"batchImported": "{count} link diimpor",
+		"filenameTemplate": "Template nama file"
 	},
 	"queue": {
 		"kicker": "Manifest kargo",
@@ -475,7 +476,9 @@
 		"retryStormCap": "Maks retry bersamaan",
 		"diskGuard": "Ruang disk minimum (GB, 0 = mati)",
 		"safeMode": "Mode aman",
-		"resetSafeMode": "Reset mode aman"
+		"resetSafeMode": "Reset mode aman",
+		"newSmartFolder": "Folder pintar baru",
+		"videoQuality": "Kualitas"
 	},
 	"about": {
 		"tagline": "Setiap tautan, terkirim.",

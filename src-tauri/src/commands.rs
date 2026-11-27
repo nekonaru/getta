@@ -151,6 +151,7 @@ pub async fn restore_recovery(app: AppHandle, state: State<'_, AppState>) -> Res
             after_id: None,
             preset_id: None,
             direct: false,
+            filename_template: None,
         };
         if state
             .queue
@@ -230,6 +231,7 @@ pub async fn import_links_file(
             after_id: None,
             preset_id: None,
             direct: false,
+            filename_template: None,
         };
         if state
             .queue
@@ -677,7 +679,8 @@ pub async fn load_profile(
     state: State<'_, AppState>,
     name: String,
 ) -> Result<AppSettings, String> {
-    let loaded = crate::features::load_profile(&state.data_dir, &name)?;
+    let mut loaded = crate::features::load_profile(&state.data_dir, &name)?;
+    loaded.active_profile = name.clone();
     crate::settings::save(&state.data_dir, &loaded).map_err(|e| e.to_string())?;
     {
         let mut current = state

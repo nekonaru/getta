@@ -114,6 +114,7 @@ pub async fn poll_watch_folder(app: tauri::AppHandle) {
                     after_id: None,
                     preset_id: None,
                     direct: false,
+                    filename_template: None,
                 };
                 if let Some(state) = app.try_state::<crate::AppState>() {
                     if state
@@ -200,6 +201,7 @@ pub async fn poll_rss(app: tauri::AppHandle) {
                     after_id: None,
                     preset_id: None,
                     direct: false,
+                    filename_template: None,
                 };
                 if let Some(state) = app.try_state::<crate::AppState>() {
                     if state
@@ -316,6 +318,7 @@ pub async fn poll_clipboard(app: tauri::AppHandle) {
             after_id: None,
             preset_id: None,
             direct: false,
+            filename_template: None,
         };
         let _ = state.queue.start(&app, &options.url, &options);
     }

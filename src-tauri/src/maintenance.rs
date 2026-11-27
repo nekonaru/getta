@@ -49,6 +49,8 @@ pub struct QueueBackupEntry {
     pub preset_id: Option<String>,
     #[serde(default)]
     pub direct: bool,
+    #[serde(default)]
+    pub filename_template: Option<String>,
 }
 
 fn default_mode() -> String { "auto".to_string() }
@@ -97,6 +99,7 @@ pub fn export_queue(state: &AppState, path: &Path) -> std::io::Result<()> {
             after_id: info.after_id,
             preset_id: None,
             direct: false,
+            filename_template: None,
         })
         .collect();
     storage::write_json_atomic(path, &entries)
@@ -127,6 +130,7 @@ pub fn import_queue(app: &AppHandle, state: &AppState, path: &Path) -> Result<us
             after_id: entry.after_id,
             preset_id: entry.preset_id,
             direct: entry.direct,
+            filename_template: None,
         };
         match state.queue.start_batch_item(app, &options) {
             Ok((_, true, recovery)) => {

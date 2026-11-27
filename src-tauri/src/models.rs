@@ -246,6 +246,8 @@ pub struct StartOptions {
     pub preset_id: Option<String>,
     #[serde(default)]
     pub direct: bool,
+    #[serde(default)]
+    pub filename_template: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

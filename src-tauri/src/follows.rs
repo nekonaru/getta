@@ -280,6 +280,7 @@ pub async fn check_and_enqueue(app: &AppHandle, id: &str) -> Result<usize, Strin
             after_id: None,
             preset_id: None,
             direct: false,
+            filename_template: None,
         };
         let started = app
             .try_state::<AppState>()
